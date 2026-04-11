@@ -74,6 +74,8 @@ import {
 	Zap,
 	Shield,
 	Mic2,
+	Headphones,
+	Layers,
 	Languages,
 	RefreshCw,
 	BarChart2,
@@ -2596,6 +2598,16 @@ function Landing() {
 			desc: "Retains the original speaker's tone, cadence, and emotion — not just words — in every dubbed output.",
 		},
 		{
+			Icon: Headphones,
+			title: "Video & audio translation",
+			desc: "Dub full videos or go audio-only: paste text, record a take, or upload MP3, WAV, WebM, and more—then get translated speech in any language.",
+		},
+		{
+			Icon: Layers,
+			title: "Parallel multi-language",
+			desc: "Add several target languages and run multiple translation jobs at once. Queue work without waiting for each job to finish.",
+		},
+		{
 			Icon: Globe,
 			title: "90+ Languages",
 			desc: "Spanish to Swahili, Mandarin to Malayalam. Covers virtually every major language and regional dialect.",
@@ -2603,7 +2615,7 @@ function Landing() {
 		{
 			Icon: Zap,
 			title: "Fast Turnaround",
-			desc: "Most videos under 10 min finish within 3–8 minutes. Distributed queues ensure consistent speed at scale.",
+			desc: "Most videos under 10 min finish within 3–8 minutes. Distributed queues keep parallel jobs moving at scale.",
 		},
 		{
 			Icon: Shield,
@@ -2618,16 +2630,20 @@ function Landing() {
 			a: "Any publicly accessible MP4, MOV, or WebM URL works, as well as direct file uploads up to 2 GB.",
 		},
 		{
+			q: "Can I translate audio without a video?",
+			a: "Yes. Use the voice translation flow to paste text, record from your mic, or upload an audio file—you get transcripts and translated audio in your chosen languages, with jobs tracked alongside video work.",
+		},
+		{
 			q: "How long does translation take?",
-			a: "Most videos under 10 minutes complete in 3–8 minutes. Longer videos or multi-language jobs take proportionally more time.",
+			a: "Most videos under 10 minutes complete in 3–8 minutes. Longer videos or multi-language jobs take proportionally more time. Parallel jobs each show their own progress.",
 		},
 		{
 			q: "Is the original speaker's voice preserved?",
 			a: "Yes — vaantra uses voice cloning to maintain the original speaker's timbre and rhythm in the translated dub.",
 		},
 		{
-			q: "Can I translate to multiple languages at once?",
-			a: "Multi-language batch translation is available on Pro and Studio plans.",
+			q: "Can I translate to multiple languages at the same time?",
+			a: "You can add several target languages and run multiple translation jobs in parallel so nothing blocks the rest of your queue. Advanced multi-language batch options are also available on Pro and Studio plans.",
 		},
 		{
 			q: "What happens to my videos after translation?",
@@ -2637,7 +2653,7 @@ function Landing() {
 
 	return (
 		<div className="sans" style={{ color: "#52525b", minHeight: "100vh" }}>
-			{/* Ambient glow */}
+			{/* Ambient glow — slow drift, same palette */}
 			<div
 				style={{
 					position: "fixed",
@@ -2647,17 +2663,52 @@ function Landing() {
 					overflow: "hidden",
 				}}
 			>
-				<div
+				<motion.div
+					animate={{
+						y: [0, 24, 0],
+						x: [0, -16, 0],
+						scale: [1, 1.04, 1],
+						opacity: [0.85, 1, 0.85],
+					}}
+					transition={{
+						duration: 14,
+						repeat: Infinity,
+						ease: "easeInOut",
+					}}
 					style={{
 						position: "absolute",
 						top: -180,
 						left: "50%",
-						transform: "translateX(-50%)",
+						marginLeft: "-350px",
 						width: 700,
 						height: 700,
 						borderRadius: "50%",
 						background:
 							"radial-gradient(circle, rgba(234,88,12,0.08) 0%, transparent 70%)",
+					}}
+				/>
+				<motion.div
+					animate={{
+						y: [0, -18, 0],
+						x: [0, 22, 0],
+						scale: [1, 1.06, 1],
+						opacity: [0.65, 0.95, 0.65],
+					}}
+					transition={{
+						duration: 18,
+						repeat: Infinity,
+						ease: "easeInOut",
+						delay: 1,
+					}}
+					style={{
+						position: "absolute",
+						bottom: "8%",
+						right: "-8%",
+						width: 480,
+						height: 480,
+						borderRadius: "50%",
+						background:
+							"radial-gradient(circle, rgba(194,65,12,0.06) 0%, transparent 68%)",
 					}}
 				/>
 			</div>
@@ -2735,14 +2786,77 @@ function Landing() {
 					maxWidth: 1100,
 					margin: "0 auto",
 					padding: "clamp(60px,10vw,100px) clamp(20px,5vw,60px) 80px",
+					overflow: "hidden",
 				}}
 			>
+				<style>{`
+					@keyframes hero-icon-glow {
+						0%, 100% { box-shadow: 0 0 0 0 rgba(234,88,12,0.25), 0 8px 24px rgba(24,24,27,0.06); }
+						50% { box-shadow: 0 0 0 1px rgba(234,88,12,0.35), 0 12px 32px rgba(194,65,12,0.12); }
+					}
+				`}</style>
+				{/* Hero-local mesh — same oranges / neutrals */}
+				<div
+					style={{
+						position: "absolute",
+						inset: 0,
+						pointerEvents: "none",
+						zIndex: 0,
+					}}
+				>
+					<motion.div
+						animate={{
+							opacity: [0.4, 0.7, 0.4],
+							scale: [1, 1.03, 1],
+						}}
+						transition={{
+							duration: 10,
+							repeat: Infinity,
+							ease: "easeInOut",
+						}}
+						style={{
+							position: "absolute",
+							top: "-5%",
+							left: "50%",
+							transform: "translateX(-50%)",
+							width: "min(900px, 120%)",
+							height: 320,
+							borderRadius: "50%",
+							background:
+								"radial-gradient(ellipse at center, rgba(234,88,12,0.09) 0%, transparent 72%)",
+							filter: "blur(0px)",
+						}}
+					/>
+					<motion.div
+						animate={{ rotate: [0, 3, 0, -2, 0] }}
+						transition={{
+							duration: 22,
+							repeat: Infinity,
+							ease: "easeInOut",
+						}}
+						style={{
+							position: "absolute",
+							bottom: "12%",
+							left: "-12%",
+							width: 280,
+							height: 280,
+							borderRadius: "50%",
+							background:
+								"radial-gradient(circle, rgba(234,88,12,0.05) 0%, transparent 70%)",
+						}}
+					/>
+				</div>
+
 				<motion.div
 					initial={{ opacity: 0, y: 28 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+					style={{ position: "relative", zIndex: 1 }}
 				>
-					<div
+					<motion.div
+						initial={{ opacity: 0, y: 10 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.55, delay: 0.05 }}
 						style={{
 							display: "flex",
 							alignItems: "center",
@@ -2751,7 +2865,13 @@ function Landing() {
 							marginBottom: 20,
 						}}
 					>
-						<div
+						<motion.div
+							animate={{ scaleX: [0.85, 1, 0.85], opacity: [0.7, 1, 0.7] }}
+							transition={{
+								duration: 4,
+								repeat: Infinity,
+								ease: "easeInOut",
+							}}
 							style={{
 								height: 1,
 								width: 36,
@@ -2768,19 +2888,29 @@ function Landing() {
 								textTransform: "uppercase",
 							}}
 						>
-							AI Video Translation
+							AI Video & Voice Translation
 						</span>
-						<div
+						<motion.div
+							animate={{ scaleX: [0.85, 1, 0.85], opacity: [0.7, 1, 0.7] }}
+							transition={{
+								duration: 4,
+								repeat: Infinity,
+								ease: "easeInOut",
+								delay: 0.5,
+							}}
 							style={{
 								height: 1,
 								width: 36,
 								background: "linear-gradient(90deg, #ea580c, transparent)",
 							}}
 						/>
-					</div>
+					</motion.div>
 
-					<h1
+					<motion.h1
 						className="vaantra-font"
+						initial={{ opacity: 0, y: 16 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.65, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
 						style={{
 							textAlign: "center",
 							fontSize: "clamp(2.6rem,7vw,5.2rem)",
@@ -2790,42 +2920,156 @@ function Landing() {
 							marginBottom: 20,
 						}}
 					>
-						Your video,
+						<motion.span
+							style={{ display: "inline-block" }}
+							animate={{ y: [0, -2, 0] }}
+							transition={{
+								duration: 5,
+								repeat: Infinity,
+								ease: "easeInOut",
+							}}
+						>
+							Your video & voice,
+						</motion.span>
 						<br />
-						<em style={{ color: "#c2410c", fontStyle: "italic" }}>
+						<motion.span
+							style={{
+								display: "inline-block",
+								color: "#c2410c",
+								fontStyle: "italic",
+							}}
+							animate={{
+								textShadow: [
+									"0 0 0 rgba(234,88,12,0)",
+									"0 0 28px rgba(234,88,12,0.15)",
+									"0 0 0 rgba(234,88,12,0)",
+								],
+							}}
+							transition={{
+								duration: 4,
+								repeat: Infinity,
+								ease: "easeInOut",
+							}}
+						>
 							every language.
-						</em>
-					</h1>
+						</motion.span>
+					</motion.h1>
 
-					<p
+					<div
 						style={{
 							textAlign: "center",
 							color: "#71717a",
 							fontSize: "clamp(1rem,2vw,1.15rem)",
 							lineHeight: 1.75,
-							maxWidth: 520,
-							margin: "0 auto 48px",
+							maxWidth: 580,
+							margin: "0 auto 0",
 						}}
 					>
-						Translate any video into 90+ languages with voice-cloned dubbing.
-						<br />
-						Upload once, reach the world.
-					</p>
-					<p
+						<p style={{ margin: "0 0 20px" }}>
+							Dub videos or translate audio and text into 90+ languages with
+							voice-cloned output.
+						</p>
+
+						<div
+							style={{
+								display: "flex",
+								justifyContent: "center",
+								alignItems: "center",
+								gap: "clamp(12px,3vw,22px)",
+								marginBottom: 20,
+								flexWrap: "wrap",
+							}}
+						>
+							{[
+								{ Icon: Video, label: "Video dub" },
+								{ Icon: Headphones, label: "Audio" },
+								{ Icon: Mic2, label: "Voice" },
+								{ Icon: Layers, label: "Parallel" },
+							].map(({ Icon, label }, i) => (
+								<motion.div
+									key={label}
+									initial={{ opacity: 0, y: 14, scale: 0.92 }}
+									animate={{ opacity: 1, y: 0, scale: 1 }}
+									transition={{
+										delay: 0.28 + i * 0.09,
+										duration: 0.45,
+										ease: [0.16, 1, 0.3, 1],
+									}}
+									style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}
+								>
+									<motion.div
+										animate={{ y: [0, -5, 0] }}
+										transition={{
+											duration: 3.2 + i * 0.35,
+											repeat: Infinity,
+											ease: "easeInOut",
+											delay: i * 0.2,
+										}}
+										style={{
+											width: 52,
+											height: 52,
+											borderRadius: 14,
+											background: "rgba(234,88,12,0.1)",
+											border: "1px solid rgba(234,88,12,0.32)",
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "center",
+											animation: "hero-icon-glow 3.5s ease-in-out infinite",
+											animationDelay: `${i * 0.4}s`,
+										}}
+									>
+										<Icon size={22} color="#c2410c" strokeWidth={1.75} aria-hidden />
+									</motion.div>
+									<span
+										className="mono"
+										style={{
+											fontSize: 10,
+											fontWeight: 600,
+											letterSpacing: "0.06em",
+											textTransform: "uppercase",
+											color: "#a1a1aa",
+										}}
+									>
+										{label}
+									</span>
+								</motion.div>
+							))}
+						</div>
+
+						<motion.p
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							transition={{ delay: 0.55, duration: 0.5 }}
+							style={{
+								margin: 0,
+								paddingTop: 4,
+								borderTop: "1px solid rgba(234,88,12,0.12)",
+								paddingInline: 8,
+							}}
+						>
+							Add multiple targets and run several jobs in parallel—upload once,
+							reach the world.
+						</motion.p>
+					</div>
+
+					<motion.p
+						initial={{ opacity: 0, y: 6 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ delay: 0.62, duration: 0.45 }}
 						style={{
 							textAlign: "center",
 							color: "#c2410c",
 							fontSize: "clamp(0.9rem,1.8vw,1rem)",
 							fontWeight: 600,
-							marginTop: 8,
+							marginTop: 28,
 							marginBottom: 40,
 							maxWidth: 520,
 							marginLeft: "auto",
 							marginRight: "auto",
 						}}
 					>
-						10 free video translations per month — no card required to try
-					</p>
+						10 free translation jobs per month — no card required to try
+					</motion.p>
 
 					{/* Demo card */}
 					<motion.div
@@ -2893,8 +3137,8 @@ function Landing() {
 				>
 					{[
 						["90+", "Languages"],
+						["Parallel", "Multi-job queue"],
 						["< 8min", "Avg. turnaround"],
-						["4K", "Output quality"],
 					].map(([n, l]) => (
 						<div key={l} style={{ textAlign: "center" }}>
 							<div
@@ -2941,12 +3185,13 @@ function Landing() {
 							marginBottom: 48,
 						}}
 					>
-						One tool. Every language. No production studio required.
+						Video dubbing, audio translation, and parallel languages—no
+						production studio required.
 					</p>
 					<div
 						style={{
 							display: "grid",
-							gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+							gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
 							gap: 12,
 						}}
 					>
@@ -3035,8 +3280,8 @@ function Landing() {
 							margin: "0 auto 40px",
 						}}
 					>
-						Pay only for completed translations—no flat monthly fee. Need a
-						larger credit pool or a team plan? Get in touch.
+						Pay only for completed work (video or audio minutes)—no flat
+						monthly fee. Need a larger credit pool or a team plan? Get in touch.
 					</p>
 					<div
 						style={{
@@ -3050,7 +3295,7 @@ function Landing() {
 								kind: "usage",
 								name: "Pay per use",
 								price: `$${PRICE_PER_MINUTE_USD.toFixed(2)}`,
-								unit: "per minute of video (USD)",
+								unit: "per minute of video or audio (USD)",
 								highlight: true,
 								features: [
 									`Includes ${FREE_CREDITS_PER_MONTH} free starter jobs / month`,
