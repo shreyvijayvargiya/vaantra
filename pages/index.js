@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import LoginModal from "../lib/ui/LoginModal";
+import BenefitsShortsSection from "../app/components/BenefitsShortsSection";
 import { onAuthStateChange } from "../lib/api/auth";
 import {
 	deleteTranslationGroupDoc,
@@ -79,6 +80,8 @@ import {
 	Languages,
 	RefreshCw,
 	BarChart2,
+	TrendingUp,
+	Sparkles,
 	ArrowRight,
 	Mail,
 	Copy,
@@ -2273,126 +2276,7 @@ function TranslateForm({
 					)}
 				</>
 			)}
-			{/* English → target languages */}
-			{showForm && (
-				<div style={{ marginTop: compact ? 12 : 16 }}>
-					<p
-						style={{
-							fontSize: 11,
-							fontWeight: 600,
-							letterSpacing: "0.06em",
-							textTransform: "uppercase",
-							color: "#a1a1aa",
-							marginBottom: 10,
-						}}
-					>
-						Translate from
-					</p>
-					<div>
-						<div className="my-2 gap-2 space-y-2 flex flex-col">
-							{SPOTLIGHT_TARGET_LANGS.map((langName) => {
-								const on = selectedLangs.includes(langName);
-								return (
-									<div
-										className="flex justify-start gap-4 items-center"
-										style={{
-											display: "inline-flex",
-											alignItems: "center",
-											gap: 5,
-											padding: "6px 10px",
-											borderRadius: 8,
-											fontSize: 12.5,
-											fontWeight: 500,
-											background: on ? "rgba(234,88,12,0.1)" : "#fff",
-											color: on ? "#c2410c" : "#52525b",
-											transition: "all 0.12s",
-										}}
-									>
-										<button
-											key={langName}
-											className="flex items-center gap-2"
-											type="button"
-											style={{
-												display: "inline-flex",
-												alignItems: "center",
-												padding: "6px 10px",
-												borderRadius: 8,
-												fontSize: 12.5,
-												fontWeight: 500,
-												border: `1px solid ${on ? "rgba(234,88,12,0.45)" : "rgba(0,0,0,0.1)"}`,
-												background: on ? "rgba(234,88,12,0.1)" : "#fff",
-												color: on ? "#c2410c" : "#52525b",
-												transition: "all 0.12s",
-											}}
-											onClick={() => toggleSpotlightLang(langName)}
-										>
-											<span
-												style={{
-													width: 14,
-													height: 14,
-													borderRadius: 3,
-													border: `2px solid ${on ? "#ea580c" : "rgba(0,0,0,0.2)"}`,
-													background: on ? "#ea580c" : "transparent",
-													display: "inline-flex",
-													alignItems: "center",
-													justifyContent: "center",
-													flexShrink: 0,
-												}}
-												aria-hidden
-											>
-												{on && <Check size={9} strokeWidth={3} color="#fff" />}
-											</span>
-											<span style={{ fontSize: 15 }} aria-hidden>
-												English
-											</span>
-										</button>
-										<ArrowRight className="w-4 h-4 text-zinc-400" />
-										<button
-											key={langName}
-											type="button"
-											onClick={() => toggleSpotlightLang(langName)}
-											style={{
-												display: "inline-flex",
-												alignItems: "center",
-												gap: 5,
-												padding: "6px 10px",
-												borderRadius: 8,
-												fontSize: 12.5,
-												fontWeight: 500,
-												border: `1px solid ${on ? "rgba(234,88,12,0.45)" : "rgba(0,0,0,0.1)"}`,
-												background: on ? "rgba(234,88,12,0.1)" : "#fff",
-												color: on ? "#c2410c" : "#52525b",
-												transition: "all 0.12s",
-											}}
-										>
-											<span
-												style={{
-													width: 14,
-													height: 14,
-													borderRadius: 3,
-													border: `2px solid ${on ? "#ea580c" : "rgba(0,0,0,0.2)"}`,
-													background: on ? "#ea580c" : "transparent",
-													display: "inline-flex",
-													alignItems: "center",
-													justifyContent: "center",
-													flexShrink: 0,
-												}}
-												aria-hidden
-											>
-												{on && <Check size={9} strokeWidth={3} color="#fff" />}
-											</span>
-											<span style={{ fontSize: 15 }} aria-hidden>
-												{flagForLanguageName(langName)}
-											</span>
-											{langName}
-										</button>
-									</div>
-								);
-							})}
-						</div>
-					</div>
-				</div>
-			)}
+			
 			<details
 				className="upload-limits-details"
 				style={{
@@ -2450,7 +2334,7 @@ function TranslateForm({
 						}}
 					>
 						<span style={{ color: "#71717a", fontWeight: 600 }}>
-							Approx. size
+							Approx. length
 						</span>
 						<span
 							style={{
@@ -2459,17 +2343,17 @@ function TranslateForm({
 								textAlign: "right",
 							}}
 						>
-							Typical time
+							Typical processing
 						</span>
-						<span>Under ~10 MB</span>
+						<span>~1–5 min</span>
 						<span style={{ textAlign: "right", whiteSpace: "nowrap" }}>
 							Often 1–5 min
 						</span>
-						<span>~10–25 MB</span>
+						<span>~3–10 min</span>
 						<span style={{ textAlign: "right", whiteSpace: "nowrap" }}>
 							Often 3–10 min
 						</span>
-						<span>~25–40 MB (typical cap)</span>
+						<span>~5–15+ min</span>
 						<span style={{ textAlign: "right", whiteSpace: "nowrap" }}>
 							Often 5–15+ min
 						</span>
@@ -2483,8 +2367,8 @@ function TranslateForm({
 						}}
 					>
 						Uploads in this app are limited to {VIDEO_UPLOAD_MAX_MB} MB. The
-						table is a rough guide for processing time by source size; actual
-						time depends on length, quality, and number of languages.
+						table is a rough guide by video length (minutes); actual time
+						depends on quality, languages, and queue load.
 					</p>
 				</div>
 			</details>
@@ -2583,6 +2467,149 @@ function UpgradePriceModal({ open, onClose }) {
 				</motion.div>
 			)}
 		</AnimatePresence>
+	);
+}
+
+/** Inline hero badges (headline with growth pills + social cluster). */
+function GrowthBadgePillLight() {
+	return (
+		<span
+			style={{
+				display: "inline-flex",
+				alignItems: "center",
+				verticalAlign: "middle",
+				gap: 6,
+				height: 30,
+				paddingLeft: 4,
+				paddingRight: 10,
+				borderRadius: 999,
+				background: "#e4e4e7",
+				margin: "0 0.1em",
+			}}
+		>
+			<span
+				style={{
+					width: 22,
+					height: 22,
+					borderRadius: "50%",
+					background: "#ea580c",
+					display: "inline-flex",
+					alignItems: "center",
+					justifyContent: "center",
+					flexShrink: 0,
+				}}
+			>
+				<TrendingUp size={12} color="#fff" strokeWidth={2.5} aria-hidden />
+			</span>
+			<span
+				className="sans"
+				style={{ fontWeight: 700, fontSize: "0.82em", color: "#18181b" }}
+			>
+				24X
+			</span>
+		</span>
+	);
+}
+
+function GrowthBadgePillOrange() {
+	return (
+		<span
+			style={{
+				display: "inline-flex",
+				alignItems: "center",
+				verticalAlign: "middle",
+				gap: 6,
+				height: 34,
+				paddingLeft: 8,
+				paddingRight: 14,
+				borderRadius: 999,
+				background: "linear-gradient(180deg, #fb923c 0%, #ea580c 100%)",
+				boxShadow: "0 4px 16px rgba(234, 88, 12, 0.38)",
+				margin: "0 0.1em",
+			}}
+		>
+			<TrendingUp size={17} color="#fff" strokeWidth={2.5} aria-hidden />
+			<span className="sans" style={{ fontWeight: 700, fontSize: "0.95em", color: "#fff" }}>
+				24X
+			</span>
+		</span>
+	);
+}
+
+function HeroSparkleIcon() {
+	return (
+		<span
+			style={{
+				display: "inline-flex",
+				alignItems: "center",
+				justifyContent: "center",
+				verticalAlign: "middle",
+				width: 28,
+				height: 28,
+				borderRadius: 8,
+				background: "#18181b",
+				margin: "0 0.08em",
+			}}
+		>
+			<Sparkles size={14} color="#fff" strokeWidth={2.5} aria-hidden />
+		</span>
+	);
+}
+
+function HeroSocialCluster() {
+	const box = {
+		width: 28,
+		height: 28,
+		borderRadius: 8,
+		background: "#fff",
+		border: "1px solid #e4e4e7",
+		display: "inline-flex",
+		alignItems: "center",
+		justifyContent: "center",
+		flexShrink: 0,
+	};
+	return (
+		<span
+			style={{
+				display: "inline-flex",
+				alignItems: "center",
+				gap: 4,
+				verticalAlign: "middle",
+				margin: "0 0.08em",
+			}}
+		>
+			<span style={box} title="X">
+				<svg width="13" height="13" viewBox="0 0 24 24" aria-hidden>
+					<path
+						fill="#18181b"
+						d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
+					/>
+				</svg>
+			</span>
+			<span style={box} title="Instagram Reels">
+				<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
+					<defs>
+						<linearGradient id="heroReelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+							<stop offset="0%" stopColor="#f09433" />
+							<stop offset="45%" stopColor="#e6683c" />
+							<stop offset="100%" stopColor="#bc1888" />
+						</linearGradient>
+					</defs>
+					<rect width="24" height="24" rx="7" fill="url(#heroReelGrad)" />
+					<path
+						fill="#fff"
+						d="M10 7.5v9l7-4.5-7-4.5z"
+						transform="translate(0.5,0)"
+					/>
+				</svg>
+			</span>
+			<span style={{ ...box, border: "1px solid #fecaca" }} title="YouTube Shorts">
+				<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden>
+					<rect width="24" height="24" rx="6" fill="#ff0000" />
+					<path fill="#fff" d="M10 8.5v7l6-3.5-6-3.5z" />
+				</svg>
+			</span>
+		</span>
 	);
 }
 
@@ -2736,7 +2763,7 @@ function Landing() {
 					vaantra<span style={{ color: "#ea580c" }}>.</span>
 				</div>
 				<div style={{ display: "flex", alignItems: "center", gap: 32 }}>
-					{["Features", "Pricing", "FAQ"].map((l) => (
+					{["Features", "Benefits", "Pricing", "FAQ"].map((l) => (
 						<a
 							key={l}
 							href={`#${l.toLowerCase()}`}
@@ -2753,7 +2780,6 @@ function Landing() {
 							{l}
 						</a>
 					))}
-					<style>{`@media(min-width:640px){.md-show{display:block!important}}`}</style>
 					<button
 						onClick={() => setShowLogin(true)}
 						style={{
@@ -2783,18 +2809,12 @@ function Landing() {
 				style={{
 					position: "relative",
 					zIndex: 1,
-					maxWidth: 1100,
+					maxWidth: 1440,
 					margin: "0 auto",
 					padding: "clamp(60px,10vw,100px) clamp(20px,5vw,60px) 80px",
 					overflow: "hidden",
 				}}
 			>
-				<style>{`
-					@keyframes hero-icon-glow {
-						0%, 100% { box-shadow: 0 0 0 0 rgba(234,88,12,0.25), 0 8px 24px rgba(24,24,27,0.06); }
-						50% { box-shadow: 0 0 0 1px rgba(234,88,12,0.35), 0 12px 32px rgba(194,65,12,0.12); }
-					}
-				`}</style>
 				{/* Hero-local mesh — same oranges / neutrals */}
 				<div
 					style={{
@@ -2846,238 +2866,108 @@ function Landing() {
 						}}
 					/>
 				</div>
-
 				<motion.div
-					initial={{ opacity: 0, y: 28 }}
+					className="landing-hero-split"
+					initial={{ opacity: 0, y: 24 }}
 					animate={{ opacity: 1, y: 0 }}
-					transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-					style={{ position: "relative", zIndex: 1 }}
+					transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
 				>
-					<motion.div
-						initial={{ opacity: 0, y: 10 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.55, delay: 0.05 }}
-						style={{
-							display: "flex",
-							alignItems: "center",
-							gap: 12,
-							justifyContent: "center",
-							marginBottom: 20,
-						}}
-					>
-						<motion.div
-							animate={{ scaleX: [0.85, 1, 0.85], opacity: [0.7, 1, 0.7] }}
-							transition={{
-								duration: 4,
-								repeat: Infinity,
-								ease: "easeInOut",
-							}}
+					<div className="landing-hero-copy" style={{ flex: "1 1 340px", minWidth: 0 }}>
+						<motion.h1
+							className="vaantra-font"
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
 							style={{
-								height: 1,
-								width: 36,
-								background: "linear-gradient(90deg, transparent, #ea580c)",
-							}}
-						/>
-						<span
-							className="mono"
-							style={{
-								color: "#ea580c",
-								fontSize: 11,
-								fontWeight: 500,
-								letterSpacing: "0.1em",
-								textTransform: "uppercase",
+								fontSize: "clamp(3.5rem, 12vw, 6.25rem)",
+								lineHeight: 1.02,
+								fontWeight: 700,
+								color: "#18181b",
+								letterSpacing: "-0.04em",
+								marginBottom: "clamp(20px, 3vw, 28px)",
 							}}
 						>
-							AI Video & Voice Translation
-						</span>
-						<motion.div
-							animate={{ scaleX: [0.85, 1, 0.85], opacity: [0.7, 1, 0.7] }}
-							transition={{
-								duration: 4,
-								repeat: Infinity,
-								ease: "easeInOut",
-								delay: 0.5,
-							}}
-							style={{
-								height: 1,
-								width: 36,
-								background: "linear-gradient(90deg, #ea580c, transparent)",
-							}}
-						/>
-					</motion.div>
+							Vaantra<span style={{ color: "#ea580c" }}>.</span>
+						</motion.h1>
 
-					<motion.h1
-						className="vaantra-font"
-						initial={{ opacity: 0, y: 16 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.65, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
-						style={{
-							textAlign: "center",
-							fontSize: "clamp(2.6rem,7vw,5.2rem)",
-							lineHeight: 1.08,
-							fontWeight: 700,
-							color: "#18181b",
-							marginBottom: 20,
-						}}
-					>
-						<motion.span
-							style={{ display: "inline-block" }}
-							animate={{ y: [0, -2, 0] }}
-							transition={{
-								duration: 5,
-								repeat: Infinity,
-								ease: "easeInOut",
-							}}
-						>
-							Your video & voice,
-						</motion.span>
-						<br />
-						<motion.span
+						<motion.h2
+							className="sans landing-hero-h2"
+							initial={{ opacity: 0, y: 16 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.6, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
 							style={{
-								display: "inline-block",
-								color: "#c2410c",
-								fontStyle: "italic",
-							}}
-							animate={{
-								textShadow: [
-									"0 0 0 rgba(234,88,12,0)",
-									"0 0 28px rgba(234,88,12,0.15)",
-									"0 0 0 rgba(234,88,12,0)",
-								],
-							}}
-							transition={{
-								duration: 4,
-								repeat: Infinity,
-								ease: "easeInOut",
+								fontSize: "clamp(1.5rem, 3.8vw, 2.65rem)",
+								lineHeight: 1.22,
+								fontWeight: 700,
+								color: "#27272a",
+								marginBottom: 20,
+								letterSpacing: "-0.02em",
+								maxWidth: 620,
 							}}
 						>
-							every language.
-						</motion.span>
-					</motion.h1>
-
-					<div
-						style={{
-							textAlign: "center",
-							color: "#71717a",
-							fontSize: "clamp(1rem,2vw,1.15rem)",
-							lineHeight: 1.75,
-							maxWidth: 580,
-							margin: "0 auto 0",
-						}}
-					>
-						<p style={{ margin: "0 0 20px" }}>
-							Dub videos or translate audio and text into 90+ languages with
-							voice-cloned output.
-						</p>
+							<span style={{ display: "block" }}>
+								Boost your content <GrowthBadgePillLight /> with
+							</span>
+							<span style={{ display: "block" }}>
+								seamless <HeroSparkleIcon /> audio/video
+							</span>
+							<span style={{ display: "block" }}>
+								translation to uplift your  <HeroSocialCluster />
+							</span>
+							<span style={{ display: "block" }}>
+								social game
+							</span>
+						</motion.h2>
 
 						<div
+							className="landing-hero-sub"
 							style={{
-								display: "flex",
-								justifyContent: "center",
-								alignItems: "center",
-								gap: "clamp(12px,3vw,22px)",
-								marginBottom: 20,
-								flexWrap: "wrap",
+								color: "#71717a",
+								fontSize: "clamp(1rem, 2vw, 1.12rem)",
+								lineHeight: 1.75,
+								maxWidth: 520,
 							}}
 						>
-							{[
-								{ Icon: Video, label: "Video dub" },
-								{ Icon: Headphones, label: "Audio" },
-								{ Icon: Mic2, label: "Voice" },
-								{ Icon: Layers, label: "Parallel" },
-							].map(({ Icon, label }, i) => (
-								<motion.div
-									key={label}
-									initial={{ opacity: 0, y: 14, scale: 0.92 }}
-									animate={{ opacity: 1, y: 0, scale: 1 }}
-									transition={{
-										delay: 0.28 + i * 0.09,
-										duration: 0.45,
-										ease: [0.16, 1, 0.3, 1],
-									}}
-									style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}
-								>
-									<motion.div
-										animate={{ y: [0, -5, 0] }}
-										transition={{
-											duration: 3.2 + i * 0.35,
-											repeat: Infinity,
-											ease: "easeInOut",
-											delay: i * 0.2,
-										}}
-										style={{
-											width: 52,
-											height: 52,
-											borderRadius: 14,
-											background: "rgba(234,88,12,0.1)",
-											border: "1px solid rgba(234,88,12,0.32)",
-											display: "flex",
-											alignItems: "center",
-											justifyContent: "center",
-											animation: "hero-icon-glow 3.5s ease-in-out infinite",
-											animationDelay: `${i * 0.4}s`,
-										}}
-									>
-										<Icon size={22} color="#c2410c" strokeWidth={1.75} aria-hidden />
-									</motion.div>
-									<span
-										className="mono"
-										style={{
-											fontSize: 10,
-											fontWeight: 600,
-											letterSpacing: "0.06em",
-											textTransform: "uppercase",
-											color: "#a1a1aa",
-										}}
-									>
-										{label}
-									</span>
-								</motion.div>
-							))}
+							<p style={{ margin: "0 0 16px" }}>
+								Vaantra translates audio, text, and video into 90+ languages with
+								voice-cloned output.
+							</p>
 						</div>
 
 						<motion.p
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							transition={{ delay: 0.55, duration: 0.5 }}
+							className="landing-hero-trial"
+							initial={{ opacity: 0, y: 6 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: 0.45, duration: 0.45 }}
 							style={{
-								margin: 0,
-								paddingTop: 4,
-								borderTop: "1px solid rgba(234,88,12,0.12)",
-								paddingInline: 8,
+								color: "#c2410c",
+								fontSize: "clamp(0.9rem, 1.8vw, 1rem)",
+								fontWeight: 600,
+								marginTop: 8,
+								marginBottom: 0,
+								maxWidth: 520,
 							}}
 						>
-							Add multiple targets and run several jobs in parallel—upload once,
-							reach the world.
+							10 free translation jobs per month — no card required to try
 						</motion.p>
 					</div>
 
-					<motion.p
-						initial={{ opacity: 0, y: 6 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ delay: 0.62, duration: 0.45 }}
-						style={{
-							textAlign: "center",
-							color: "#c2410c",
-							fontSize: "clamp(0.9rem,1.8vw,1rem)",
-							fontWeight: 600,
-							marginTop: 28,
-							marginBottom: 40,
-							maxWidth: 520,
-							marginLeft: "auto",
-							marginRight: "auto",
-						}}
-					>
-						10 free translation jobs per month — no card required to try
-					</motion.p>
-
-					{/* Demo card */}
 					<motion.div
+						className="landing-hero-form-col"
 						initial={{ opacity: 0, y: 18 }}
 						animate={{ opacity: 1, y: 0 }}
-						transition={{ delay: 0.25, duration: 0.6 }}
-						style={{ maxWidth: 580, margin: "0 auto" }}
+						transition={{ delay: 0.15, duration: 0.55 }}
+						style={{
+							flex: "1 1 min(100%, 440px)",
+							minWidth: 0,
+							maxWidth: 520,
+							width: "100%",
+						}}
 					>
+						<div className="flex justify-end items-start my-2 w-full px-4">
+<img className="h-6" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyOCAyOCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjZDVkNWQ1IiBzdHlsZT0ib3BhY2l0eToxOyI+PHBhdGggIGQ9Ik0xOS40MDEgMy4zNzhhLjc1Ljc1IDAgMCAwLTEuMDIzLS4yOEMxMy4wNzIgNi4xMzIgMTMgMTEuMjY5IDEzIDE0Ljc1djcuNjlsLTQuNzItNC43MmEuNzUuNzUgMCAxIDAtMS4wNiAxLjA2bDYgNmEuNzUuNzUgMCAwIDAgMS4wNiAwbDYtNmEuNzUuNzUgMCAwIDAtMS4wNi0xLjA2bC00LjcyIDQuNzJ2LTcuNjljMC0zLjUxOC4xMjgtNy43OCA0LjYyMi0xMC4zNDlhLjc1Ljc1IDAgMCAwIC4yOC0xLjAyMyIvPjwvc3ZnPg==" />
+							<span className="text-sm text-zinc-400">Try demo</span>
+						</div>
 						<div
 							style={{
 								borderRadius: 20,
@@ -3088,32 +2978,6 @@ function Landing() {
 									"0 24px 64px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)",
 							}}
 						>
-							<div
-								style={{
-									display: "flex",
-									alignItems: "center",
-									gap: 6,
-									marginBottom: 18,
-								}}
-							>
-								{["#ef4444", "#f59e0b", "#22c55e"].map((c, i) => (
-									<div
-										key={i}
-										style={{
-											width: 8,
-											height: 8,
-											borderRadius: "50%",
-											background: c,
-										}}
-									/>
-								))}
-								<span
-									className="mono"
-									style={{ marginLeft: 8, color: "#a1a1aa", fontSize: 11 }}
-								>
-									vaantra.video — try it live
-								</span>
-							</div>
 							<TranslateForm
 								requireAuthOnSubmit
 								onRequireAuth={() => setShowLogin(true)}
@@ -3248,6 +3112,8 @@ function Landing() {
 					</div>
 				</div>
 			</section>
+
+			<BenefitsShortsSection />
 
 			{/* Pricing */}
 			<section

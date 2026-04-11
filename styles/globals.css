@@ -5,6 +5,50 @@
 /* Leaflet CSS for map components */
 @import "leaflet/dist/leaflet.css";
 
+@media(min-width:640px){.md-show{display:block!important}}
+
+.landing-hero-split {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: clamp(36px, 6vw, 52px);
+	position: relative;
+	z-index: 1;
+}
+.landing-hero-copy { text-align: center; }
+.landing-hero-copy .landing-hero-h2 {
+	margin-left: auto;
+	margin-right: auto;
+}
+.landing-hero-copy .landing-hero-sub,
+.landing-hero-copy .landing-hero-trial {
+	margin-left: auto;
+	margin-right: auto;
+}
+.landing-hero-form-col {
+	margin-left: auto;
+	margin-right: auto;
+}
+@media (min-width: 960px) {
+	.landing-hero-split {
+		flex-direction: row;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: clamp(40px, 5vw, 64px);
+	}
+	.landing-hero-copy { text-align: left; }
+	.landing-hero-copy .landing-hero-h2,
+	.landing-hero-copy .landing-hero-sub,
+	.landing-hero-copy .landing-hero-trial {
+		margin-left: 0;
+		margin-right: 0;
+	}
+	.landing-hero-form-col {
+		margin-left: 0;
+		margin-right: 0;
+	}
+}
+
 .blog-content {
 	line-height: 1;
 	color: #3f3f46;
