@@ -4,6 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import LoginModal from "../lib/ui/LoginModal";
 import BenefitsShortsSection from "../app/components/BenefitsShortsSection";
+import LandingMarketingNav from "../app/components/LandingMarketingNav";
+import LandingMarketingFooter from "../app/components/LandingMarketingFooter";
 import { onAuthStateChange } from "../lib/api/auth";
 import {
 	deleteTranslationGroupDoc,
@@ -25,6 +27,12 @@ import {
 	subscribeUserUsage,
 } from "../lib/api/userUsage";
 import { UsagePricingPanel } from "../lib/ui/UsagePricingPanel";
+import {
+	GrowthBadgePillLight,
+	GrowthBadgePillOrange,
+	HeroSparkleIcon,
+	HeroSocialCluster,
+} from "../app/components/LandingHeroBadges";
 import {
 	PRICE_PER_MINUTE_USD,
 	USAGE_MINUTE_STEPS,
@@ -80,8 +88,6 @@ import {
 	Languages,
 	RefreshCw,
 	BarChart2,
-	TrendingUp,
-	Sparkles,
 	ArrowRight,
 	Mail,
 	Copy,
@@ -2470,149 +2476,6 @@ function UpgradePriceModal({ open, onClose }) {
 	);
 }
 
-/** Inline hero badges (headline with growth pills + social cluster). */
-function GrowthBadgePillLight() {
-	return (
-		<span
-			style={{
-				display: "inline-flex",
-				alignItems: "center",
-				verticalAlign: "middle",
-				gap: 6,
-				height: 30,
-				paddingLeft: 4,
-				paddingRight: 10,
-				borderRadius: 999,
-				background: "#e4e4e7",
-				margin: "0 0.1em",
-			}}
-		>
-			<span
-				style={{
-					width: 22,
-					height: 22,
-					borderRadius: "50%",
-					background: "#ea580c",
-					display: "inline-flex",
-					alignItems: "center",
-					justifyContent: "center",
-					flexShrink: 0,
-				}}
-			>
-				<TrendingUp size={12} color="#fff" strokeWidth={2.5} aria-hidden />
-			</span>
-			<span
-				className="sans"
-				style={{ fontWeight: 700, fontSize: "0.82em", color: "#18181b" }}
-			>
-				24X
-			</span>
-		</span>
-	);
-}
-
-function GrowthBadgePillOrange() {
-	return (
-		<span
-			style={{
-				display: "inline-flex",
-				alignItems: "center",
-				verticalAlign: "middle",
-				gap: 6,
-				height: 34,
-				paddingLeft: 8,
-				paddingRight: 14,
-				borderRadius: 999,
-				background: "linear-gradient(180deg, #fb923c 0%, #ea580c 100%)",
-				boxShadow: "0 4px 16px rgba(234, 88, 12, 0.38)",
-				margin: "0 0.1em",
-			}}
-		>
-			<TrendingUp size={17} color="#fff" strokeWidth={2.5} aria-hidden />
-			<span className="sans" style={{ fontWeight: 700, fontSize: "0.95em", color: "#fff" }}>
-				24X
-			</span>
-		</span>
-	);
-}
-
-function HeroSparkleIcon() {
-	return (
-		<span
-			style={{
-				display: "inline-flex",
-				alignItems: "center",
-				justifyContent: "center",
-				verticalAlign: "middle",
-				width: 28,
-				height: 28,
-				borderRadius: 8,
-				background: "#18181b",
-				margin: "0 0.08em",
-			}}
-		>
-			<Sparkles size={14} color="#fff" strokeWidth={2.5} aria-hidden />
-		</span>
-	);
-}
-
-function HeroSocialCluster() {
-	const box = {
-		width: 28,
-		height: 28,
-		borderRadius: 8,
-		background: "#fff",
-		border: "1px solid #e4e4e7",
-		display: "inline-flex",
-		alignItems: "center",
-		justifyContent: "center",
-		flexShrink: 0,
-	};
-	return (
-		<span
-			style={{
-				display: "inline-flex",
-				alignItems: "center",
-				gap: 4,
-				verticalAlign: "middle",
-				margin: "0 0.08em",
-			}}
-		>
-			<span style={box} title="X">
-				<svg width="13" height="13" viewBox="0 0 24 24" aria-hidden>
-					<path
-						fill="#18181b"
-						d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
-					/>
-				</svg>
-			</span>
-			<span style={box} title="Instagram Reels">
-				<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
-					<defs>
-						<linearGradient id="heroReelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-							<stop offset="0%" stopColor="#f09433" />
-							<stop offset="45%" stopColor="#e6683c" />
-							<stop offset="100%" stopColor="#bc1888" />
-						</linearGradient>
-					</defs>
-					<rect width="24" height="24" rx="7" fill="url(#heroReelGrad)" />
-					<path
-						fill="#fff"
-						d="M10 7.5v9l7-4.5-7-4.5z"
-						transform="translate(0.5,0)"
-					/>
-				</svg>
-			</span>
-			<span style={{ ...box, border: "1px solid #fecaca" }} title="YouTube Shorts">
-				<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden>
-					<rect width="24" height="24" rx="6" fill="#ff0000" />
-					<path fill="#fff" d="M10 8.5v7l6-3.5-6-3.5z" />
-				</svg>
-			</span>
-		</span>
-	);
-}
-
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 function Landing() {
 	const [showLogin, setShowLogin] = useState(false);
@@ -2740,69 +2603,7 @@ function Landing() {
 				/>
 			</div>
 
-			{/* Navbar */}
-			<nav
-				style={{
-					position: "sticky",
-					top: 0,
-					zIndex: 100,
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "space-between",
-					padding: "0 clamp(20px, 5vw, 64px)",
-					height: 62,
-					background: "rgba(255,255,255,0.85)",
-					backdropFilter: "blur(18px)",
-					borderBottom: "1px solid rgba(0,0,0,0.06)",
-				}}
-			>
-				<div
-					className="vaantra-font"
-					style={{ fontSize: 22, fontWeight: 700, color: "#18181b" }}
-				>
-					vaantra<span style={{ color: "#ea580c" }}>.</span>
-				</div>
-				<div style={{ display: "flex", alignItems: "center", gap: 32 }}>
-					{["Features", "Benefits", "Pricing", "FAQ"].map((l) => (
-						<a
-							key={l}
-							href={`#${l.toLowerCase()}`}
-							style={{
-								fontSize: 14,
-								color: "#71717a",
-								transition: "color 0.2s",
-								display: "none",
-							}}
-							className="md-show"
-							onMouseEnter={(e) => (e.target.style.color = "#18181b")}
-							onMouseLeave={(e) => (e.target.style.color = "#71717a")}
-						>
-							{l}
-						</a>
-					))}
-					<button
-						onClick={() => setShowLogin(true)}
-						style={{
-							padding: "8px 18px",
-							borderRadius: 10,
-							fontSize: 13,
-							fontWeight: 600,
-							background: "rgba(234,88,12,0.1)",
-							border: "1px solid rgba(234,88,12,0.35)",
-							color: "#c2410c",
-							transition: "background 0.2s",
-						}}
-						onMouseEnter={(e) =>
-							(e.currentTarget.style.background = "rgba(234,88,12,0.18)")
-						}
-						onMouseLeave={(e) =>
-							(e.currentTarget.style.background = "rgba(234,88,12,0.1)")
-						}
-					>
-						Sign in
-					</button>
-				</div>
-			</nav>
+			<LandingMarketingNav onSignIn={() => setShowLogin(true)} />
 
 			{/* Hero */}
 			<section
@@ -3420,62 +3221,7 @@ function Landing() {
 				</div>
 			</section>
 
-			{/* Footer */}
-			<footer
-				style={{
-					borderTop: "1px solid rgba(0,0,0,0.06)",
-					padding: "32px clamp(20px,5vw,64px)",
-					textAlign: "center",
-				}}
-			>
-				<div
-					className="vaantra-font"
-					style={{
-						fontSize: 20,
-						fontWeight: 700,
-						color: "#18181b",
-						marginBottom: 8,
-					}}
-				>
-					vaantra<span style={{ color: "#ea580c" }}>.</span>
-				</div>
-				<p style={{ color: "#a1a1aa", fontSize: 12, marginBottom: 12 }}>
-					© 2026 vaantra.video · All rights reserved
-				</p>
-				<div
-					style={{
-						display: "flex",
-						flexWrap: "wrap",
-						justifyContent: "center",
-						alignItems: "center",
-						gap: 16,
-						fontSize: 13,
-					}}
-				>
-					<a
-						href={X_PROFILE_URL}
-						target="_blank"
-						rel="noopener noreferrer"
-						style={{ color: "#18181b", fontWeight: 500 }}
-					>
-						X (Twitter)
-					</a>
-					<span style={{ color: "#d4d4d8" }}>·</span>
-					<a
-						href={`mailto:${CONTACT_EMAIL}`}
-						style={{
-							display: "inline-flex",
-							alignItems: "center",
-							gap: 6,
-							color: "#18181b",
-							fontWeight: 500,
-						}}
-					>
-						<Mail size={14} style={{ color: "#ea580c" }} />
-						{CONTACT_EMAIL}
-					</a>
-				</div>
-			</footer>
+			<LandingMarketingFooter />
 
 			<LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
 		</div>

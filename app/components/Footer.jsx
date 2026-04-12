@@ -38,6 +38,7 @@ const Footer = () => {
 		Product: [
 			{ href: "/#features", label: "Features" },
 			{ href: "/pricing", label: "Pricing" },
+			{ href: "/login", label: "Login" },
 			{ href: "/blog", label: "Blog" },
 			{ href: "/docs", label: "Documentation" },
 		],

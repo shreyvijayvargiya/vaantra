@@ -1,6 +1,18 @@
+@import url("https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,600;0,700;1,600&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.vaantra-font {
+	font-family: "Lora", Georgia, serif;
+}
+.sans {
+	font-family: "DM Sans", system-ui, sans-serif;
+}
+.mono {
+	font-family: "DM Mono", "Courier New", monospace;
+}
 
 /* Leaflet CSS for map components */
 @import "leaflet/dist/leaflet.css";

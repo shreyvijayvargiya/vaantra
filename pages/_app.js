@@ -40,7 +40,6 @@ const MyApp = ({ Component, pageProps }) => {
 	return (
 		<QueryClientProvider client={queryClient}>
 			{/* PostHog Provider - Session Replays & Product Analytics */}
-			<PostHogProvider>
 				{/* Automatic SEO tags based on route - configured in lib/config/seo.js */}
 				<SEO />
 				{/* Analytics Tracker - tracks once per session */}
@@ -60,7 +59,6 @@ const MyApp = ({ Component, pageProps }) => {
 				/>
 				{/* Vercel Analytics - Web Performance & Visitor Metrics */}
 				<Analytics />
-			</PostHogProvider>
 		</QueryClientProvider>
 	);
 };

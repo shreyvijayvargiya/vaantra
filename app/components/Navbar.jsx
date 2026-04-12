@@ -260,13 +260,13 @@ const Navbar = () => {
 									</AnimatePresence>
 								</div>
 							) : (
-								<button
-									onClick={() => setShowLoginModal(true)}
+								<Link
+									href="/login"
 									className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl text-sm font-medium hover:bg-zinc-800 transition-colors"
 								>
 									<LogIn className="w-4 h-4" />
 									Get Started
-								</button>
+								</Link>
 							)}
 						</div>
 
@@ -363,16 +363,14 @@ const Navbar = () => {
 										</button>
 									</div>
 								) : (
-									<button
-										onClick={() => {
-											setShowLoginModal(true);
-											setIsMobileMenuOpen(false);
-										}}
+									<Link
+										href="/login"
+										onClick={() => setIsMobileMenuOpen(false)}
 										className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl text-sm font-medium hover:bg-zinc-800 transition-colors mt-2"
 									>
 										<LogIn className="w-4 h-4" />
 										Get Started
-									</button>
+									</Link>
 								)}
 							</div>
 						</motion.div>
