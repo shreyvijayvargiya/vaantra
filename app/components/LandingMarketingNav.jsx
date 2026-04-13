@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { onAuthStateChange } from "../../lib/api/auth";
 
 const NAV_LINKS = [
 	{ label: "Features", hash: "features" },
@@ -34,12 +36,28 @@ const signInButtonStyle = {
 	display: "inline-block",
 };
 
+const ghostLinkStyle = {
+	...signInButtonStyle,
+	background: "transparent",
+	border: "1px solid rgba(0,0,0,0.08)",
+	color: "#3f3f46",
+};
+
 /**
- * Landing-style nav: logo, anchor links to home sections, Sign in.
+ * Landing-style nav: logo, anchor links to home sections, Sign in or Account + App.
  * @param {object} props
  * @param {() => void} [props.onSignIn] — if set, Sign in opens modal (home). Otherwise links to `/login`.
  */
 export default function LandingMarketingNav({ onSignIn }) {
+	const [sessionUser, setSessionUser] = useState(null);
+
+	useEffect(() => {
+		const unsub = onAuthStateChange((u) => setSessionUser(u));
+		return () => unsub();
+	}, []);
+
+	const loggedIn = Boolean(sessionUser);
+
 	return (
 		<nav style={navStyle}>
 			<Link
@@ -49,7 +67,15 @@ export default function LandingMarketingNav({ onSignIn }) {
 			>
 				vaantra<span style={{ color: "#ea580c" }}>.</span>
 			</Link>
-			<div style={{ display: "flex", alignItems: "center", gap: 32 }}>
+			<div
+				style={{
+					display: "flex",
+					alignItems: "center",
+					gap: 12,
+					flexWrap: "wrap",
+					justifyContent: "flex-end",
+				}}
+			>
 				{NAV_LINKS.map(({ label, hash }) => (
 					<Link
 						key={hash}
@@ -71,7 +97,40 @@ export default function LandingMarketingNav({ onSignIn }) {
 						{label}
 					</Link>
 				))}
-				{onSignIn ? (
+				{loggedIn ? (
+					<>
+						<Link
+							href="/account"
+							style={{
+								...ghostLinkStyle,
+								display: "inline-block",
+							}}
+							onMouseEnter={(e) => {
+								e.currentTarget.style.background = "rgba(0,0,0,0.04)";
+							}}
+							onMouseLeave={(e) => {
+								e.currentTarget.style.background = "transparent";
+							}}
+						>
+							Account
+						</Link>
+						<Link
+							href="/app"
+							style={{
+								...signInButtonStyle,
+								padding: "8px 16px",
+							}}
+							onMouseEnter={(e) => {
+								e.currentTarget.style.background = "rgba(234,88,12,0.18)";
+							}}
+							onMouseLeave={(e) => {
+								e.currentTarget.style.background = "rgba(234,88,12,0.1)";
+							}}
+						>
+							App
+						</Link>
+					</>
+				) : onSignIn ? (
 					<button
 						type="button"
 						onClick={onSignIn}

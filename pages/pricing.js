@@ -155,7 +155,7 @@ const PricingPage = () => {
 							</h1>
 							<p className="text-lg text-zinc-600 max-w-2xl mx-auto leading-relaxed">
 								Buy translation minutes when you need them. No monthly seat
-								fees—pay for processing time, check out securely with Polar, and
+								fees—pay for processing time, check out securely, and
 								use minutes across video dubbing and voice translation.
 							</p>
 						</div>
@@ -169,7 +169,7 @@ const PricingPage = () => {
 								Translation minutes
 							</h2>
 							<p className="text-sm text-zinc-600 mb-6">
-								Choose a pack, review the USD total, then pay with Polar. Minutes
+								Choose a pack, review the USD total, then pay. Minutes
 								apply to your account for dubbing and voice jobs.
 							</p>
 							<UsagePricingPanel

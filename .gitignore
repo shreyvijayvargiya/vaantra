@@ -5,6 +5,7 @@ yarn-error.lock
 .vercel
 .cursor
 .env.local
+.env
 
 .swc
 package-lock.json

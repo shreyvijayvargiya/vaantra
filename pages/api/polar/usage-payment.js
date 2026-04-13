@@ -1,16 +1,27 @@
 import { verifyFirebaseIdToken } from "../../../lib/api/verifyFirebaseIdToken";
 import {
-	getUsdCentsForMinutes,
+	getUsagePolarFixedPriceRowsForMinutes,
+	normalizeUsageCurrency,
 	USAGE_POLAR_PRODUCT_ID,
-	validateUsageAmountCents,
+	validateUsageAmountMinorUnits,
 } from "../../../lib/utils/usagePricing";
 
 const POLAR_ACCESS_TOKEN = process.env.POLAR_ACCESS_TOKEN;
 const POLAR_API_URL = process.env.POLAR_API_URL || "https://api.polar.sh";
 
 /**
- * POST body: { idToken, minutes, amountCents, currency?: "usd" }
- * Creates a Polar checkout with ad-hoc fixed price for USAGE_POLAR_PRODUCT_ID.
+ * POST body: {
+ *   idToken,
+ *   minutes,
+ *   currency?: "usd" | "inr",
+ *   amountMinorUnits?: number, // USD cents or INR paise (matches `currency`)
+ *   amountCents?: number,       // alias for amountMinorUnits (backward compat; still USD cents when currency is usd)
+ * }
+ * Creates a Polar checkout with ad-hoc fixed prices for USAGE_POLAR_PRODUCT_ID (USD + INR
+ * rows so the org default presentment currency is included — required by Polar).
+ *
+ * Credits are applied when Polar delivers `order.paid` to `/api/polar/webhook`
+ * (subscribe to that event on your webhook endpoint in the Polar dashboard).
  */
 export default async function handler(req, res) {
 	if (req.method !== "POST") {
@@ -22,18 +33,34 @@ export default async function handler(req, res) {
 	}
 
 	try {
-		const { idToken, minutes, amountCents, currency = "usd" } = req.body || {};
+		const { idToken, minutes, amountCents, amountMinorUnits, currency: currencyRaw } =
+			req.body || {};
 		const m = Math.floor(Number(minutes) || 0);
-		const cents = Number(amountCents);
+		const currency = normalizeUsageCurrency(currencyRaw);
+		const amountFromClient =
+			amountMinorUnits != null && amountMinorUnits !== ""
+				? Number(amountMinorUnits)
+				: Number(amountCents);
+
 		if (m <= 0) {
 			return res.status(400).json({ error: "Invalid minutes" });
 		}
+		if (!currency) {
+			return res.status(400).json({
+				error: "Unsupported currency",
+				supported: ["usd", "inr"],
+			});
+		}
+		if (!Number.isFinite(amountFromClient)) {
+			return res.status(400).json({ error: "Invalid amount" });
+		}
 
-		if (!validateUsageAmountCents(m, cents)) {
+		if (!validateUsageAmountMinorUnits(m, amountFromClient, currency)) {
 			return res.status(400).json({ error: "Amount does not match server pricing" });
 		}
 
-		const expected = getUsdCentsForMinutes(m);
+		const priceRows = getUsagePolarFixedPriceRowsForMinutes(m);
+		const price_currency = currency;
 
 		const { uid, email } = await verifyFirebaseIdToken(idToken);
 
@@ -51,20 +78,15 @@ export default async function handler(req, res) {
 			customer_email: email || undefined,
 			success_url: successUrl,
 			return_url: `${origin}/app`,
-			currency: String(currency).toLowerCase(),
+			currency: price_currency,
 			metadata: {
 				firebase_uid: uid,
 				minutes: m,
 				kind: "translate_minutes",
+				checkout_currency: price_currency,
 			},
 			prices: {
-				[productId]: [
-					{
-						amount_type: "fixed",
-						price_amount: expected,
-						price_currency: String(currency).toLowerCase(),
-					},
-				],
+				[productId]: priceRows,
 			},
 		};
 

@@ -17,7 +17,11 @@ import {
 import { USAGE_POLAR_PRODUCT_ID } from "../../../lib/utils/usagePricing";
 
 // Import utility functions
-import { COLLECTIONS, DEFAULTS } from "../../../lib/utils/polar/constants";
+import {
+	COLLECTIONS,
+	DEFAULTS,
+	POLAR_WEBHOOK_EVENT_ORDER_PAID,
+} from "../../../lib/utils/polar/constants";
 import {
 	normalizeDate,
 	getFirestoreDate,
@@ -36,6 +40,9 @@ import {
 // ============================================================================
 // MAIN WEBHOOK HANDLER
 // ============================================================================
+//
+// Usage-minute credits (`users/{uid}.usageMinutesCredited`): subscribe in Polar to
+// POLAR_WEBHOOK_EVENT_ORDER_PAID (`order.paid`) — see handleOrderPaidEvent.
 
 export default async function handler(req, res) {
 	if (req.method !== "POST") {
@@ -82,7 +89,7 @@ export default async function handler(req, res) {
 				await handlePaymentEvent(event);
 				break;
 
-			case "order.paid":
+			case POLAR_WEBHOOK_EVENT_ORDER_PAID:
 				await handleOrderPaidEvent(event);
 				break;
 

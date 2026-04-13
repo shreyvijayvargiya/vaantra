@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import LoginModal from "../lib/ui/LoginModal";
 import BenefitsShortsSection from "../app/components/BenefitsShortsSection";
@@ -38,6 +39,7 @@ import {
 	USAGE_MINUTE_STEPS,
 } from "../lib/utils/usagePricing";
 import {
+	probeAudioDurationSeconds,
 	probeVideoDurationSeconds,
 	secondsToBillableMinutes,
 } from "../lib/utils/videoDuration";
@@ -59,8 +61,6 @@ import {
 	extractVoiceTranslateResponse,
 	extractVoiceTranslateBatchResponse,
 	transcribeAudioBlob,
-	TRANSLATE_LLM_OPTIONS,
-	TRANSLATE_LLM_STORAGE_KEY,
 } from "../lib/translateApi";
 import {
 	Upload,
@@ -96,6 +96,11 @@ import {
 	Download,
 	Mic,
 	Square,
+	CreditCard,
+	ArrowRightIcon,
+	Play,
+	Pause,
+	Maximize2,
 } from "lucide-react";
 
 // ─── Contact & billing (UI only; API later) ───────────────────────────────────
@@ -385,72 +390,57 @@ export const GlobalStyles = () => (
     .upload-limits-details[open] summary .accordion-chevron { transform: rotate(180deg); }
     @keyframes app-skeleton-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
     .app-skeleton-pulse { animation: app-skeleton-pulse 1.1s ease-in-out infinite; }
+    @keyframes landing-cta-border-spin {
+      to { transform: rotate(360deg); }
+    }
+    .landing-hero-cta-shine-wrap {
+      position: relative;
+      display: inline-flex;
+      border-radius: 0.75rem;
+      padding: 2px;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    .landing-hero-cta-shine-wrap::before {
+      content: "";
+      position: absolute;
+      z-index: 0;
+      width: 200%;
+      height: 200%;
+      left: 50%;
+      top: 50%;
+      margin-left: -100%;
+      margin-top: -100%;
+      background: conic-gradient(
+        from 0deg,
+        #ea580c,
+        #fb923c,
+        #fdba74,
+        #fff7ed,
+        #fef3c7,
+        #fed7aa,
+        #f97316,
+        #ea580c,
+        #fb923c
+      );
+      animation: landing-cta-border-spin 2.5s linear infinite;
+    }
+    .landing-hero-cta-shine-btn {
+      position: relative;
+      z-index: 1;
+      border-radius: 0.625rem;
+      border: none !important;
+    }
   `}</style>
 );
 
-/** LLM dropdown for video + voice translate (uses {@link TRANSLATE_LLM_OPTIONS}). */
-function LlmModelSelect({ id, value, onChange }) {
-	return (
-		<div style={{ marginBottom: 12 }}>
-			<label
-				htmlFor={id}
-				style={{
-					display: "block",
-					fontSize: 12,
-					color: "#52525b",
-					marginBottom: 8,
-				}}
-			>
-				Translation model
-			</label>
-			<select
-				id={id}
-				value={value}
-				onChange={(e) => onChange(e.target.value)}
-				style={{
-					width: "100%",
-					padding: "10px 12px",
-					borderRadius: 10,
-					fontSize: 13,
-					fontWeight: 500,
-					background: "#fff",
-					border: "1px solid rgba(0,0,0,0.1)",
-					color: "#18181b",
-					outline: "none",
-					cursor: "pointer",
-					appearance: "none",
-					backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
-					backgroundRepeat: "no-repeat",
-					backgroundPosition: "right 10px center",
-					paddingRight: 36,
-				}}
-				onFocus={(e) => (e.target.style.borderColor = "rgba(234,88,12,0.45)")}
-				onBlur={(e) => (e.target.style.borderColor = "rgba(0,0,0,0.1)")}
-			>
-				{TRANSLATE_LLM_OPTIONS.map((o) => (
-					<option key={o.id} value={o.id}>
-						{o.label}
-						{o.hint ? ` — ${o.hint}` : ""}
-					</option>
-				))}
-			</select>
-			<p
-				style={{
-					fontSize: 11,
-					color: "#a1a1aa",
-					marginTop: 6,
-					lineHeight: 1.45,
-				}}
-			>
-				Gemini is the default when no model is sent. Other options use
-				OpenRouter-style model ids.
-			</p>
-		</div>
-	);
-}
-
 /** Multi-select target languages (checkboxes + search). */
-function LangMultiSelect({ selected, onChange, fullWidth = false }) {
+function LangMultiSelect({
+	selected,
+	onChange,
+	fullWidth = false,
+	lockedLangs = [],
+}) {
 	const [open, setOpen] = useState(false);
 	const [q, setQ] = useState("");
 	const filtered = LANGS.filter((l) =>
@@ -465,6 +455,7 @@ function LangMultiSelect({ selected, onChange, fullWidth = false }) {
 		return () => document.removeEventListener("mousedown", h);
 	}, []);
 	const toggle = (lang) => {
+		if (lockedLangs.includes(lang)) return;
 		if (selected.includes(lang)) onChange(selected.filter((x) => x !== lang));
 		else onChange([...selected, lang]);
 	};
@@ -477,7 +468,8 @@ function LangMultiSelect({ selected, onChange, fullWidth = false }) {
 	return (
 		<div
 			ref={ref}
-			style={{ position: "relative", width: fullWidth ? "100%" : undefined }}
+			style={{ position: "relative"}}
+			className="min-w-48 max-w-56"
 		>
 			<button
 				type="button"
@@ -578,6 +570,7 @@ function LangMultiSelect({ selected, onChange, fullWidth = false }) {
 							}}
 						>
 							{filtered.map((lang) => {
+								const locked = lockedLangs.includes(lang);
 								const on = selected.includes(lang);
 								return (
 									<button
@@ -587,6 +580,7 @@ function LangMultiSelect({ selected, onChange, fullWidth = false }) {
 											e.preventDefault();
 											toggle(lang);
 										}}
+										disabled={locked}
 										style={{
 											width: "100%",
 											display: "flex",
@@ -599,8 +593,11 @@ function LangMultiSelect({ selected, onChange, fullWidth = false }) {
 											background: on ? "rgba(234,88,12,0.08)" : "transparent",
 											transition: "background 0.1s",
 											gap: 10,
+											cursor: locked ? "not-allowed" : "pointer",
+											opacity: locked ? 0.85 : 1,
 										}}
 										onMouseEnter={(e) => {
+											if (locked) return;
 											if (!on)
 												e.currentTarget.style.background = "rgba(0,0,0,0.04)";
 										}}
@@ -863,12 +860,553 @@ function StatusProgress({ status, jobId }) {
 	);
 }
 
+function formatAudioClock(sec) {
+	if (!Number.isFinite(sec) || sec < 0) return "0:00";
+	const m = Math.floor(sec / 60);
+	const s = Math.floor(sec % 60);
+	return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/** Dark chrome + custom controls; matches `VoiceStyleAudioPlayer` styling for video translation. */
+function StudioVideoPlayer({ src, footerLabel = "Video" }) {
+	const videoRef = useRef(null);
+	const [playing, setPlaying] = useState(false);
+	const [duration, setDuration] = useState(0);
+	const [currentTime, setCurrentTime] = useState(0);
+	const [loadError, setLoadError] = useState(false);
+
+	useEffect(() => {
+		const v = videoRef.current;
+		if (!v) return;
+		setLoadError(false);
+		const onTime = () => setCurrentTime(v.currentTime);
+		const onDur = () =>
+			setDuration(Number.isFinite(v.duration) ? v.duration : 0);
+		const onPlay = () => setPlaying(true);
+		const onPause = () => setPlaying(false);
+		const onEnded = () => setPlaying(false);
+		const onErr = () => setLoadError(true);
+		v.addEventListener("timeupdate", onTime);
+		v.addEventListener("loadedmetadata", onDur);
+		v.addEventListener("play", onPlay);
+		v.addEventListener("pause", onPause);
+		v.addEventListener("ended", onEnded);
+		v.addEventListener("error", onErr);
+		return () => {
+			v.removeEventListener("timeupdate", onTime);
+			v.removeEventListener("loadedmetadata", onDur);
+			v.removeEventListener("play", onPlay);
+			v.removeEventListener("pause", onPause);
+			v.removeEventListener("ended", onEnded);
+			v.removeEventListener("error", onErr);
+		};
+	}, [src]);
+
+	const toggle = async () => {
+		const v = videoRef.current;
+		if (!v) return;
+		try {
+			if (v.paused) await v.play();
+			else v.pause();
+		} catch {
+			setPlaying(false);
+		}
+	};
+
+	const seek = (e) => {
+		const v = videoRef.current;
+		if (!v || !duration) return;
+		const rect = e.currentTarget.getBoundingClientRect();
+		const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+		v.currentTime = (x / rect.width) * duration;
+	};
+
+	const requestFullscreen = () => {
+		const v = videoRef.current;
+		if (!v) return;
+		try {
+			if (v.requestFullscreen) void v.requestFullscreen();
+			else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen();
+		} catch {
+			/* ignore */
+		}
+	};
+
+	const pct = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+
+	if (loadError) {
+		return (
+			<p style={{ color: "#a1a1aa", fontSize: 13, margin: 0 }}>
+				Could not load video.
+			</p>
+		);
+	}
+
+	return (
+		<div
+			style={{
+				borderRadius: 16,
+				overflow: "hidden",
+				background:
+					"linear-gradient(145deg, #18181b 0%, #27272a 45%, #1c1917 100%)",
+				border: "1px solid rgba(255,255,255,0.06)",
+				boxShadow:
+					"0 12px 40px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)",
+			}}
+		>
+			<motion.div
+				animate={
+					playing
+						? { boxShadow: "0 0 0 1px rgba(234,88,12,0.35)" }
+						: { boxShadow: "0 0 0 1px rgba(255,255,255,0.04)" }
+				}
+				transition={{ duration: 0.35 }}
+				style={{
+					borderRadius: 12,
+					overflow: "hidden",
+					position: "relative",
+					background: "#000",
+					aspectRatio: "16/9",
+					maxHeight: 320,
+					width: "100%",
+				}}
+			>
+				<video
+					ref={videoRef}
+					src={src}
+					playsInline
+					preload="metadata"
+					style={{
+						width: "100%",
+						height: "100%",
+						objectFit: "contain",
+						display: "block",
+						cursor: "pointer",
+					}}
+					onClick={() => void toggle()}
+				/>
+				{!playing && (
+					<div
+						style={{
+							position: "absolute",
+							inset: 0,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							pointerEvents: "none",
+							zIndex: 1,
+						}}
+					>
+						<motion.button
+							type="button"
+							aria-label="Play"
+							initial={{ scale: 0.92 }}
+							animate={{ scale: 1 }}
+							onClick={(e) => {
+								e.stopPropagation();
+								void toggle();
+							}}
+							style={{
+								pointerEvents: "auto",
+								width: 64,
+								height: 64,
+								borderRadius: "50%",
+								border: "none",
+								background:
+									"linear-gradient(145deg, #f97316, #ea580c)",
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								color: "#fff",
+								boxShadow: "0 12px 40px rgba(234,88,12,0.45)",
+								cursor: "pointer",
+							}}
+						>
+							<Play
+								size={28}
+								strokeWidth={2.2}
+								color="currentColor"
+								style={{ marginLeft: 4 }}
+							/>
+						</motion.button>
+					</div>
+				)}
+				<div
+					style={{
+						position: "absolute",
+						bottom: 0,
+						left: 0,
+						right: 0,
+						zIndex: 4,
+						padding: "10px 12px",
+						background:
+							"linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.75) 40%, rgba(0,0,0,0.92) 100%)",
+					}}
+					onClick={(e) => e.stopPropagation()}
+					onKeyDown={(e) => e.stopPropagation()}
+					role="presentation"
+				>
+					<div
+						style={{
+							display: "flex",
+							alignItems: "center",
+							gap: 10,
+						}}
+					>
+						<motion.button
+							type="button"
+							aria-label={playing ? "Pause" : "Play"}
+							onClick={() => void toggle()}
+							whileHover={{ scale: 1.06 }}
+							whileTap={{ scale: 0.94 }}
+							style={{
+								width: 40,
+								height: 40,
+								borderRadius: "50%",
+								border: "none",
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								flexShrink: 0,
+								background: "rgba(255,255,255,0.12)",
+								color: "#fff",
+								cursor: "pointer",
+							}}
+						>
+							{playing ? (
+								<Pause size={18} strokeWidth={2.4} />
+							) : (
+								<Play size={18} strokeWidth={2.4} style={{ marginLeft: 2 }} />
+							)}
+						</motion.button>
+						<button
+							type="button"
+							onClick={seek}
+							style={{
+								flex: 1,
+								minWidth: 0,
+								padding: 0,
+								border: "none",
+								background: "transparent",
+								cursor: "pointer",
+								borderRadius: 4,
+							}}
+						>
+							<div
+								style={{
+									height: 5,
+									borderRadius: 3,
+									background: "rgba(255,255,255,0.15)",
+									overflow: "hidden",
+								}}
+							>
+								<div
+									style={{
+										height: "100%",
+										width: `${pct}%`,
+										borderRadius: 3,
+										background:
+											"linear-gradient(90deg, #fb923c, #ea580c, #f97316)",
+										boxShadow: "0 0 10px rgba(234,88,12,0.45)",
+									}}
+								/>
+							</div>
+						</button>
+						<span
+							style={{
+								fontSize: 11,
+								fontFamily: "'DM Mono', monospace",
+								color: "rgba(255,255,255,0.85)",
+								flexShrink: 0,
+								whiteSpace: "nowrap",
+							}}
+						>
+							{formatAudioClock(currentTime)} / {formatAudioClock(duration)}
+						</span>
+						<button
+							type="button"
+							aria-label="Fullscreen"
+							onClick={requestFullscreen}
+							style={{
+								width: 36,
+								height: 36,
+								borderRadius: 8,
+								border: "none",
+								background: "rgba(255,255,255,0.08)",
+								color: "rgba(255,255,255,0.9)",
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								cursor: "pointer",
+								flexShrink: 0,
+							}}
+						>
+							<Maximize2 size={16} strokeWidth={2} />
+						</button>
+					</div>
+				</div>
+			</motion.div>
+			
+		</div>
+	);
+}
+
+/** Dark, Spotify-inspired player with animated waveform bars (voice translation). */
+function VoiceStyleAudioPlayer({ src }) {
+	const audioRef = useRef(null);
+	const [playing, setPlaying] = useState(false);
+	const [duration, setDuration] = useState(0);
+	const [currentTime, setCurrentTime] = useState(0);
+	const [loadError, setLoadError] = useState(false);
+
+	useEffect(() => {
+		const a = audioRef.current;
+		if (!a) return;
+		setLoadError(false);
+		const onTime = () => setCurrentTime(a.currentTime);
+		const onDur = () => setDuration(Number.isFinite(a.duration) ? a.duration : 0);
+		const onEnded = () => setPlaying(false);
+		const onPlay = () => setPlaying(true);
+		const onPause = () => setPlaying(false);
+		const onError = () => setLoadError(true);
+		a.addEventListener("timeupdate", onTime);
+		a.addEventListener("loadedmetadata", onDur);
+		a.addEventListener("ended", onEnded);
+		a.addEventListener("play", onPlay);
+		a.addEventListener("pause", onPause);
+		a.addEventListener("error", onError);
+		return () => {
+			a.removeEventListener("timeupdate", onTime);
+			a.removeEventListener("loadedmetadata", onDur);
+			a.removeEventListener("ended", onEnded);
+			a.removeEventListener("play", onPlay);
+			a.removeEventListener("pause", onPause);
+			a.removeEventListener("error", onError);
+		};
+	}, [src]);
+
+	const toggle = async () => {
+		const a = audioRef.current;
+		if (!a) return;
+		try {
+			if (a.paused) await a.play();
+			else a.pause();
+		} catch {
+			setPlaying(false);
+		}
+	};
+
+	const seek = (e) => {
+		const a = audioRef.current;
+		if (!a || !duration) return;
+		const rect = e.currentTarget.getBoundingClientRect();
+		const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+		a.currentTime = (x / rect.width) * duration;
+	};
+
+	const pct = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+	const bars = 16;
+
+	if (loadError) {
+		return (
+			<p style={{ color: "#a1a1aa", fontSize: 13, margin: 0 }}>
+				Could not load audio.
+			</p>
+		);
+	}
+
+	return (
+		<div
+			style={{
+				borderRadius: 16,
+				overflow: "hidden",
+				background:
+					"linear-gradient(145deg, #18181b 0%, #27272a 45%, #1c1917 100%)",
+				border: "1px solid rgba(255,255,255,0.06)",
+				boxShadow: "0 12px 40px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)",
+				padding: "14px 16px 16px",
+			}}
+		>
+			<audio ref={audioRef} src={src} preload="metadata" />
+			<div
+				style={{
+					display: "flex",
+					alignItems: "center",
+					gap: 14,
+				}}
+			>
+				<motion.button
+					type="button"
+					onClick={() => void toggle()}
+					aria-label={playing ? "Pause" : "Play"}
+					whileHover={{ scale: 1.06 }}
+					whileTap={{ scale: 0.94 }}
+					style={{
+						width: 52,
+						height: 52,
+						borderRadius: "50%",
+						border: "none",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						flexShrink: 0,
+						background:
+							playing
+								? "linear-gradient(145deg, #f97316, #ea580c)"
+								: "linear-gradient(145deg, #3f3f46, #27272a)",
+						color: "#fff",
+						boxShadow: playing
+							? "0 8px 24px rgba(234,88,12,0.45)"
+							: "0 4px 14px rgba(0,0,0,0.35)",
+						cursor: "pointer",
+					}}
+				>
+					{playing ? (
+						<Pause size={22} strokeWidth={2.4} color="currentColor" />
+					) : (
+						<Play
+							size={22}
+							strokeWidth={2.4}
+							color="currentColor"
+							style={{ marginLeft: 3 }}
+						/>
+					)}
+				</motion.button>
+
+				<div
+					style={{
+						flex: 1,
+						minWidth: 0,
+						display: "flex",
+						flexDirection: "column",
+						gap: 10,
+					}}
+				>
+					<div
+						style={{
+							display: "flex",
+							alignItems: "flex-end",
+							justifyContent: "center",
+							gap: 3,
+							height: 36,
+							padding: "0 4px",
+						}}
+					>
+						{Array.from({ length: bars }, (_, i) => (
+							<motion.div
+								key={i}
+								animate={
+									playing
+										? {
+												height: [
+													6,
+													10 + (i % 5) * 5,
+													14,
+													8 + (i % 7) * 4,
+													22 + (i % 4) * 2,
+													6,
+												],
+											}
+										: { height: 5 }
+								}
+								transition={
+									playing
+										? {
+												repeat: Infinity,
+												duration: 0.85 + (i % 5) * 0.08,
+												ease: "easeInOut",
+												delay: i * 0.04,
+											}
+										: { duration: 0.25 }
+								}
+								style={{
+									width: 3,
+									borderRadius: 2,
+									background: playing
+										? "linear-gradient(180deg, #fef3c7, #ea580c)"
+										: "rgba(255,255,255,0.12)",
+									alignSelf: "flex-end",
+								}}
+							/>
+						))}
+					</div>
+
+					<button
+						type="button"
+						onClick={seek}
+						style={{
+							width: "100%",
+							padding: 0,
+							border: "none",
+							background: "transparent",
+							cursor: "pointer",
+							borderRadius: 4,
+						}}
+					>
+						<div
+							style={{
+								height: 5,
+								borderRadius: 3,
+								background: "rgba(255,255,255,0.1)",
+								overflow: "hidden",
+							}}
+						>
+							<motion.div
+								style={{
+									height: "100%",
+									width: `${pct}%`,
+									borderRadius: 3,
+									background:
+										"linear-gradient(90deg, #fb923c, #ea580c, #f97316)",
+									boxShadow: "0 0 12px rgba(234,88,12,0.5)",
+								}}
+							/>
+						</div>
+					</button>
+
+					<div
+						style={{
+							display: "flex",
+							justifyContent: "space-between",
+							alignItems: "center",
+							fontSize: 11,
+							fontFamily: "'DM Mono', monospace",
+							color: "rgba(255,255,255,0.45)",
+							letterSpacing: "0.02em",
+						}}
+					>
+						<span>{formatAudioClock(currentTime)}</span>
+						<span
+							style={{
+								display: "inline-flex",
+								alignItems: "center",
+								gap: 5,
+								color: "rgba(255,255,255,0.35)",
+								fontSize: 10,
+								textTransform: "uppercase",
+								letterSpacing: "0.08em",
+							}}
+						>
+							<Headphones size={12} aria-hidden />
+							Now playing
+						</span>
+						<span>{formatAudioClock(duration)}</span>
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+}
+
 function CopyTextBlock({
 	label,
 	text,
 	audioSrc,
 	audioDownloadName,
 	audioPreviewLabel,
+	animatedAudio = false,
+	/** When false, header download still works but no player under the label (e.g. voice detail has a main player). */
+	showInlineAudio = true,
 }) {
 	const [copied, setCopied] = useState(false);
 	return (
@@ -927,7 +1465,7 @@ function CopyTextBlock({
 					) : null}
 				</div>
 			</div>
-			{audioSrc ? (
+			{audioSrc && showInlineAudio ? (
 				<div style={{ marginBottom: 10 }}>
 					{audioPreviewLabel ? (
 						<p
@@ -941,14 +1479,18 @@ function CopyTextBlock({
 							{audioPreviewLabel}
 						</p>
 					) : null}
-					<audio
-						controls
-						src={audioSrc}
-						preload="metadata"
-						style={{ width: "100%", height: 40, borderRadius: 8 }}
-					>
-						Your browser does not support audio playback.
-					</audio>
+					{animatedAudio ? (
+						<VoiceStyleAudioPlayer src={audioSrc} />
+					) : (
+						<audio
+							controls
+							src={audioSrc}
+							preload="metadata"
+							style={{ width: "100%", height: 40, borderRadius: 8 }}
+						>
+							Your browser does not support audio playback.
+						</audio>
+					)}
 				</div>
 			) : null}
 			<textarea
@@ -1130,24 +1672,6 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 	const speechFinalRef = useRef("");
 	const textAtRecordStartRef = useRef("");
 	const speechHeardRef = useRef(false);
-	const [llmChoice, setLlmChoice] = useState(() => {
-		if (typeof window === "undefined") return "gemini";
-		try {
-			const s = localStorage.getItem(TRANSLATE_LLM_STORAGE_KEY);
-			if (s && TRANSLATE_LLM_OPTIONS.some((o) => o.id === s)) return s;
-		} catch {
-			/* ignore */
-		}
-		return "gemini";
-	});
-
-	useEffect(() => {
-		try {
-			localStorage.setItem(TRANSLATE_LLM_STORAGE_KEY, llmChoice);
-		} catch {
-			/* ignore */
-		}
-	}, [llmChoice]);
 
 	useEffect(() => {
 		return () => {
@@ -1309,8 +1833,6 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 		setErr(null);
 		setResults(null);
 		const url = getVoiceTranslatePostUrl();
-		const llmOpt = TRANSLATE_LLM_OPTIONS.find((o) => o.id === llmChoice);
-		const llmModel = llmOpt?.apiValue ?? null;
 		try {
 			let res;
 			if (hasAudio) {
@@ -1324,10 +1846,6 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 				fd.append("languages", JSON.stringify(langs));
 				fd.append("include_audio", "true");
 				if (hasText) fd.append("text", text.trim());
-				if (llmModel) {
-					fd.append("llm_model", llmModel);
-					fd.append("model", llmModel);
-				}
 				const auth = await getTranslateAuthHeaders();
 				res = await fetch(url, {
 					method: "POST",
@@ -1345,7 +1863,6 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 						text: text.trim(),
 						languages: langs,
 						include_audio: true,
-						...(llmModel ? { llm_model: llmModel, model: llmModel } : {}),
 					}),
 				});
 			}
@@ -1399,6 +1916,7 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 					jobs,
 					createdAt: new Date().toISOString(),
 					sourceVideoUrl: null,
+					sourceText: hasText ? text.trim() : null,
 				});
 			}
 		} catch (e) {
@@ -1547,11 +2065,6 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 					</span>
 				)}
 			</div>
-			<LlmModelSelect
-				id="voice-translate-llm-select"
-				value={llmChoice}
-				onChange={setLlmChoice}
-			/>
 			<label
 				style={{
 					display: "block",
@@ -1643,17 +2156,9 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 							</p>
 							{r.audioUrl ? (
 								<>
-									<audio
-										controls
-										src={r.audioUrl}
-										preload="metadata"
-										style={{
-											width: "100%",
-											height: 40,
-											borderRadius: 8,
-											marginBottom: 8,
-										}}
-									/>
+									<div style={{ marginBottom: 12 }}>
+										<VoiceStyleAudioPlayer src={r.audioUrl} />
+									</div>
 									<a
 										href={r.audioUrl}
 										download
@@ -1734,11 +2239,7 @@ function NewTranslationPanel({ addVideo }) {
 				</>
 			) : (
 				<>
-					<p style={{ fontSize: 14, color: "#71717a", marginBottom: 16 }}>
-						Convert text or audio into one or more languages—transcript and
-						spoken audio. Jobs are saved to the same history as video
-						translations (browser storage).
-					</p>
+					
 					<VoiceTranslateForm compact onVoiceJobCreated={addVideo} />
 				</>
 			)}
@@ -1765,16 +2266,6 @@ function TranslateForm({
 	const [localTrack, setLocalTrack] = useState(null);
 	const [drag, setDrag] = useState(false);
 	const [fileError, setFileError] = useState(null);
-	const [llmChoice, setLlmChoice] = useState(() => {
-		if (typeof window === "undefined") return "gemini";
-		try {
-			const s = localStorage.getItem(TRANSLATE_LLM_STORAGE_KEY);
-			if (s && TRANSLATE_LLM_OPTIONS.some((o) => o.id === s)) return s;
-		} catch {
-			/* ignore */
-		}
-		return "gemini";
-	});
 	const fileRef = useRef();
 	const localTrackRef = useRef(null);
 	localTrackRef.current = localTrack;
@@ -1789,14 +2280,6 @@ function TranslateForm({
 		setFile(null);
 		setFileError(null);
 	}, [prefillVideoUrl, lockPrefilledUrl]);
-
-	useEffect(() => {
-		try {
-			localStorage.setItem(TRANSLATE_LLM_STORAGE_KEY, llmChoice);
-		} catch {
-			/* ignore */
-		}
-	}, [llmChoice]);
 
 	const pickVideoFile = (f) => {
 		if (!f) return;
@@ -1886,8 +2369,6 @@ function TranslateForm({
 		setBusy(true);
 		const postUrl = getTranslatePostUrl();
 		const langs = [...selectedLangs].sort();
-		const llmOpt = TRANSLATE_LLM_OPTIONS.find((o) => o.id === llmChoice);
-		const llmModel = llmOpt?.apiValue ?? null;
 		const groupId =
 			typeof crypto !== "undefined" && crypto.randomUUID
 				? crypto.randomUUID()
@@ -1901,10 +2382,6 @@ function TranslateForm({
 							video_url: url.trim(),
 							output_language: lang,
 						};
-						if (llmModel) {
-							body.llm_model = llmModel;
-							body.model = llmModel;
-						}
 						res = await fetch(postUrl, {
 							method: "POST",
 							headers: {
@@ -1917,10 +2394,6 @@ function TranslateForm({
 						const fd = new FormData();
 						fd.append("video", file);
 						fd.append("output_language", lang);
-						if (llmModel) {
-							fd.append("llm_model", llmModel);
-							fd.append("model", llmModel);
-						}
 						res = await fetch(postUrl, {
 							method: "POST",
 							headers: await getTranslateAuthHeaders(),
@@ -2167,12 +2640,6 @@ function TranslateForm({
 							{fileError}
 						</p>
 					)}
-
-					<LlmModelSelect
-						id="video-translate-llm-select"
-						value={llmChoice}
-						onChange={setLlmChoice}
-					/>
 
 					{/* Language + Submit row */}
 					<div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -2428,11 +2895,10 @@ function UpgradePriceModal({ open, onClose }) {
 								marginBottom: 6,
 							}}
 						>
-							Add translation minutes
+							Pay per use
 						</h3>
-						<p style={{ fontSize: 14, color: "#71717a", marginBottom: 20 }}>
-							Choose how many minutes of video you want to translate. Checkout
-							is powered by Polar.
+						<p style={{ fontSize: 14, color: "#71717a", marginBottom: 10 }}>
+							Choose how many minutes of video you want to translate and pay for it.
 						</p>
 						<UsagePricingPanel
 							successReturnPath="/app"
@@ -2453,22 +2919,7 @@ function UpgradePriceModal({ open, onClose }) {
 							<Mail size={16} />
 							Contact for volume or API
 						</a>
-						<button
-							type="button"
-							onClick={onClose}
-							style={{
-								width: "100%",
-								padding: "11px",
-								borderRadius: 10,
-								fontSize: 14,
-								fontWeight: 600,
-								background: "rgba(0,0,0,0.06)",
-								color: "#52525b",
-								marginTop: 14,
-							}}
-						>
-							Close
-						</button>
+						
 					</motion.div>
 				</motion.div>
 			)}
@@ -2480,6 +2931,9 @@ function UpgradePriceModal({ open, onClose }) {
 function Landing() {
 	const [showLogin, setShowLogin] = useState(false);
 	const [faqOpen, setFaqOpen] = useState(null);
+	const router = useRouter();
+
+
 
 	const features = [
 		{
@@ -2735,23 +3189,26 @@ function Landing() {
 							</p>
 						</div>
 
-						<motion.p
-							className="landing-hero-trial"
-							initial={{ opacity: 0, y: 6 }}
+						<motion.div
+							className="landing-hero-cta-shine-wrap"
+							initial={{ opacity: 0, y: 8 }}
 							animate={{ opacity: 1, y: 0 }}
-							transition={{ delay: 0.45, duration: 0.45 }}
-							style={{
-								color: "#c2410c",
-								fontSize: "clamp(0.9rem, 1.8vw, 1rem)",
-								fontWeight: 600,
-								marginTop: 8,
-								marginBottom: 0,
-								maxWidth: 520,
-							}}
+							transition={{ duration: 0.45, delay: 0.12 }}
 						>
-							10 free translation jobs per month — no card required to try
-						</motion.p>
+							<motion.button
+								type="button"
+								onClick={() => router.push("/login")}
+								className="landing-hero-cta-shine-btn flex items-center gap-2 py-2 px-4 text-zinc-50 text-lg font-semibold group bg-gradient-to-r from-orange-400 to-orange-600 hover:from-orange-500 hover:to-orange-700 hover:shadow-xl transition-all duration-200"
+								whileHover={{ scale: 1.02 }}
+								whileTap={{ scale: 0.98 }}
+							>
+								Get Started
+								<ArrowRightIcon className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
+							</motion.button>
+						</motion.div>
+
 					</div>
+				
 
 					<motion.div
 						className="landing-hero-form-col"
@@ -2765,9 +3222,20 @@ function Landing() {
 							width: "100%",
 						}}
 					>
-						<div className="flex justify-end items-start my-2 w-full px-4">
-<img className="h-6" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyOCAyOCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjZDVkNWQ1IiBzdHlsZT0ib3BhY2l0eToxOyI+PHBhdGggIGQ9Ik0xOS40MDEgMy4zNzhhLjc1Ljc1IDAgMCAwLTEuMDIzLS4yOEMxMy4wNzIgNi4xMzIgMTMgMTEuMjY5IDEzIDE0Ljc1djcuNjlsLTQuNzItNC43MmEuNzUuNzUgMCAxIDAtMS4wNiAxLjA2bDYgNmEuNzUuNzUgMCAwIDAgMS4wNiAwbDYtNmEuNzUuNzUgMCAwIDAtMS4wNi0xLjA2bC00LjcyIDQuNzJ2LTcuNjljMC0zLjUxOC4xMjgtNy43OCA0LjYyMi0xMC4zNDlhLjc1Ljc1IDAgMCAwIC4yOC0xLjAyMyIvPjwvc3ZnPg==" />
-							<span className="text-sm text-zinc-400">Try demo</span>
+						<div className="flex justify-between items-start my-2 w-full px-2">
+						<motion.button
+							className="landing-hero-trial w-fit p-1 text-xs border border-orange-400 rounded-xl bg-gradient-to-r from-orange-50 to-orange-100"
+							initial={{ opacity: 0, y: 6 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: 0.45, duration: 0.45 }}
+							onClick={() => router.push("/login")}
+						>
+							Start with free 10 minutes credits
+						</motion.button>
+						<div className="flex items-center gap-2">
+						<img className="h-6" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyOCAyOCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjZDVkNWQ1IiBzdHlsZT0ib3BhY2l0eToxOyI+PHBhdGggIGQ9Ik0xOS40MDEgMy4zNzhhLjc1Ljc1IDAgMCAwLTEuMDIzLS4yOEMxMy4wNzIgNi4xMzIgMTMgMTEuMjY5IDEzIDE0Ljc1djcuNjlsLTQuNzItNC43MmEuNzUuNzUgMCAxIDAtMS4wNiAxLjA2bDYgNmEuNzUuNzUgMCAwIDAgMS4wNiAwbDYtNmEuNzUuNzUgMCAwIDAtMS4wNi0xLjA2bC00LjcyIDQuNzJ2LTcuNjljMC0zLjUxOC4xMjgtNy43OCA0LjYyMi0xMC4zNDlhLjc1Ljc1IDAgMCAwIC4yOC0xLjAyMyIvPjwvc3ZnPg==" />
+						<span className="text-sm text-zinc-400">Try demo</span>
+						</div>
 						</div>
 						<div
 							style={{
@@ -2784,6 +3252,7 @@ function Landing() {
 								onRequireAuth={() => setShowLogin(true)}
 							/>
 						</div>
+				
 					</motion.div>
 				</motion.div>
 
@@ -3379,6 +3848,8 @@ export function Dashboard({ user, onLogout }) {
 	const [storageHydrated, setStorageHydrated] = useState(false);
 	const [selected, setSelected] = useState(null);
 	const [detailTab, setDetailTab] = useState(0);
+	const [stagedLangs, setStagedLangs] = useState([]);
+	const [appendBusy, setAppendBusy] = useState(null);
 	const [editingSidebarId, setEditingSidebarId] = useState(null);
 	const [editingName, setEditingName] = useState("");
 	const [viewNew, setViewNew] = useState(true);
@@ -3483,9 +3954,16 @@ export function Dashboard({ user, onLogout }) {
 		prevRouteVideoIdRef.current = routeVideoId;
 
 		if (routeVideoId) {
-			const v = videos.find((x) => x.id === routeVideoId);
+			// Prefer list data; fall back to in-memory selection when the React Query list
+			// has not caught up yet right after `addVideo` + `router.push` (avoids bouncing to /app).
+			const fromList = videos.find((x) => x.id === routeVideoId);
+			const fromRef =
+				selectedRef.current?.id === routeVideoId
+					? selectedRef.current
+					: null;
+			const v = fromList ?? fromRef;
 			if (v) {
-				setSelected(v);
+				setSelected(fromList ?? fromRef);
 				setViewNew(false);
 			} else {
 				setSelected(null);
@@ -3500,11 +3978,30 @@ export function Dashboard({ user, onLogout }) {
 		}
 	}, [routeVideoId, videos, router, pageReady]);
 
+	const isVoiceTranslationGroup = useMemo(() => {
+		if (!selected?.jobs?.length) return false;
+		return selected.jobs.some((j) => String(j.id).startsWith("voice_"));
+	}, [selected?.jobs]);
+
+	const jobsForTabs = useMemo(() => {
+		if (!selected) return [];
+		const real = selected.jobs || [];
+		const staged = stagedLangs.map((lang) => ({
+			id: `staged_${lang}`,
+			lang,
+			status: "staged",
+			isStaged: true,
+			createdAt: new Date().toISOString(),
+		}));
+		return [...real, ...staged];
+	}, [selected, stagedLangs]);
+
 	const selectedDetail = useMemo(() => {
 		if (!selected) return null;
-		const jobs = selected.jobs || [];
+		const jobs = jobsForTabs;
 		if (!jobs.length) return null;
-		const agg = aggregateJobStatus(jobs);
+		const realJobs = jobs.filter((j) => !j.isStaged);
+		const agg = realJobs.length ? aggregateJobStatus(realJobs) : "queued";
 		const idx = Math.min(detailTab, Math.max(0, jobs.length - 1));
 		return {
 			jobs,
@@ -3513,16 +4010,18 @@ export function Dashboard({ user, onLogout }) {
 			j: jobs[idx],
 			hasTabs: jobs.length > 1,
 		};
-	}, [selected, selected?.jobs, detailTab]);
-
-	const isVoiceTranslationGroup = useMemo(() => {
-		if (!selected?.jobs?.length) return false;
-		return selected.jobs.some((j) => String(j.id).startsWith("voice_"));
-	}, [selected?.jobs]);
+	}, [selected, jobsForTabs, detailTab]);
 
 	useEffect(() => {
 		setDetailTab(0);
+		setStagedLangs([]);
 	}, [selected?.id]);
+
+	useEffect(() => {
+		setDetailTab((d) =>
+			Math.min(d, Math.max(0, jobsForTabs.length - 1)),
+		);
+	}, [jobsForTabs.length]);
 
 	const usedThisMonth = useMemo(() => {
 		const now = new Date();
@@ -3554,6 +4053,74 @@ export function Dashboard({ user, onLogout }) {
 
 	const isMobile = windowW < 720;
 
+	/** Bill usage when a job reaches `done` (video via SSE/updateJob; voice often created already done). */
+	const billUsageForJobId = useCallback(
+		async (jobId, groupId) => {
+			if (!uid || !jobId) return;
+			if (recordedJobIdsRef.current.has(jobId)) return;
+			const list =
+				queryClient.getQueryData(QUERY_KEY_TRANSLATION_GROUPS(uid)) || [];
+			const group = list.find(
+				(g) =>
+					(groupId && g.id === groupId) ||
+					g.jobs?.some((j) => j.id === jobId),
+			);
+			const job = group?.jobs?.find((j) => j.id === jobId);
+			if (!job || job.status !== "done") return;
+			recordedJobIdsRef.current.add(jobId);
+			const isVoice = String(job.id).startsWith("voice_");
+			let minutes = job.durationMinutes;
+			if (minutes == null) {
+				if (isVoice && job.resultUrl) {
+					const sec = await probeAudioDurationSeconds(job.resultUrl);
+					minutes = secondsToBillableMinutes(sec);
+					if (group) {
+						patchVideos((prev) =>
+							prev.map((g) => {
+								if (g.id !== group.id) return g;
+								const jobs = g.jobs.map((j) =>
+									j.id === jobId ? { ...j, durationMinutes: minutes } : j,
+								);
+								const out = { ...g, jobs };
+								void upsertTranslationGroup(uid, out);
+								return out;
+							}),
+						);
+					}
+				} else if (!isVoice && job.sourceVideoUrl) {
+					const sec = await probeVideoDurationSeconds(job.sourceVideoUrl);
+					minutes = secondsToBillableMinutes(sec);
+					if (group) {
+						patchVideos((prev) =>
+							prev.map((g) => {
+								if (g.id !== group.id) return g;
+								const jobs = g.jobs.map((j) =>
+									j.id === jobId ? { ...j, durationMinutes: minutes } : j,
+								);
+								const out = { ...g, jobs };
+								void upsertTranslationGroup(uid, out);
+								return out;
+							}),
+						);
+					}
+				} else {
+					minutes = 1;
+				}
+			}
+			if (typeof minutes !== "number" || minutes <= 0) minutes = 1;
+			try {
+				if (!auth.currentUser?.uid) {
+					recordedJobIdsRef.current.delete(jobId);
+					return;
+				}
+				await incrementUserUsageMinutesClient(uid, minutes);
+			} catch {
+				recordedJobIdsRef.current.delete(jobId);
+			}
+		},
+		[uid, queryClient, patchVideos],
+	);
+
 	const addVideo = useCallback(
 		(payload) => {
 			const groupId = payload.id || `grp_${Date.now()}`;
@@ -3579,6 +4146,8 @@ export function Dashboard({ user, onLogout }) {
 				createdAt: payload.createdAt || new Date().toISOString(),
 				sourceVideoUrl:
 					payload.sourceVideoUrl ?? jobs[0]?.sourceVideoUrl ?? null,
+				sourceText:
+					typeof payload.sourceText === "string" ? payload.sourceText : null,
 				type: inferTranslationGroupType({
 					...payload,
 					id: groupId,
@@ -3592,8 +4161,376 @@ export function Dashboard({ user, onLogout }) {
 			setSelected(v);
 			setViewNew(false);
 			router.push(`/app/${encodeURIComponent(v.id)}`);
+			queueMicrotask(() => {
+				for (const job of v.jobs || []) {
+					if (job.status === "done") {
+						void billUsageForJobId(job.id, v.id);
+					}
+				}
+			});
 		},
-		[router, uid, patchVideos],
+		[router, uid, patchVideos, billUsageForJobId],
+	);
+
+	const appendSourceVideoUrl = useMemo(() => {
+		if (!selected) return null;
+		if (selected.sourceVideoUrl) return selected.sourceVideoUrl;
+		const j0 = selected.jobs?.find((j) => j.sourceVideoUrl);
+		return j0?.sourceVideoUrl ?? null;
+	}, [selected]);
+
+	/** Original text for voice “add language” (group field or any voice job). */
+	const appendVoiceSourceText = useMemo(() => {
+		if (!selected) return null;
+		const fromGroup =
+			typeof selected.sourceText === "string" && selected.sourceText.trim()
+				? selected.sourceText.trim()
+				: null;
+		if (fromGroup) return fromGroup;
+		const j = selected.jobs?.find(
+			(j) =>
+				String(j.id).startsWith("voice_") &&
+				typeof j.transcriptOriginal === "string" &&
+				j.transcriptOriginal.trim(),
+		);
+		return j?.transcriptOriginal?.trim() ?? null;
+	}, [selected]);
+
+	const existingJobLangs = useMemo(() => {
+		if (!selected?.jobs?.length) return [];
+		const langs = selected.jobs.map((j) => j.lang).filter(Boolean);
+		return [...new Set(langs)];
+	}, [selected?.jobs]);
+
+	const langPickerSelected = useMemo(
+		() => [...new Set([...existingJobLangs, ...stagedLangs])].sort(),
+		[existingJobLangs, stagedLangs],
+	);
+
+	const setLangPickerSelected = useCallback(
+		(next) => {
+			const staged = next.filter((l) => !existingJobLangs.includes(l));
+			setStagedLangs(staged);
+		},
+		[existingJobLangs],
+	);
+
+	const submitAppendTranslation = useCallback(
+		async (lang) => {
+			if (!selected?.id || !appendSourceVideoUrl) {
+				toast.error("Source video URL is missing.");
+				return;
+			}
+			setAppendBusy(lang);
+			const postUrl = getTranslatePostUrl();
+			const groupId = selected.id;
+			try {
+				const body = {
+					video_url: appendSourceVideoUrl,
+					output_language: lang,
+				};
+				const res = await fetch(postUrl, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						...(await getTranslateAuthHeaders()),
+					},
+					body: JSON.stringify(body),
+				});
+				const data = await res.json().catch(() => ({}));
+				const apiErr = getApiErrorMessage(data);
+				if (apiErr || !res.ok) {
+					toast.error(apiErr || "Translation request failed.");
+					return;
+				}
+				const videoId = parseVideoIdFromPostResponse(data);
+				if (!videoId) {
+					toast.error("Could not start translation.");
+					return;
+				}
+				const initial = normalizeStatus(extractStatusField(data));
+				const postFields = extractJobFieldsFromGetResponse(data);
+				const newJob = {
+					id: videoId,
+					lang,
+					status: initial,
+					createdAt: new Date().toISOString(),
+					...postFields,
+					resultUrl: postFields.resultUrl ?? extractResultUrl(data) ?? null,
+					sourceVideoUrl: postFields.sourceVideoUrl ?? appendSourceVideoUrl,
+					videoTranslateId: postFields.videoTranslateId ?? videoId,
+				};
+				patchVideos((prev) => {
+					const next = prev.map((g) => {
+						if (g.id !== groupId) return g;
+						const jobs = [...(g.jobs || []), newJob];
+						const out = {
+							...g,
+							jobs,
+							sourceVideoUrl: g.sourceVideoUrl || appendSourceVideoUrl,
+						};
+						out.type = inferTranslationGroupType(out);
+						return out;
+					});
+					const touched = next.find((g) => g.id === groupId);
+					if (touched) scheduleUpsertGroup(touched);
+					return next;
+				});
+				setSelected((s) => {
+					if (!s || s.id !== groupId) return s;
+					const jobs = [...(s.jobs || []), newJob];
+					const out = {
+						...s,
+						jobs,
+						sourceVideoUrl: s.sourceVideoUrl || appendSourceVideoUrl,
+					};
+					out.type = inferTranslationGroupType(out);
+					return out;
+				});
+				setStagedLangs((prev) => prev.filter((l) => l !== lang));
+				setDetailTab(selected.jobs?.length || 0);
+			} catch (e) {
+				toast.error(e?.message || "Something went wrong.");
+			} finally {
+				setAppendBusy(null);
+			}
+		},
+		[
+			selected?.id,
+			selected?.jobs?.length,
+			appendSourceVideoUrl,
+			patchVideos,
+			scheduleUpsertGroup,
+		],
+	);
+
+	const submitAppendVoiceTranslation = useCallback(
+		async (lang) => {
+			if (!selected?.id || !appendVoiceSourceText) {
+				toast.error(
+					"Original text is not available. Include text with your voice submission to add more languages.",
+				);
+				return;
+			}
+			setAppendBusy(lang);
+			const url = getVoiceTranslatePostUrl();
+			const groupId = selected.id;
+			try {
+				const body = {
+					text: appendVoiceSourceText,
+					languages: [lang],
+					include_audio: true,
+				};
+				const res = await fetch(url, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						...(await getTranslateAuthHeaders()),
+					},
+					body: JSON.stringify(body),
+				});
+				const data = await res.json().catch(() => ({}));
+				const apiErr = getApiErrorMessage(data);
+				if (apiErr || !res.ok) {
+					toast.error(apiErr || "Voice translation failed.");
+					return;
+				}
+				let batch = extractVoiceTranslateBatchResponse(data);
+				if (!batch.length) {
+					const one = extractVoiceTranslateResponse(data);
+					if (one.transcript || one.audioUrl) {
+						batch = [
+							{
+								lang: one.outputLanguage || lang,
+								transcript: one.transcript,
+								audioUrl: one.audioUrl,
+							},
+						];
+					}
+				}
+				const r =
+					batch.find(
+						(x) =>
+							String(x.lang || "")
+								.toLowerCase()
+								.includes(String(lang).toLowerCase()) || x.lang === lang,
+					) || batch[0];
+				if (!r || (!r.transcript && !r.audioUrl)) {
+					toast.error("Could not read translation from the API.");
+					return;
+				}
+				const outLang = r.lang || lang;
+				const newJobId = `voice_${groupId}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+				const newJob = {
+					id: newJobId,
+					lang: outLang,
+					status: "done",
+					createdAt: new Date().toISOString(),
+					resultUrl: r.audioUrl ?? null,
+					translatedTranscript: r.transcript ?? null,
+					caption: r.transcript ?? null,
+					outputLanguage: outLang,
+					transcriptOriginal: appendVoiceSourceText,
+					sourceVideoUrl: null,
+					videoTranslateId: newJobId,
+				};
+				patchVideos((prev) => {
+					const next = prev.map((g) => {
+						if (g.id !== groupId) return g;
+						const jobs = [...(g.jobs || []), newJob];
+						const out = {
+							...g,
+							jobs,
+							sourceText: g.sourceText || appendVoiceSourceText,
+						};
+						out.type = inferTranslationGroupType(out);
+						return out;
+					});
+					const touched = next.find((g) => g.id === groupId);
+					if (touched) scheduleUpsertGroup(touched);
+					return next;
+				});
+				setSelected((s) => {
+					if (!s || s.id !== groupId) return s;
+					const jobs = [...(s.jobs || []), newJob];
+					const out = {
+						...s,
+						jobs,
+						sourceText: s.sourceText || appendVoiceSourceText,
+					};
+					out.type = inferTranslationGroupType(out);
+					return out;
+				});
+				setStagedLangs((prev) => prev.filter((l) => l !== lang));
+				setDetailTab(selected.jobs?.length || 0);
+				queueMicrotask(() => {
+					void billUsageForJobId(newJobId, groupId);
+				});
+			} catch (e) {
+				toast.error(e?.message || "Something went wrong.");
+			} finally {
+				setAppendBusy(null);
+			}
+		},
+		[
+			selected?.id,
+			selected?.jobs?.length,
+			appendVoiceSourceText,
+			patchVideos,
+			scheduleUpsertGroup,
+			billUsageForJobId,
+		],
+	);
+
+	const retryFailedTranslation = useCallback(
+		async (failedJob) => {
+			if (!selected?.id || !failedJob?.lang || failedJob.status !== "error") {
+				toast.error("Cannot retry this translation.");
+				return;
+			}
+			if (isVoiceTranslationGroup) {
+				toast.error("Retry from the new translation screen for voice jobs.");
+				return;
+			}
+			if (!appendSourceVideoUrl) {
+				toast.error("Source video URL is missing.");
+				return;
+			}
+			const lang = failedJob.lang;
+			const oldJobId = failedJob.id;
+			setAppendBusy(lang);
+			const postUrl = getTranslatePostUrl();
+			const groupId = selected.id;
+			try {
+				const body = {
+					video_url: appendSourceVideoUrl,
+					output_language: lang,
+				};
+				const res = await fetch(postUrl, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						...(await getTranslateAuthHeaders()),
+					},
+					body: JSON.stringify(body),
+				});
+				const data = await res.json().catch(() => ({}));
+				const apiErr = getApiErrorMessage(data);
+				if (apiErr || !res.ok) {
+					toast.error(apiErr || "Translation request failed.");
+					return;
+				}
+				const videoId = parseVideoIdFromPostResponse(data);
+				if (!videoId) {
+					toast.error("Could not start translation.");
+					return;
+				}
+				const initial = normalizeStatus(extractStatusField(data));
+				const postFields = extractJobFieldsFromGetResponse(data);
+				const newJob = {
+					id: videoId,
+					lang,
+					status: initial,
+					createdAt: new Date().toISOString(),
+					...postFields,
+					resultUrl: postFields.resultUrl ?? extractResultUrl(data) ?? null,
+					sourceVideoUrl: postFields.sourceVideoUrl ?? appendSourceVideoUrl,
+					videoTranslateId: postFields.videoTranslateId ?? videoId,
+				};
+				patchVideos((prev) => {
+					const next = prev.map((g) => {
+						if (g.id !== groupId) return g;
+						const jobs = [...(g.jobs || [])];
+						let idx = jobs.findIndex((j) => j.id === oldJobId);
+						if (idx < 0)
+							idx = jobs.findIndex(
+								(j) => j.lang === lang && j.status === "error",
+							);
+						if (idx < 0) return g;
+						jobs[idx] = newJob;
+						const out = {
+							...g,
+							jobs,
+							sourceVideoUrl: g.sourceVideoUrl || appendSourceVideoUrl,
+						};
+						out.type = inferTranslationGroupType(out);
+						return out;
+					});
+					const touched = next.find((g) => g.id === groupId);
+					if (touched) scheduleUpsertGroup(touched);
+					return next;
+				});
+				setSelected((s) => {
+					if (!s || s.id !== groupId) return s;
+					const jobs = [...(s.jobs || [])];
+					let idx = jobs.findIndex((j) => j.id === oldJobId);
+					if (idx < 0)
+						idx = jobs.findIndex(
+							(j) => j.lang === lang && j.status === "error",
+						);
+					if (idx < 0) return s;
+					jobs[idx] = newJob;
+					const out = {
+						...s,
+						jobs,
+						sourceVideoUrl: s.sourceVideoUrl || appendSourceVideoUrl,
+					};
+					out.type = inferTranslationGroupType(out);
+					return out;
+				});
+			} catch (e) {
+				toast.error(e?.message || "Something went wrong.");
+			} finally {
+				setAppendBusy(null);
+			}
+		},
+		[
+			selected?.id,
+			appendSourceVideoUrl,
+			isVoiceTranslationGroup,
+			patchVideos,
+			scheduleUpsertGroup,
+		],
 	);
 
 	const updateJob = useCallback(
@@ -3643,59 +4580,11 @@ export function Dashboard({ user, onLogout }) {
 
 			if (patch.status === "done" && uid && jobId) {
 				queueMicrotask(() => {
-					void (async () => {
-						if (recordedJobIdsRef.current.has(jobId)) return;
-						const list =
-							queryClient.getQueryData(QUERY_KEY_TRANSLATION_GROUPS(uid)) ||
-							[];
-						const group = list.find(
-							(g) =>
-								(groupId && g.id === groupId) ||
-								g.jobs?.some((j) => j.id === jobId),
-						);
-						const job = group?.jobs?.find((j) => j.id === jobId);
-						if (
-							!job ||
-							String(job.id).startsWith("voice_") ||
-							job.status !== "done"
-						)
-							return;
-						recordedJobIdsRef.current.add(jobId);
-						let minutes = job.durationMinutes;
-						if (minutes == null && job.sourceVideoUrl) {
-							const sec = await probeVideoDurationSeconds(job.sourceVideoUrl);
-							minutes = secondsToBillableMinutes(sec);
-							patchVideos((prev) =>
-								prev.map((g) => {
-									if (!group || g.id !== group.id) return g;
-									const jobs = g.jobs.map((j) =>
-										j.id === jobId
-											? { ...j, durationMinutes: minutes }
-											: j,
-									);
-									const out = { ...g, jobs };
-									void upsertTranslationGroup(uid, out);
-									return out;
-								}),
-							);
-						} else if (minutes == null) {
-							minutes = 1;
-						}
-						if (typeof minutes !== "number" || minutes <= 0) minutes = 1;
-						try {
-							if (!auth.currentUser?.uid) {
-								recordedJobIdsRef.current.delete(jobId);
-								return;
-							}
-							await incrementUserUsageMinutesClient(uid, minutes);
-						} catch {
-							recordedJobIdsRef.current.delete(jobId);
-						}
-					})();
+					void billUsageForJobId(jobId, groupId);
 				});
 			}
 		},
-		[uid, patchVideos, scheduleUpsertGroup, queryClient],
+		[uid, patchVideos, scheduleUpsertGroup, billUsageForJobId],
 	);
 
 	const renameVideo = useCallback(
@@ -3869,18 +4758,7 @@ export function Dashboard({ user, onLogout }) {
 					padding: "6px 10px",
 				}}
 			>
-				<p
-					className="mono"
-					style={{
-						fontSize: 10,
-						letterSpacing: "0.07em",
-						textTransform: "uppercase",
-						color: "#a1a1aa",
-						padding: "8px 6px 6px",
-					}}
-				>
-					History
-				</p>
+				
 				{!storageHydrated ? (
 					<SidebarHistorySkeleton />
 				) : videos.length === 0 ? (
@@ -4069,6 +4947,7 @@ export function Dashboard({ user, onLogout }) {
 					padding: "14px 14px 12px",
 					borderBottom: "1px solid rgba(0,0,0,0.06)",
 				}}
+				className="p-1 border border-zinc-200/80 rounded-xl m-2"
 			>
 				<div
 					style={{
@@ -4155,24 +5034,8 @@ export function Dashboard({ user, onLogout }) {
 						}}
 					/>
 				</div>
-				<div
-					style={{
-						display: "flex",
-						justifyContent: "space-between",
-						alignItems: "baseline",
-						marginBottom: 6,
-					}}
-				>
-					<span style={{ fontSize: 11, color: "#a1a1aa" }}>Free jobs / mo</span>
-					<span style={{ fontSize: 12, fontWeight: 600, color: "#52525b" }}>
-						{usedThisMonth} / {FREE_CREDITS_PER_MONTH}
-					</span>
-				</div>
-				<p style={{ fontSize: 11, color: "#a1a1aa", marginTop: 4 }}>
-					${PRICE_PER_MINUTE_USD.toFixed(2)}/min packs via Polar ·{" "}
-					{USAGE_MINUTE_STEPS[0]}–{USAGE_MINUTE_STEPS[USAGE_MINUTE_STEPS.length - 1]}{" "}
-					min
-				</p>
+				
+				
 				<button
 					type="button"
 					onClick={() => setShowUpgrade(true)}
@@ -4273,7 +5136,6 @@ export function Dashboard({ user, onLogout }) {
 			</div>
 		</div>
 	);
-
 	return (
 		<div
 			className="sans"
@@ -4473,35 +5335,43 @@ export function Dashboard({ user, onLogout }) {
 													>
 														{selected.label || sidebarTitle(selected)}
 													</h2>
-													<p
-														className="mono"
-														style={{ fontSize: 11, color: "#a1a1aa" }}
-													>
-														group: {selected.id}
-														{selectedDetail.hasTabs &&
-															` · ${selectedDetail.jobs.length} languages`}
-													</p>
-													<p
-														className="mono"
-														style={{ fontSize: 10, color: "#a1a1aa" }}
-													>
-														job: {selectedDetail.j.id}
-													</p>
 												</div>
-												<span
+											{((!isVoiceTranslationGroup && appendSourceVideoUrl) ||
+												(isVoiceTranslationGroup && appendVoiceSourceText)) && (
+												
+													<LangMultiSelect
+														selected={langPickerSelected}
+														onChange={setLangPickerSelected}
+														lockedLangs={existingJobLangs}
+														fullWidth
+													/>
+											)}
+											</div>
+
+											{isVoiceTranslationGroup && !appendVoiceSourceText && (
+												<div
 													style={{
-														padding: "4px 12px",
-														borderRadius: 20,
-														fontSize: 11.5,
-														fontWeight: 600,
-														flexShrink: 0,
-														background: statusBg(selectedDetail.agg),
-														color: statusColor(selectedDetail.agg),
+														marginBottom: 20,
+														padding: "12px 14px",
+														borderRadius: 12,
+														background: "rgba(0,0,0,0.04)",
+														border: "1px solid rgba(0,0,0,0.06)",
 													}}
 												>
-													{selectedDetail.agg}
-												</span>
-											</div>
+													<p
+														style={{
+															fontSize: 12,
+															color: "#71717a",
+															margin: 0,
+															lineHeight: 1.45,
+														}}
+													>
+														To add more languages here, include the original text in the
+														voice form (or use a submission that stored it). Audio-only
+														entries without text cannot be extended from this screen.
+													</p>
+												</div>
+											)}
 
 											{selectedDetail.hasTabs && (
 												<div
@@ -4538,7 +5408,19 @@ export function Dashboard({ user, onLogout }) {
 																{flagForLanguageName(job.lang)}
 															</span>
 															{job.lang}
-															{job.status !== "done" &&
+															{job.isStaged && (
+																<span
+																	style={{
+																		fontSize: 10,
+																		fontWeight: 600,
+																		color: "#a1a1aa",
+																	}}
+																>
+																	· new
+																</span>
+															)}
+															{!job.isStaged &&
+																job.status !== "done" &&
 																job.status !== "error" &&
 																!String(job.id).startsWith("failed_") && (
 																	<Loader2 size={12} className="spin" />
@@ -4548,7 +5430,145 @@ export function Dashboard({ user, onLogout }) {
 												</div>
 											)}
 
-											{selectedDetail.j.status !== "done" &&
+											{selectedDetail.j.isStaged && isVoiceTranslationGroup && (
+												<div style={{ marginBottom: 24 }}>
+													{appendVoiceSourceText ? (
+														<>
+															<p
+																style={{
+																	fontSize: 13,
+																	color: "#52525b",
+																	marginBottom: 12,
+																	lineHeight: 1.5,
+																}}
+															>
+																Translate to{" "}
+																<strong>{selectedDetail.j.lang}</strong> using your
+																saved source text.
+															</p>
+															<div
+																style={{
+																	borderRadius: 12,
+																	padding: "12px 14px",
+																	marginBottom: 16,
+																	background: "#fafaf9",
+																	border: "1px solid rgba(0,0,0,0.08)",
+																	maxHeight: 160,
+																	overflow: "auto",
+																	fontSize: 13,
+																	lineHeight: 1.55,
+																	color: "#3f3f46",
+																}}
+															>
+																{appendVoiceSourceText}
+															</div>
+															<button
+																type="button"
+																onClick={() =>
+																	submitAppendVoiceTranslation(
+																		selectedDetail.j.lang,
+																	)
+																}
+																disabled={appendBusy === selectedDetail.j.lang}
+																style={{
+																	display: "inline-flex",
+																	alignItems: "center",
+																	justifyContent: "center",
+																	gap: 8,
+																	padding: "12px 22px",
+																	borderRadius: 10,
+																	fontSize: 14,
+																	fontWeight: 600,
+																	background: "#ea580c",
+																	color: "#fff",
+																	border: "none",
+																	cursor:
+																		appendBusy === selectedDetail.j.lang
+																			? "wait"
+																			: "pointer",
+																	opacity:
+																		appendBusy === selectedDetail.j.lang
+																			? 0.85
+																			: 1,
+																}}
+															>
+																{appendBusy === selectedDetail.j.lang ? (
+																	<>
+																		<Loader2 size={16} className="spin" aria-hidden />
+																		Starting…
+																	</>
+																) : (
+																	"Translate"
+																)}
+															</button>
+														</>
+													) : (
+														<p style={{ fontSize: 13, color: "#71717a" }}>
+															Original text is not available for this project.
+														</p>
+													)}
+												</div>
+											)}
+
+											{selectedDetail.j.isStaged && !isVoiceTranslationGroup && (
+												<div style={{ marginBottom: 24 }}>
+													<p
+														style={{
+															fontSize: 13,
+															color: "#52525b",
+															marginBottom: 12,
+															lineHeight: 1.5,
+														}}
+													>
+														Translate to{" "}
+														<strong>{selectedDetail.j.lang}</strong> using the same
+														source video.
+													</p>
+													<div style={{ marginBottom: 16 }}>
+														<StudioVideoPlayer
+															src={appendSourceVideoUrl}
+															footerLabel="Source preview"
+														/>
+													</div>
+													<button
+														type="button"
+														onClick={() =>
+															submitAppendTranslation(selectedDetail.j.lang)
+														}
+														disabled={appendBusy === selectedDetail.j.lang}
+														style={{
+															display: "inline-flex",
+															alignItems: "center",
+															justifyContent: "center",
+															gap: 8,
+															padding: "12px 22px",
+															borderRadius: 10,
+															fontSize: 14,
+															fontWeight: 600,
+															background: "#ea580c",
+															color: "#fff",
+															border: "none",
+															cursor:
+																appendBusy === selectedDetail.j.lang
+																	? "wait"
+																	: "pointer",
+															opacity: appendBusy === selectedDetail.j.lang ? 0.85 : 1,
+														}}
+													>
+														{appendBusy === selectedDetail.j.lang ? (
+															<>
+																<Loader2 size={16} className="spin" aria-hidden />
+																Starting…
+															</>
+														) : (
+															"Translate"
+														)}
+													</button>
+												</div>
+											)}
+
+											{!selectedDetail.j.isStaged &&
+												selectedDetail.j.status !== "done" &&
 												selectedDetail.j.status !== "error" && (
 													<StatusProgress
 														status={selectedDetail.j.status}
@@ -4559,307 +5579,519 @@ export function Dashboard({ user, onLogout }) {
 											{selectedDetail.j.status === "done" &&
 												(isVoiceTranslationGroup ? (
 													<div>
-														{selectedDetail.j.resultUrl ? (
-															<div style={{ marginBottom: 24 }}>
-																<p
-																	style={{
-																		fontSize: 12,
-																		fontWeight: 600,
-																		color: "#52525b",
-																		marginBottom: 10,
-																	}}
-																>
-																	Translated audio (
-																	{selectedDetail.j.outputLanguage ||
-																		selectedDetail.j.lang}
-																	)
-																</p>
-																<audio
-																	src={selectedDetail.j.resultUrl}
-																	controls
-																	style={{
-																		width: "100%",
-																		maxWidth: 480,
-																		display: "block",
-																		marginBottom: 14,
-																	}}
-																/>
-																<a
-																	href={selectedDetail.j.resultUrl}
-																	download
-																	target="_blank"
-																	rel="noopener noreferrer"
-																	style={{
-																		display: "inline-flex",
-																		alignItems: "center",
-																		gap: 8,
-																		fontSize: 14,
-																		fontWeight: 600,
-																		color: "#fff",
-																		background: "#ea580c",
-																		padding: "10px 18px",
-																		borderRadius: 10,
-																		textDecoration: "none",
-																	}}
-																>
-																	<Download size={16} aria-hidden />
-																	Download audio
-																</a>
-															</div>
-														) : (
-															<p
-																style={{
-																	color: "#71717a",
-																	fontSize: 13,
-																	marginBottom: 20,
-																}}
-															>
-																Audio URL not available yet.
-															</p>
-														)}
-														<button
-															type="button"
-															style={{
-																padding: "10px 16px",
-																borderRadius: 10,
-																fontSize: 13.5,
-																color: "#71717a",
-																border: "1px solid rgba(0,0,0,0.1)",
-															}}
-															onClick={() => {
-																setViewNew(true);
-																setSelected(null);
-																router.push("/app");
-															}}
-														>
-															Translate another
-														</button>
-													</div>
-												) : (
-													<div>
-														<p
-															style={{
-																fontSize: 12,
-																color: "#a1a1aa",
-																marginBottom: 16,
-															}}
-														>
-															Status updates via repeated GET{" "}
-															<span className="mono">
-																/api/video-translate/:id
-															</span>{" "}
-															until complete.
-														</p>
+														{/* Top: translated audio + translated script */}
 														<div
 															style={{
-																display: "grid",
-																gridTemplateColumns:
-																	"repeat(auto-fit, minmax(260px, 1fr))",
-																gap: 16,
+																borderRadius: 14,
+																border: "1px solid rgba(234, 88, 12, 0.2)",
+																background:
+																	"linear-gradient(180deg, rgba(254,243,232,0.65) 0%, #fff 48px)",
+																padding: "18px 18px 20px",
 																marginBottom: 20,
 															}}
 														>
-															<div>
+															<div
+																style={{
+																	marginBottom: 14,
+																	paddingBottom: 12,
+																	borderBottom: "1px solid rgba(234, 88, 12, 0.12)",
+																}}
+															>
 																<p
+																	style={{
+																		fontSize: 10,
+																		fontWeight: 700,
+																		letterSpacing: "0.12em",
+																		textTransform: "uppercase",
+																		color: "#c2410c",
+																		margin: "0 0 4px",
+																	}}
+																>
+																	This language
+																</p>
+																<p
+																	style={{
+																		fontSize: 15,
+																		fontWeight: 700,
+																		color: "#18181b",
+																		margin: 0,
+																	}}
+																>
+																	Translation ·{" "}
+																	{selectedDetail.j.outputLanguage ||
+																		selectedDetail.j.lang}
+																</p>
+																<p
+																	style={{
+																		fontSize: 12,
+																		color: "#71717a",
+																		margin: "6px 0 0",
+																		lineHeight: 1.45,
+																	}}
+																>
+																	Translated audio and script for the tab you
+																	selected above.
+																</p>
+															</div>
+															<div
+																style={{
+																	display: "flex",
+																	alignItems: "center",
+																	justifyContent: "space-between",
+																	gap: 10,
+																	marginBottom: 10,
+																	flexWrap: "wrap",
+																}}
+															>
+																<span
 																	style={{
 																		fontSize: 12,
 																		fontWeight: 600,
 																		color: "#52525b",
-																		marginBottom: 8,
 																	}}
 																>
-																	Original source
-																</p>
-																<div
-																	style={{
-																		borderRadius: 12,
-																		overflow: "hidden",
-																		background: "#000",
-																		aspectRatio: "16/9",
-																		maxHeight: 320,
-																	}}
-																>
-																	{selected.sourceVideoUrl ||
-																	selectedDetail.j.sourceVideoUrl ? (
-																		<video
-																			src={
-																				selected.sourceVideoUrl ||
-																				selectedDetail.j.sourceVideoUrl
-																			}
-																			controls
-																			style={{
-																				width: "100%",
-																				height: "100%",
-																			}}
-																		/>
-																	) : (
-																		<div
-																			style={{
-																				height: "100%",
-																				minHeight: 160,
-																				display: "flex",
-																				alignItems: "center",
-																				justifyContent: "center",
-																				color: "#71717a",
-																				fontSize: 13,
-																				padding: 16,
-																			}}
-																		>
-																			Source URL not available yet
-																		</div>
-																	)}
-																</div>
-															</div>
-															<div>
-																<div
-																	style={{
-																		display: "flex",
-																		alignItems: "center",
-																		justifyContent: "space-between",
-																		gap: 10,
-																		marginBottom: 8,
-																		flexWrap: "wrap",
-																	}}
-																>
-																	<p
+																	Translated audio
+																</span>
+																{selectedDetail.j.resultUrl ? (
+																	<a
+																		href={selectedDetail.j.resultUrl}
+																		download
+																		target="_blank"
+																		rel="noopener noreferrer"
 																		style={{
+																			display: "inline-flex",
+																			alignItems: "center",
+																			gap: 6,
 																			fontSize: 12,
 																			fontWeight: 600,
-																			color: "#52525b",
+																			color: "#fff",
+																			background: "#ea580c",
+																			padding: "6px 12px",
+																			borderRadius: 8,
+																			textDecoration: "none",
+																		}}
+																	>
+																		<Download size={14} aria-hidden />
+																		Download
+																	</a>
+																) : null}
+															</div>
+															<div style={{ marginBottom: 18 }}>
+																{selectedDetail.j.resultUrl ? (
+																	<VoiceStyleAudioPlayer
+																		src={selectedDetail.j.resultUrl}
+																	/>
+																) : (
+																	<p
+																		style={{
+																			color: "#a1a1aa",
+																			fontSize: 13,
 																			margin: 0,
 																		}}
 																	>
-																		Dubbed (
-																		{selectedDetail.j.outputLanguage ||
-																			selectedDetail.j.lang}
-																		)
+																		Audio URL not available yet.
 																	</p>
-																	{selectedDetail.j.resultUrl && (
-																		<a
-																			href={selectedDetail.j.resultUrl}
-																			download
-																			target="_blank"
-																			rel="noopener noreferrer"
-																			style={{
-																				display: "inline-flex",
-																				alignItems: "center",
-																				gap: 6,
-																				fontSize: 12,
-																				fontWeight: 600,
-																				color: "#fff",
-																				background: "#ea580c",
-																				padding: "6px 12px",
-																				borderRadius: 8,
-																				textDecoration: "none",
-																				flexShrink: 0,
-																			}}
-																		>
-																			<Download size={14} aria-hidden />
-																			Download video
-																		</a>
-																	)}
-																</div>
-																<div
-																	style={{
-																		borderRadius: 12,
-																		overflow: "hidden",
-																		background: "#000",
-																		aspectRatio: "16/9",
-																		maxHeight: 320,
-																	}}
-																>
-																	{selectedDetail.j.resultUrl ? (
-																		<video
-																			src={selectedDetail.j.resultUrl}
-																			controls
-																			style={{
-																				width: "100%",
-																				height: "100%",
-																			}}
+																)}
+															</div>
+															{(selectedDetail.j.translatedTranscript ||
+																selectedDetail.j.caption) && (
+																<div style={{ marginBottom: 4 }}>
+																	{selectedDetail.j.translatedTranscript && (
+																		<CopyTextBlock
+																			label="Translated transcript"
+																			text={
+																				selectedDetail.j.translatedTranscript
+																			}
+																			audioSrc={
+																				selectedDetail.j.resultUrl ||
+																				undefined
+																			}
+																			audioDownloadName={`voice-translated-${(selectedDetail.j.outputLanguage || selectedDetail.j.lang || "output").replace(/[^\w-]+/g, "_")}.mp3`}
+																			audioPreviewLabel="Translated audio (dubbed)"
+																			showInlineAudio={false}
 																		/>
-																	) : (
-																		<div
-																			style={{
-																				height: "100%",
-																				minHeight: 160,
-																				display: "flex",
-																				alignItems: "center",
-																				justifyContent: "center",
-																				color: "#71717a",
-																				fontSize: 13,
-																				padding: 16,
-																			}}
-																		>
-																			Dubbed file URL not available yet
-																		</div>
 																	)}
+																	{selectedDetail.j.caption &&
+																		selectedDetail.j.caption !==
+																			selectedDetail.j.translatedTranscript && (
+																			<CopyTextBlock
+																				label={`Caption (${selectedDetail.j.outputLanguage || selectedDetail.j.lang || "output"})`}
+																				text={selectedDetail.j.caption}
+																				audioSrc={
+																					selectedDetail.j.resultUrl ||
+																					undefined
+																				}
+																				audioDownloadName={`voice-caption-${(selectedDetail.j.outputLanguage || selectedDetail.j.lang || "output").replace(/[^\w-]+/g, "_")}.mp3`}
+																				audioPreviewLabel="Caption language audio"
+																				showInlineAudio={false}
+																			/>
+																		)}
 																</div>
-															</div>
+															)}
 														</div>
-														{(selectedDetail.j.transcriptOriginal ||
-															selectedDetail.j.translatedTranscript ||
-															selectedDetail.j.caption) && (
-															<div style={{ marginBottom: 16 }}>
-																{selectedDetail.j.transcriptOriginal && (
-																	<CopyTextBlock
-																		label="Original transcript"
-																		text={selectedDetail.j.transcriptOriginal}
-																		audioSrc={
-																			selected.sourceVideoUrl ||
-																			selectedDetail.j.sourceVideoUrl ||
-																			undefined
-																		}
-																		audioDownloadName="original-source.mp4"
-																		audioPreviewLabel="Original audio (from source video)"
-																	/>
-																)}
-																{selectedDetail.j.translatedTranscript && (
-																	<CopyTextBlock
-																		label="Translated transcript"
-																		text={selectedDetail.j.translatedTranscript}
-																		audioSrc={
-																			selectedDetail.j.resultUrl || undefined
-																		}
-																		audioDownloadName={`dubbed-transcript-${(selectedDetail.j.outputLanguage || selectedDetail.j.lang || "output").replace(/[^\w-]+/g, "_")}.mp4`}
-																		audioPreviewLabel="Translated audio (dubbed)"
-																	/>
-																)}
-																{selectedDetail.j.caption && (
-																	<CopyTextBlock
-																		label={`Caption (${selectedDetail.j.outputLanguage || selectedDetail.j.lang || "output"})`}
-																		text={selectedDetail.j.caption}
-																		audioSrc={
-																			selectedDetail.j.resultUrl || undefined
-																		}
-																		audioDownloadName={`caption-audio-${(selectedDetail.j.outputLanguage || selectedDetail.j.lang || "output").replace(/[^\w-]+/g, "_")}.mp4`}
-																		audioPreviewLabel="Caption language audio (dubbed)"
-																	/>
-																)}
-															</div>
-														)}
-														{selectedDetail.j.captionUrl && (
-															<p style={{ fontSize: 13, marginBottom: 16 }}>
-																<ExternalLink
-																	size={14}
+
+														{/* Bottom: original transcript */}
+														<div
+															style={{
+																borderRadius: 14,
+																border: "1px solid rgba(0,0,0,0.08)",
+																background: "#fafaf9",
+																padding: "18px 18px 20px",
+																marginBottom: 20,
+															}}
+														>
+															<div style={{ marginBottom: 14 }}>
+																<p
 																	style={{
-																		display: "inline",
-																		verticalAlign: "middle",
-																		marginRight: 6,
-																	}}
-																/>
-																<a
-																	href={selectedDetail.j.captionUrl}
-																	target="_blank"
-																	rel="noopener noreferrer"
-																	style={{
-																		color: "#c2410c",
-																		fontWeight: 500,
+																		fontSize: 10,
+																		fontWeight: 700,
+																		letterSpacing: "0.12em",
+																		textTransform: "uppercase",
+																		color: "#71717a",
+																		margin: "0 0 4px",
 																	}}
 																>
-																	Open caption file
-																</a>
+																	Source
+																</p>
+																<p
+																	style={{
+																		fontSize: 15,
+																		fontWeight: 700,
+																		color: "#18181b",
+																		margin: 0,
+																	}}
+																>
+																	Original transcript
+																</p>
+																<p
+																	style={{
+																		fontSize: 12,
+																		color: "#71717a",
+																		margin: "6px 0 0",
+																		lineHeight: 1.45,
+																	}}
+																>
+																	Text you submitted before translation (same for
+																	all language tabs).
+																</p>
+															</div>
+															{selectedDetail.j.transcriptOriginal ? (
+																<CopyTextBlock
+																	label="Original transcript"
+																	text={selectedDetail.j.transcriptOriginal}
+																/>
+															) : (
+																<p
+																	style={{
+																		fontSize: 13,
+																		color: "#a1a1aa",
+																		margin: 0,
+																	}}
+																>
+																	No original text was stored (e.g. audio-only
+																	input).
+																</p>
+															)}
+														</div>
+
+														<div
+															style={{
+																display: "flex",
+																gap: 10,
+																flexWrap: "wrap",
+															}}
+														>
+															<button
+																type="button"
+																onClick={() => {
+																	if (selectedDetail.j.resultUrl)
+																		window.open(
+																			selectedDetail.j.resultUrl,
+																			"_blank",
+																			"noopener,noreferrer",
+																		);
+																}}
+																disabled={!selectedDetail.j.resultUrl}
+																style={{
+																	flex: 1,
+																	minWidth: 120,
+																	padding: "10px",
+																	borderRadius: 10,
+																	fontSize: 13.5,
+																	fontWeight: 600,
+																	background: "#ea580c",
+																	color: "#fff",
+																	opacity: selectedDetail.j.resultUrl ? 1 : 0.45,
+																	cursor: selectedDetail.j.resultUrl
+																		? "pointer"
+																		: "not-allowed",
+																}}
+															>
+																Open translated audio
+															</button>
+															<button
+																type="button"
+																style={{
+																	padding: "10px 16px",
+																	borderRadius: 10,
+																	fontSize: 13.5,
+																	color: "#71717a",
+																	border: "1px solid rgba(0,0,0,0.1)",
+																}}
+																onClick={() => {
+																	setViewNew(true);
+																	setSelected(null);
+																}}
+															>
+																Translate another
+															</button>
+														</div>
+													</div>
+												) : (
+													<div>
+														{/* Top: this tab’s translation (dubbed + translated text) */}
+														<div
+															style={{
+																borderRadius: 14,
+																border: "1px solid rgba(234, 88, 12, 0.2)",
+																background:
+																	"linear-gradient(180deg, rgba(254,243,232,0.65) 0%, #fff 48px)",
+																padding: "18px 18px 20px",
+																marginBottom: 20,
+															}}
+														>
+															
+															<div
+																style={{
+																	display: "flex",
+																	alignItems: "center",
+																	justifyContent: "space-between",
+																	gap: 10,
+																	marginBottom: 10,
+																	flexWrap: "wrap",
+																}}
+															>
+																<span
+																	style={{
+																		fontSize: 12,
+																		fontWeight: 600,
+																		color: "#52525b",
+																	}}
+																>
+																	Dubbed video
+																</span>
+																{selectedDetail.j.resultUrl ? (
+																	<a
+																		href={selectedDetail.j.resultUrl}
+																		download
+																		target="_blank"
+																		rel="noopener noreferrer"
+																		style={{
+																			display: "inline-flex",
+																			alignItems: "center",
+																			gap: 6,
+																			fontSize: 12,
+																			fontWeight: 600,
+																			color: "#fff",
+																			background: "#ea580c",
+																			padding: "6px 12px",
+																			borderRadius: 8,
+																			textDecoration: "none",
+																		}}
+																	>
+																		<Download size={14} aria-hidden />
+																		Download
+																	</a>
+																) : null}
+															</div>
+															<div style={{ marginBottom: 18 }}>
+																{selectedDetail.j.resultUrl ? (
+																	<StudioVideoPlayer
+																		src={selectedDetail.j.resultUrl}
+																		footerLabel="Dubbed output"
+																	/>
+																) : (
+																	<div
+																		style={{
+																			borderRadius: 12,
+																			minHeight: 160,
+																			display: "flex",
+																			alignItems: "center",
+																			justifyContent: "center",
+																			color: "#a1a1aa",
+																			fontSize: 13,
+																			padding: 16,
+																			background: "#fafaf9",
+																			border: "1px solid rgba(0,0,0,0.06)",
+																		}}
+																	>
+																		Dubbed file URL not available yet
+																	</div>
+																)}
+															</div>
+															{(selectedDetail.j.translatedTranscript ||
+																selectedDetail.j.caption) && (
+																<div style={{ marginBottom: 4 }}>
+																	{selectedDetail.j.translatedTranscript && (
+																		<CopyTextBlock
+																			label="Translated transcript"
+																			text={
+																				selectedDetail.j.translatedTranscript
+																			}
+																			audioSrc={
+																				selectedDetail.j.resultUrl ||
+																				undefined
+																			}
+																			audioDownloadName={`dubbed-transcript-${(selectedDetail.j.outputLanguage || selectedDetail.j.lang || "output").replace(/[^\w-]+/g, "_")}.mp4`}
+																			audioPreviewLabel="Translated audio (dubbed)"
+																			animatedAudio
+																		/>
+																	)}
+																	{selectedDetail.j.caption && (
+																		<CopyTextBlock
+																			label={`Caption (${selectedDetail.j.outputLanguage || selectedDetail.j.lang || "output"})`}
+																			text={selectedDetail.j.caption}
+																			audioSrc={
+																				selectedDetail.j.resultUrl ||
+																				undefined
+																			}
+																			audioDownloadName={`caption-audio-${(selectedDetail.j.outputLanguage || selectedDetail.j.lang || "output").replace(/[^\w-]+/g, "_")}.mp4`}
+																			audioPreviewLabel="Caption language audio (dubbed)"
+																			animatedAudio
+																		/>
+																	)}
+																</div>
+															)}
+															{selectedDetail.j.captionUrl && (
+																<p
+																	style={{
+																		fontSize: 13,
+																		marginTop: 8,
+																		marginBottom: 0,
+																	}}
+																>
+																	<ExternalLink
+																		size={14}
+																		style={{
+																			display: "inline",
+																			verticalAlign: "middle",
+																			marginRight: 6,
+																		}}
+																	/>
+																	<a
+																		href={selectedDetail.j.captionUrl}
+																		target="_blank"
+																		rel="noopener noreferrer"
+																		style={{
+																			color: "#c2410c",
+																			fontWeight: 500,
+																		}}
+																	>
+																		Open caption file
+																	</a>
+																</p>
+															)}
+														</div>
+
+														{/* Bottom: original source + original transcript */}
+														<div
+															style={{
+																borderRadius: 14,
+																border: "1px solid rgba(0,0,0,0.08)",
+																background: "#fafaf9",
+																padding: "18px 18px 20px",
+																marginBottom: 20,
+															}}
+														>
+															<div style={{ marginBottom: 14 }}>
+																<p
+																	style={{
+																		fontSize: 10,
+																		fontWeight: 700,
+																		letterSpacing: "0.12em",
+																		textTransform: "uppercase",
+																		color: "#71717a",
+																		margin: "0 0 4px",
+																	}}
+																>
+																	Source
+																</p>
+																<p
+																	style={{
+																		fontSize: 15,
+																		fontWeight: 700,
+																		color: "#18181b",
+																		margin: 0,
+																	}}
+																>
+																	Original video & transcript
+																</p>
+																<p
+																	style={{
+																		fontSize: 12,
+																		color: "#71717a",
+																		margin: "6px 0 0",
+																		lineHeight: 1.45,
+																	}}
+																>
+																	What you uploaded or linked before translation.
+																</p>
+															</div>
+															<p
+																style={{
+																	fontSize: 12,
+																	fontWeight: 600,
+																	color: "#52525b",
+																	margin: "0 0 8px",
+																}}
+															>
+																Original video
 															</p>
-														)}
+															<div style={{ marginBottom: 18 }}>
+																{selected.sourceVideoUrl ||
+																selectedDetail.j.sourceVideoUrl ? (
+																	<StudioVideoPlayer
+																		src={
+																			selected.sourceVideoUrl ||
+																			selectedDetail.j.sourceVideoUrl
+																		}
+																		footerLabel="Source video"
+																	/>
+																) : (
+																	<div
+																		style={{
+																			borderRadius: 12,
+																			minHeight: 160,
+																			display: "flex",
+																			alignItems: "center",
+																			justifyContent: "center",
+																			color: "#a1a1aa",
+																			fontSize: 13,
+																			padding: 16,
+																			background: "#fafaf9",
+																			border: "1px solid rgba(0,0,0,0.06)",
+																		}}
+																	>
+																		Source URL not available yet
+																	</div>
+																)}
+															</div>
+															{selectedDetail.j.transcriptOriginal && (
+																<CopyTextBlock
+																	label="Original transcript"
+																	text={selectedDetail.j.transcriptOriginal}
+																	audioSrc={
+																		selected.sourceVideoUrl ||
+																		selectedDetail.j.sourceVideoUrl ||
+																		undefined
+																	}
+																	audioDownloadName="original-source.mp4"
+																	audioPreviewLabel="Original audio (from source video)"
+																	animatedAudio
+																/>
+															)}
+														</div>
+
 														<div
 															style={{
 																display: "flex",
@@ -4923,6 +6155,7 @@ export function Dashboard({ user, onLogout }) {
 														alignItems: "center",
 														gap: 10,
 														padding: "28px 0",
+														width: "100%",
 													}}
 												>
 													<AlertCircle size={44} style={{ color: "#ef4444" }} />
@@ -4938,28 +6171,84 @@ export function Dashboard({ user, onLogout }) {
 														style={{
 															color: "#71717a",
 															fontSize: 13.5,
+															textAlign: "center",
 														}}
 													>
-														Please try again with a new translation
+														Retry with the same source video, or start a new
+														translation.
 													</p>
-													<button
-														type="button"
-														onClick={() => {
-															setViewNew(true);
-															setSelected(null);
-														}}
+													<div
 														style={{
+															display: "flex",
+															flexWrap: "wrap",
+															gap: 10,
+															justifyContent: "center",
 															marginTop: 4,
-															padding: "9px 20px",
-															borderRadius: 10,
-															fontSize: 13.5,
-															background: "rgba(234,88,12,0.1)",
-															border: "1px solid rgba(234,88,12,0.25)",
-															color: "#c2410c",
 														}}
 													>
-														New Translation
-													</button>
+														{!isVoiceTranslationGroup && appendSourceVideoUrl && (
+															<button
+																type="button"
+																onClick={() =>
+																	retryFailedTranslation(selectedDetail.j)
+																}
+																disabled={
+																	appendBusy === selectedDetail.j.lang
+																}
+																style={{
+																	display: "inline-flex",
+																	alignItems: "center",
+																	justifyContent: "center",
+																	gap: 8,
+																	padding: "9px 20px",
+																	borderRadius: 10,
+																	fontSize: 13.5,
+																	fontWeight: 600,
+																	background: "#ea580c",
+																	color: "#fff",
+																	border: "none",
+																	cursor:
+																		appendBusy === selectedDetail.j.lang
+																			? "wait"
+																			: "pointer",
+																	opacity:
+																		appendBusy === selectedDetail.j.lang
+																			? 0.85
+																			: 1,
+																}}
+															>
+																{appendBusy === selectedDetail.j.lang ? (
+																	<>
+																		<Loader2
+																			size={16}
+																			className="spin"
+																			aria-hidden
+																		/>
+																		Starting…
+																	</>
+																) : (
+																	"Retry"
+																)}
+															</button>
+														)}
+														<button
+															type="button"
+															onClick={() => {
+																setViewNew(true);
+																setSelected(null);
+															}}
+															style={{
+																padding: "9px 20px",
+																borderRadius: 10,
+																fontSize: 13.5,
+																background: "rgba(234,88,12,0.1)",
+																border: "1px solid rgba(234,88,12,0.25)",
+																color: "#c2410c",
+															}}
+														>
+															New Translation
+														</button>
+													</div>
 												</div>
 											)}
 										</>

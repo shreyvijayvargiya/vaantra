@@ -101,26 +101,14 @@ export default function LoginPage() {
 				style={{ background: "#f5f4f0", fontFamily: "'DM Sans', system-ui, sans-serif" }}
 			>
 				<LandingMarketingNav />
-				<main className="flex-1 flex flex-col lg:flex-row">
+				<main className="flex-1 flex flex-col lg:flex-row max-w-7xl mx-auto">
 					<div className="flex-1 flex flex-col justify-center px-6 sm:px-10 lg:px-16 py-14 lg:py-20 max-w-xl mx-auto lg:mx-0 lg:max-w-none">
 						<motion.div
 							initial={{ opacity: 0, y: 16 }}
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ duration: 0.5 }}
 						>
-							<h1
-								className="vaantra-font"
-								style={{
-									fontSize: "clamp(3.5rem, 12vw, 6.25rem)",
-									lineHeight: 1.02,
-									fontWeight: 700,
-									color: "#18181b",
-									letterSpacing: "-0.04em",
-									marginBottom: "clamp(20px, 3vw, 28px)",
-								}}
-							>
-								Vaantra<span style={{ color: "#ea580c" }}>.</span>
-							</h1>
+							
 							<h2
 								className="sans"
 								style={{
@@ -156,6 +144,7 @@ export default function LoginPage() {
 								Vaantra translates audio, text, and video into 90+ languages with
 								voice-cloned output.
 							</p>
+							
 							<p
 								style={{
 									color: "#c2410c",
@@ -165,14 +154,13 @@ export default function LoginPage() {
 									margin: 0,
 								}}
 							>
-								10 free translation jobs per month — no card required to try
+								Get started with 10 miuntes free credits — no card required to try
 							</p>
 						</motion.div>
 					</div>
 
 					<div
-						className="flex-1 flex items-center justify-center px-6 sm:px-10 lg:px-16 py-14 lg:py-20 border-t lg:border-t-0 lg:border-l border-black/6"
-						style={{ background: "rgba(255,255,255,0.85)" }}
+						className="flex-1 flex items-center justify-center px-6 sm:px-10 lg:px-16 py-14 lg:py-20 "
 					>
 						<motion.div
 							initial={{ opacity: 0, y: 12 }}
@@ -188,7 +176,7 @@ export default function LoginPage() {
 								}}
 							>
 								<h2 className="vaantra-font text-2xl font-bold text-zinc-900 mb-2">
-									Welcome back
+									Get Started
 								</h2>
 								<p className="text-sm text-zinc-600 mb-8">
 									Continue with Google to open your dashboard and manage

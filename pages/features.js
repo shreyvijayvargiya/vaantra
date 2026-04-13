@@ -33,7 +33,7 @@ const FeaturesPage = () => {
 			icon: CreditCard,
 			title: "Payment Integration",
 			description:
-				"Seamless payment processing with Polar. Subscription management, webhooks, and customer management built-in.",
+				"Seamless payment processing in USD and INR. Subscription management, webhooks, and customer management built-in.",
 		},
 		{
 			icon: Database,
