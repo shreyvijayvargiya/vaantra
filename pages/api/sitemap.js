@@ -1,6 +1,6 @@
 /**
  * Dynamic sitemap for crawlers. Rewritten as /sitemap.xml via next.config.js.
- * Set NEXT_PUBLIC_SITE_URL (e.g. https://vaantra.com) on Vercel for stable absolute URLs.
+ * Set NEXT_PUBLIC_SITE_URL (e.g. https://aantraa.com) on Vercel for stable absolute URLs.
  */
 const PATHS = [
 	{ path: "/", changefreq: "weekly", priority: 1 },

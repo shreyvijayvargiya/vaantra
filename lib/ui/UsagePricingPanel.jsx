@@ -208,6 +208,8 @@ export function UsagePricingPanel({
 	onRequireLogin,
 	compact = false,
 	defaultCurrency = "usd",
+	/** When set (e.g. modal opens), snaps the minute slider to this index. */
+	suggestedSliderIndex,
 }) {
 	const [sliderIdx, setSliderIdx] = useState(2);
 	const [currency, setCurrency] = useState(
@@ -217,6 +219,18 @@ export function UsagePricingPanel({
 	);
 	const [busy, setBusy] = useState(false);
 	const [err, setErr] = useState(null);
+
+	useEffect(() => {
+		if (suggestedSliderIndex == null || !Number.isFinite(Number(suggestedSliderIndex))) {
+			return;
+		}
+		const max = USAGE_MINUTE_STEPS.length - 1;
+		const i = Math.max(
+			0,
+			Math.min(max, Math.floor(Number(suggestedSliderIndex))),
+		);
+		setSliderIdx(i);
+	}, [suggestedSliderIndex]);
 
 	const minutes = useMemo(
 		() => minutesFromSliderIndex(sliderIdx),
@@ -327,7 +341,6 @@ export function UsagePricingPanel({
 			<p style={{ fontSize: 13, color: "#52525b", marginBottom: 4 }}>
 				{formatPricePerMinuteLine(currency)} · selected <strong>{minutes} min</strong>
 			</p>
-			
 			{err ? (
 				<p style={{ fontSize: 12, color: "#dc2626", marginBottom: 8 }}>{err}</p>
 			) : null}

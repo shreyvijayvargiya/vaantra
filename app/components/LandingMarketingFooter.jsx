@@ -14,7 +14,7 @@ export default function LandingMarketingFooter() {
 			}}
 		>
 			<div
-				className="vaantra-font"
+				className="aantraa-font"
 				style={{
 					fontSize: 20,
 					fontWeight: 700,
@@ -22,10 +22,10 @@ export default function LandingMarketingFooter() {
 					marginBottom: 8,
 				}}
 			>
-				vaantra<span style={{ color: "#ea580c" }}>.</span>
+				aantraa<span style={{ color: "#ea580c" }}>.</span>
 			</div>
 			<p style={{ color: "#a1a1aa", fontSize: 12, marginBottom: 12 }}>
-				© 2026 vaantra.video · All rights reserved
+				© 2026 aantraa.video · All rights reserved
 			</p>
 			<div
 				style={{

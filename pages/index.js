@@ -5,8 +5,9 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import LoginModal from "../lib/ui/LoginModal";
 import BenefitsShortsSection from "../app/components/BenefitsShortsSection";
-import LandingMarketingNav from "../app/components/LandingMarketingNav";
-import LandingMarketingFooter from "../app/components/LandingMarketingFooter";
+import Navbar from "../app/components/Navbar";
+import Footer from "../app/components/Footer";
+import HomePage from "../app/components/Home";
 import { onAuthStateChange } from "../lib/api/auth";
 import {
 	deleteTranslationGroupDoc,
@@ -36,6 +37,7 @@ import {
 } from "../app/components/LandingHeroBadges";
 import {
 	PRICE_PER_MINUTE_USD,
+	sliderIndexForAtLeastMinutes,
 	USAGE_MINUTE_STEPS,
 } from "../lib/utils/usagePricing";
 import {
@@ -44,6 +46,7 @@ import {
 	secondsToBillableMinutes,
 } from "../lib/utils/videoDuration";
 import {
+	getYouTubeVideoId,
 	normalizeYouTubeVideoUrl,
 	PENDING_YOUTUBE_TRANSLATE_STORAGE_KEY,
 } from "../lib/utils/youtubeUrl";
@@ -377,7 +380,7 @@ export const GlobalStyles = () => (
     @keyframes pulse-amber { 0%,100% { box-shadow: 0 0 0 0 rgba(234,88,12,0.25); } 50% { box-shadow: 0 0 0 8px rgba(234,88,12,0); } }
     .spin { animation: spin 1s linear infinite; }
     .pulse { animation: pulse-amber 1.8s ease-in-out infinite; }
-    .vaantra-font { font-family: 'Lora', Georgia, serif; }
+    .aantraa-font { font-family: 'Lora', Georgia, serif; }
     .sans { font-family: 'DM Sans', system-ui, sans-serif; }
     .mono { font-family: 'DM Mono', 'Courier New', monospace; }
     a { text-decoration: none; color: inherit; }
@@ -461,7 +464,7 @@ function LangMultiSelect({
 	};
 	const summary =
 		selected.length === 0
-			? "Target languages"
+			? "Select languages"
 			: selected.length === 1
 				? selected[0]
 				: `${selected.length} languages`;
@@ -491,7 +494,7 @@ function LangMultiSelect({
 					style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}
 					aria-hidden
 				>
-					{selected.length === 1 ? flagForLanguageName(selected[0]) : "🌐"}
+					{selected.length === 1 ? flagForLanguageName(selected[0]) : "🏴"}
 				</span>
 				<span
 					style={{
@@ -867,6 +870,14 @@ function formatAudioClock(sec) {
 	return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+function getLongMediaEtaLine(durationSec) {
+	const minutes = Math.max(0, Number(durationSec) || 0) / 60;
+	if (minutes <= 2) return null;
+	const minWait = Math.max(3, Math.ceil(minutes * 0.9));
+	const maxWait = Math.max(minWait + 2, Math.ceil(minutes * 1.7));
+	return `Long media detected (~${Math.ceil(minutes)} min). Please wait about ${minWait}-${maxWait} minutes after clicking Translate.`;
+}
+
 /** Dark chrome + custom controls; matches `VoiceStyleAudioPlayer` styling for video translation. */
 function StudioVideoPlayer({ src, footerLabel = "Video" }) {
 	const videoRef = useRef(null);
@@ -1149,6 +1160,79 @@ function StudioVideoPlayer({ src, footerLabel = "Video" }) {
 			
 		</div>
 	);
+}
+
+/** Same outer chrome as {@link StudioVideoPlayer}; iframe preview for YouTube in the translate form. */
+function StudioYouTubePreview({ videoId, durationHintSec = 0 }) {
+	const embedSrc = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?rel=0&modestbranding=1`;
+	return (
+		<div
+			style={{
+				borderRadius: 16,
+				overflow: "hidden",
+				background:
+					"linear-gradient(145deg, #18181b 0%, #27272a 45%, #1c1917 100%)",
+				border: "1px solid rgba(255,255,255,0.06)",
+				boxShadow:
+					"0 12px 40px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)",
+			}}
+		>
+			<div
+				style={{
+					borderRadius: 12,
+					overflow: "hidden",
+					position: "relative",
+					background: "#000",
+					aspectRatio: "16/9",
+					maxHeight: 320,
+					width: "100%",
+				}}
+			>
+				<iframe
+					src={embedSrc}
+					title="YouTube video preview"
+					allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+					referrerPolicy="strict-origin-when-cross-origin"
+					allowFullScreen
+					style={{
+						width: "100%",
+						height: "100%",
+						border: "none",
+						display: "block",
+					}}
+				/>
+			</div>
+			<div
+				style={{
+					padding: "8px 12px",
+					background: "rgba(0,0,0,0.45)",
+					borderTop: "1px solid rgba(255,255,255,0.06)",
+				}}
+			>
+				<span
+					style={{
+						fontSize: 11,
+						fontFamily: "'DM Mono', monospace",
+						color: "rgba(255,255,255,0.8)",
+					}}
+				>
+					{durationHintSec > 0
+						? `Duration ${formatAudioClock(durationHintSec)} · `
+						: ""}
+					Preview
+				</span>
+			</div>
+		</div>
+	);
+}
+
+function isHttpOrHttpsUrl(s) {
+	try {
+		const u = new URL(s.trim());
+		return u.protocol === "http:" || u.protocol === "https:";
+	} catch {
+		return false;
+	}
 }
 
 /** Dark, Spotify-inspired player with animated waveform bars (voice translation). */
@@ -1672,6 +1756,9 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 	const speechFinalRef = useRef("");
 	const textAtRecordStartRef = useRef("");
 	const speechHeardRef = useRef(false);
+	const [audioDurationSec, setAudioDurationSec] = useState(0);
+	const [audioPreviewUrl, setAudioPreviewUrl] = useState("");
+	const submitAbortRef = useRef(null);
 
 	useEffect(() => {
 		return () => {
@@ -1816,6 +1903,51 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 		})();
 	};
 
+	useEffect(() => {
+		const media = uploadedFile || recordedBlob;
+		if (!media) {
+			setAudioDurationSec(0);
+			return;
+		}
+		const audioEl = document.createElement("audio");
+		audioEl.preload = "metadata";
+		const objectUrl = URL.createObjectURL(media);
+		audioEl.src = objectUrl;
+		const onLoaded = () => {
+			setAudioDurationSec(
+				Number.isFinite(audioEl.duration) ? audioEl.duration : 0,
+			);
+			URL.revokeObjectURL(objectUrl);
+		};
+		const onError = () => {
+			setAudioDurationSec(0);
+			URL.revokeObjectURL(objectUrl);
+		};
+		audioEl.addEventListener("loadedmetadata", onLoaded);
+		audioEl.addEventListener("durationchange", onLoaded);
+		audioEl.addEventListener("error", onError);
+		audioEl.load();
+		return () => {
+			audioEl.removeEventListener("loadedmetadata", onLoaded);
+			audioEl.removeEventListener("durationchange", onLoaded);
+			audioEl.removeEventListener("error", onError);
+			URL.revokeObjectURL(objectUrl);
+		};
+	}, [uploadedFile, recordedBlob]);
+
+	useEffect(() => {
+		const media = uploadedFile || recordedBlob;
+		if (!media) {
+			setAudioPreviewUrl("");
+			return;
+		}
+		const objectUrl = URL.createObjectURL(media);
+		setAudioPreviewUrl(objectUrl);
+		return () => {
+			URL.revokeObjectURL(objectUrl);
+		};
+	}, [uploadedFile, recordedBlob]);
+
 	const submit = async () => {
 		const langs = [...selectedLangs].sort();
 		if (langs.length === 0) {
@@ -1833,6 +1965,8 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 		setErr(null);
 		setResults(null);
 		const url = getVoiceTranslatePostUrl();
+		const ac = new AbortController();
+		submitAbortRef.current = ac;
 		try {
 			let res;
 			if (hasAudio) {
@@ -1851,6 +1985,7 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 					method: "POST",
 					headers: auth,
 					body: fd,
+					signal: ac.signal,
 				});
 			} else {
 				res = await fetch(url, {
@@ -1864,6 +1999,7 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 						languages: langs,
 						include_audio: true,
 					}),
+					signal: ac.signal,
 				});
 			}
 			const data = await res.json().catch(() => ({}));
@@ -1920,34 +2056,36 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 				});
 			}
 		} catch (e) {
+			if (e?.name === "AbortError") {
+				setErr("Translation cancelled.");
+				return;
+			}
 			console.error(e);
 			setErr(e?.message || "Something went wrong");
 		} finally {
+			submitAbortRef.current = null;
 			setBusy(false);
 		}
 	};
 
 	const hasAudio = Boolean(uploadedFile || recordedBlob);
+	const isFreeUser = !auth.currentUser;
+	const freeDurationLimitSec = 30;
+	const freeDurationBlocked =
+		isFreeUser &&
+		audioDurationSec > freeDurationLimitSec;
 	const canSubmit = Boolean(
 		(text.trim() || hasAudio) &&
 		selectedLangs.length > 0 &&
 		!busy &&
-		!transcribing,
+		!transcribing &&
+		!freeDurationBlocked,
 	);
+	const longMediaEta = getLongMediaEtaLine(audioDurationSec);
 
 	return (
 		<div>
-			<label
-				style={{
-					display: "block",
-					fontSize: 12,
-					fontWeight: 600,
-					color: "#52525b",
-					marginBottom: 8,
-				}}
-			>
-				Text to translate (optional if you use audio)
-			</label>
+			
 			<textarea
 				value={text}
 				onChange={(e) => setText(e.target.value)}
@@ -2065,24 +2203,51 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 					</span>
 				)}
 			</div>
-			<label
-				style={{
-					display: "block",
-					fontSize: 12,
-					fontWeight: 600,
-					color: "#52525b",
-					marginBottom: 8,
-				}}
-			>
-				Target languages
-			</label>
-			<div style={{ marginBottom: 16 }}>
-				<LangMultiSelect
-					selected={selectedLangs}
-					onChange={setSelectedLangs}
-					fullWidth
-				/>
-			</div>
+			{audioPreviewUrl && (
+				<div
+					style={{
+						marginBottom: 14,
+						padding: "10px 12px 12px",
+						borderRadius: 14,
+						background: "rgba(0,0,0,0.02)",
+						border: "1px solid rgba(0,0,0,0.06)",
+					}}
+				>
+					<p style={{ fontSize: 12, color: "#71717a", marginBottom: 8 }}>
+						Audio preview
+					</p>
+					<VoiceStyleAudioPlayer src={audioPreviewUrl} />
+				</div>
+			)}
+			<LangMultiSelect
+				selected={selectedLangs}
+				onChange={setSelectedLangs}
+				fullWidth
+			/>
+			
+			{longMediaEta && (
+				<p
+					
+					className="my-2 p-2"
+				>
+					{longMediaEta}
+				</p>
+			)}
+			{freeDurationBlocked && (
+				<p
+					style={{
+						fontSize: 12,
+						color: "#b91c1c",
+						background: "rgba(239,68,68,0.08)",
+						border: "1px solid rgba(239,68,68,0.2)",
+						borderRadius: 10,
+						padding: "8px 10px",
+						marginBottom: 10,
+					}}
+				>
+					Free plan supports audio up to 30 seconds. Upgrade to translate longer clips.
+				</p>
+			)}
 			<button
 				type="button"
 				onClick={submit}
@@ -2097,6 +2262,7 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 					color: canSubmit ? "#fff" : "#a1a1aa",
 					cursor: canSubmit ? "pointer" : "not-allowed",
 				}}
+				className="my-4"
 			>
 				{busy ? (
 					<span
@@ -2109,6 +2275,25 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 					"Translate & generate audio"
 				)}
 			</button>
+			{busy && (
+				<button
+					type="button"
+					onClick={() => submitAbortRef.current?.abort()}
+					style={{
+						width: "100%",
+						marginTop: 8,
+						padding: "10px 14px",
+						borderRadius: 10,
+						fontSize: 13,
+						fontWeight: 600,
+						color: "#b91c1c",
+						background: "rgba(239,68,68,0.08)",
+						border: "1px solid rgba(239,68,68,0.25)",
+					}}
+				>
+					Cancel translation
+				</button>
+			)}
 			{err && (
 				<p style={{ color: "#ef4444", fontSize: 13, marginTop: 12 }}>{err}</p>
 			)}
@@ -2186,8 +2371,17 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 	);
 }
 
-function NewTranslationPanel({ addVideo }) {
-	const [tab, setTab] = useState("video");
+function NewTranslationPanel({
+	addVideo,
+	tab: controlledTab,
+	onTabChange,
+	showTabs = true,
+	usageMinutesUsed,
+	usageMinutesCredited,
+}) {
+	const [internalTab, setInternalTab] = useState("video");
+	const tab = controlledTab ?? internalTab;
+	const setTab = onTabChange ?? setInternalTab;
 	const tabBtn = (id, label, Icon) => (
 		<button
 			key={id}
@@ -2195,22 +2389,30 @@ function NewTranslationPanel({ addVideo }) {
 			onClick={() => setTab(id)}
 			style={{
 				flex: 1,
-				minWidth: 140,
+				minWidth: 160,
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
-				gap: 8,
-				padding: "10px 12px",
-				borderRadius: 12,
-				fontSize: 13,
+				gap: 9,
+				padding: "11px 14px",
+				borderRadius: 11,
+				fontSize: 13.5,
 				fontWeight: 600,
 				border:
 					tab === id
-						? "1px solid rgba(234,88,12,0.45)"
-						: "1px solid rgba(0,0,0,0.08)",
-				background: tab === id ? "rgba(234,88,12,0.1)" : "rgba(0,0,0,0.02)",
+						? "1px solid rgba(234,88,12,0.35)"
+						: "1px solid rgba(0,0,0,0.06)",
+				background:
+					tab === id
+						? "linear-gradient(180deg, rgba(234,88,12,0.14), rgba(234,88,12,0.08))"
+						: "#fff",
 				color: tab === id ? "#c2410c" : "#71717a",
 				cursor: "pointer",
+				boxShadow:
+					tab === id
+						? "0 4px 14px rgba(234,88,12,0.1)"
+						: "0 1px 2px rgba(0,0,0,0.03)",
+				transition: "all 0.2s ease",
 			}}
 		>
 			{Icon ? <Icon size={16} /> : null}
@@ -2219,27 +2421,41 @@ function NewTranslationPanel({ addVideo }) {
 	);
 	return (
 		<>
-			<div
-				style={{
-					display: "flex",
-					gap: 8,
-					marginBottom: 12,
-					flexWrap: "wrap",
-				}}
-			>
-				{tabBtn("video", "Video translation", Video)}
-				{tabBtn("voice", "Voice & text", Mic2)}
-			</div>
+			{showTabs && (
+				<div
+					style={{
+						display: "grid",
+						gridTemplateColumns: "1fr 1fr",
+						gap: 8,
+						marginBottom: 14,
+						flexWrap: "wrap",
+						padding: 5,
+						background: "rgba(0,0,0,0.03)",
+						border: "1px solid rgba(0,0,0,0.06)",
+						borderRadius: 14,
+					}}
+				>
+					{tabBtn("video", "Translate video", Video)}
+					{tabBtn("voice", "Translate audio", Mic2)}
+				</div>
+			)}
 			{tab === "video" ? (
 				<>
-					<p style={{ fontSize: 14, color: "#71717a", marginBottom: 24 }}>
+					<p className="text-sm text-zinc-600 my-4">
 						Upload a video or paste a URL to get started
 					</p>
-					<TranslateForm onJobCreated={addVideo} compact />
+					<TranslateForm
+						onJobCreated={addVideo}
+						compact
+						usageMinutesUsed={usageMinutesUsed}
+						usageMinutesCredited={usageMinutesCredited}
+					/>
 				</>
 			) : (
 				<>
-					
+					<p className="text-sm text-zinc-600 my-4">
+						Record, upload, or paste text to translate audio quickly
+					</p>
 					<VoiceTranslateForm compact onVoiceJobCreated={addVideo} />
 				</>
 			)}
@@ -2254,6 +2470,8 @@ function TranslateForm({
 	onRequireAuth,
 	prefillVideoUrl = null,
 	lockPrefilledUrl = false,
+	usageMinutesUsed,
+	usageMinutesCredited,
 }) {
 	const [mode, setMode] = useState("url");
 	const [url, setUrl] = useState("");
@@ -2266,9 +2484,16 @@ function TranslateForm({
 	const [localTrack, setLocalTrack] = useState(null);
 	const [drag, setDrag] = useState(false);
 	const [fileError, setFileError] = useState(null);
+	const [fileDurationSec, setFileDurationSec] = useState(0);
+	const [videoPreviewUrl, setVideoPreviewUrl] = useState("");
+	const [urlDurationSec, setUrlDurationSec] = useState(0);
+	const [youtubeDurationSec, setYoutubeDurationSec] = useState(0);
 	const fileRef = useRef();
 	const localTrackRef = useRef(null);
+	const submitAbortRef = useRef(null);
 	localTrackRef.current = localTrack;
+	const [showCreditsModal, setShowCreditsModal] = useState(false);
+	const [creditsModalDetail, setCreditsModalDetail] = useState(null);
 
 	useEffect(() => {
 		if (!prefillVideoUrl) return;
@@ -2302,13 +2527,109 @@ function TranslateForm({
 		setFile(f);
 	};
 
-	const toggleSpotlightLang = (langName) => {
-		setSelectedLangs((prev) =>
-			prev.includes(langName)
-				? prev.filter((x) => x !== langName)
-				: [...prev, langName],
-		);
-	};
+
+
+	useEffect(() => {
+		if (!file) {
+			setFileDurationSec(0);
+			return;
+		}
+		const videoEl = document.createElement("video");
+		videoEl.preload = "metadata";
+		const objectUrl = URL.createObjectURL(file);
+		videoEl.src = objectUrl;
+		const onLoaded = () => {
+			setFileDurationSec(
+				Number.isFinite(videoEl.duration) ? videoEl.duration : 0,
+			);
+			URL.revokeObjectURL(objectUrl);
+		};
+		const onError = () => {
+			setFileDurationSec(0);
+			URL.revokeObjectURL(objectUrl);
+		};
+		videoEl.addEventListener("loadedmetadata", onLoaded);
+		videoEl.addEventListener("durationchange", onLoaded);
+		videoEl.addEventListener("error", onError);
+		videoEl.load();
+		return () => {
+			videoEl.removeEventListener("loadedmetadata", onLoaded);
+			videoEl.removeEventListener("durationchange", onLoaded);
+			videoEl.removeEventListener("error", onError);
+			URL.revokeObjectURL(objectUrl);
+		};
+	}, [file]);
+
+	useEffect(() => {
+		if (!file) {
+			setVideoPreviewUrl("");
+			return;
+		}
+		const objectUrl = URL.createObjectURL(file);
+		setVideoPreviewUrl(objectUrl);
+		return () => {
+			URL.revokeObjectURL(objectUrl);
+		};
+	}, [file]);
+
+	useEffect(() => {
+		if (mode !== "url") {
+			setUrlDurationSec(0);
+			return;
+		}
+		const trimmed = url.trim();
+		if (!trimmed) {
+			setUrlDurationSec(0);
+			return;
+		}
+		if (getYouTubeVideoId(trimmed)) {
+			setUrlDurationSec(0);
+			return;
+		}
+		let cancelled = false;
+		const t = setTimeout(() => {
+			void probeVideoDurationSeconds(trimmed).then((sec) => {
+				if (!cancelled) setUrlDurationSec(Number.isFinite(sec) ? sec : 0);
+			});
+		}, 350);
+		return () => {
+			cancelled = true;
+			clearTimeout(t);
+		};
+	}, [mode, url]);
+
+	useEffect(() => {
+		if (mode !== "url") {
+			setYoutubeDurationSec(0);
+			return;
+		}
+		const trimmed = url.trim();
+		if (!getYouTubeVideoId(trimmed)) {
+			setYoutubeDurationSec(0);
+			return;
+		}
+		let cancelled = false;
+		const t = setTimeout(() => {
+			void fetch(
+				`/api/youtube-duration?url=${encodeURIComponent(trimmed)}`,
+			)
+				.then((r) => r.json())
+				.then((d) => {
+					const sec = Number(d?.durationSec);
+					if (!cancelled)
+						setYoutubeDurationSec(
+							Number.isFinite(sec) && sec > 0 ? sec : 0,
+						);
+				})
+				.catch(() => {
+					if (!cancelled) setYoutubeDurationSec(0);
+				});
+		}, 400);
+		return () => {
+			cancelled = true;
+			clearTimeout(t);
+		};
+	}, [mode, url]);
 
 	/** Landing: realtime caption SSE per in-flight job (no dashboard callback) */
 	useEffect(() => {
@@ -2366,9 +2687,49 @@ function TranslateForm({
 			onRequireAuth();
 			return;
 		}
+
+		const durationSecForCredits =
+			mode === "file"
+				? fileDurationSec
+				: Math.max(urlDurationSec, youtubeDurationSec);
+		const perJobBillableMin =
+			durationSecForCredits > 0
+				? secondsToBillableMinutes(durationSecForCredits)
+				: 0;
+		const estimatedTotalMinutes =
+			perJobBillableMin > 0
+				? perJobBillableMin * selectedLangs.length
+				: 0;
+		const usageProvided =
+			typeof usageMinutesUsed === "number" &&
+			typeof usageMinutesCredited === "number";
+		if (
+			auth.currentUser &&
+			usageProvided &&
+			estimatedTotalMinutes > 0
+		) {
+			const remaining = Math.max(
+				0,
+				usageMinutesCredited - usageMinutesUsed,
+			);
+			if (estimatedTotalMinutes > remaining) {
+				setCreditsModalDetail({
+					estimatedTotalMinutes,
+					remainingMinutes: remaining,
+					needMoreMinutes: estimatedTotalMinutes - remaining,
+					perJobMinutes: perJobBillableMin,
+					langCount: selectedLangs.length,
+				});
+				setShowCreditsModal(true);
+				return;
+			}
+		}
+
 		setBusy(true);
 		const postUrl = getTranslatePostUrl();
 		const langs = [...selectedLangs].sort();
+		const ac = new AbortController();
+		submitAbortRef.current = ac;
 		const groupId =
 			typeof crypto !== "undefined" && crypto.randomUUID
 				? crypto.randomUUID()
@@ -2389,6 +2750,7 @@ function TranslateForm({
 								...(await getTranslateAuthHeaders()),
 							},
 							body: JSON.stringify(body),
+							signal: ac.signal,
 						});
 					} else {
 						const fd = new FormData();
@@ -2398,6 +2760,7 @@ function TranslateForm({
 							method: "POST",
 							headers: await getTranslateAuthHeaders(),
 							body: fd,
+							signal: ac.signal,
 						});
 					}
 					const data = await res.json().catch(() => ({}));
@@ -2468,8 +2831,13 @@ function TranslateForm({
 				setLocalTrack({ groupId, jobs });
 			}
 		} catch (e) {
+			if (e?.name === "AbortError") {
+				console.info("Translation cancelled by user.");
+				return;
+			}
 			console.error(e);
 		} finally {
+			submitAbortRef.current = null;
 			setBusy(false);
 		}
 	};
@@ -2483,6 +2851,29 @@ function TranslateForm({
 
 	const canSubmit =
 		selectedLangs.length > 0 && (mode === "url" ? url.trim() : file) && !busy;
+	const detectedDurationSec =
+		mode === "file"
+			? fileDurationSec
+			: Math.max(urlDurationSec, youtubeDurationSec);
+	const isYouTubeUrl =
+		mode === "url" && Boolean(normalizeYouTubeVideoUrl(url.trim()));
+	const isFreeUser = requireAuthOnSubmit || !auth.currentUser;
+	const freeDurationBlocked = isFreeUser && detectedDurationSec > 30;
+	const canSubmitWithLimits = canSubmit && !freeDurationBlocked;
+	const longMediaEta =
+		getLongMediaEtaLine(detectedDurationSec) ||
+		(isYouTubeUrl && detectedDurationSec === 0
+			? "YouTube URL detected. If this video is longer than 2 minutes, processing can take several minutes after you click Translate."
+			: null);
+
+	const trimmedUrlForPreview = mode === "url" ? url.trim() : "";
+	const ytPreviewId = trimmedUrlForPreview
+		? getYouTubeVideoId(trimmedUrlForPreview)
+		: null;
+	const showUrlVideoPreview =
+		mode === "url" &&
+		Boolean(trimmedUrlForPreview) &&
+		(Boolean(ytPreviewId) || isHttpOrHttpsUrl(trimmedUrlForPreview));
 
 	const showForm = !localTrack;
 
@@ -2532,101 +2923,155 @@ function TranslateForm({
 
 					{/* Input area */}
 					{mode === "url" ? (
-						<input
-							value={url}
-							onChange={(e) => setUrl(e.target.value)}
-							placeholder="https://example.com/video.mp4"
-							style={{
-								width: "100%",
-								padding: "11px 14px",
-								borderRadius: 10,
-								fontSize: 13,
-								marginBottom: 12,
-								background: "#fff",
-								border: "1px solid rgba(0,0,0,0.1)",
-								color: "#18181b",
-								outline: "none",
-								transition: "border-color 0.2s",
-							}}
-							onFocus={(e) =>
-								(e.target.style.borderColor = "rgba(234,88,12,0.5)")
-							}
-							onBlur={(e) => (e.target.style.borderColor = "rgba(0,0,0,0.1)")}
-						/>
-					) : (
-						<div
-							onClick={() => fileRef.current?.click()}
-							onDragOver={(e) => {
-								e.preventDefault();
-								setDrag(true);
-							}}
-							onDragLeave={() => setDrag(false)}
-							onDrop={(e) => {
-								e.preventDefault();
-								setDrag(false);
-								const f = e.dataTransfer.files[0];
-								if (f) pickVideoFile(f);
-							}}
-							style={{
-								marginBottom: 12,
-								borderRadius: 12,
-								cursor: "pointer",
-								height: compact ? 72 : 104,
-								display: "flex",
-								flexDirection: "column",
-								alignItems: "center",
-								justifyContent: "center",
-								gap: 6,
-								border: `2px dashed ${drag ? "#ea580c" : file ? "rgba(234,88,12,0.45)" : "rgba(0,0,0,0.12)"}`,
-								background: drag ? "rgba(234,88,12,0.06)" : "rgba(0,0,0,0.02)",
-								transition: "all 0.2s",
-							}}
-						>
-							{file ? (
-								<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-									<Film size={15} style={{ color: "#ea580c" }} />
-									<span
-										style={{
-											color: "#52525b",
-											fontSize: 13,
-											maxWidth: 200,
-											overflow: "hidden",
-											textOverflow: "ellipsis",
-											whiteSpace: "nowrap",
-										}}
-									>
-										{file.name}
-									</span>
-									<button
-										onClick={(e) => {
-											e.stopPropagation();
-											setFile(null);
-										}}
-										style={{ color: "#71717a", display: "flex" }}
-									>
-										<X size={13} />
-									</button>
-								</div>
-							) : (
-								<>
-									<Upload size={18} style={{ color: "#a1a1aa" }} />
-									<span style={{ color: "#71717a", fontSize: 12 }}>
-										Drop MP4 here or click to browse
-									</span>
-								</>
-							)}
+						<>
 							<input
-								ref={fileRef}
-								type="file"
-								accept="video/*"
-								style={{ display: "none" }}
-								onChange={(e) => {
-									const f = e.target.files?.[0];
-									e.target.value = "";
-									pickVideoFile(f);
+								value={url}
+								onChange={(e) => setUrl(e.target.value)}
+								placeholder="https://example.com/video.mp4"
+								style={{
+									width: "100%",
+									padding: "11px 14px",
+									borderRadius: 10,
+									fontSize: 13,
+									marginBottom: 12,
+									background: "#fff",
+									border: "1px solid rgba(0,0,0,0.1)",
+									color: "#18181b",
+									outline: "none",
+									transition: "border-color 0.2s",
 								}}
+								onFocus={(e) =>
+									(e.target.style.borderColor = "rgba(234,88,12,0.5)")
+								}
+								onBlur={(e) =>
+									(e.target.style.borderColor = "rgba(0,0,0,0.1)")
+								}
 							/>
-						</div>
+							{showUrlVideoPreview && (
+								<div
+									style={{
+										marginBottom: 12,
+										padding: "10px 12px 12px",
+										borderRadius: 14,
+										background: "rgba(0,0,0,0.02)",
+										border: "1px solid rgba(0,0,0,0.06)",
+									}}
+								>
+									<p
+										style={{
+											fontSize: 12,
+											color: "#71717a",
+											marginBottom: 8,
+										}}
+									>
+										Video preview
+									</p>
+									{ytPreviewId ? (
+										<StudioYouTubePreview
+											videoId={ytPreviewId}
+											durationHintSec={youtubeDurationSec}
+										/>
+									) : (
+										<StudioVideoPlayer
+											src={trimmedUrlForPreview}
+											footerLabel="Preview"
+										/>
+									)}
+								</div>
+							)}
+						</>
+					) : (
+						<>
+							<div
+								onClick={() => fileRef.current?.click()}
+								onDragOver={(e) => {
+									e.preventDefault();
+									setDrag(true);
+								}}
+								onDragLeave={() => setDrag(false)}
+								onDrop={(e) => {
+									e.preventDefault();
+									setDrag(false);
+									const f = e.dataTransfer.files[0];
+									if (f) pickVideoFile(f);
+								}}
+								style={{
+									marginBottom: 12,
+									borderRadius: 12,
+									cursor: "pointer",
+									height: compact ? 72 : 104,
+									display: "flex",
+									flexDirection: "column",
+									alignItems: "center",
+									justifyContent: "center",
+									gap: 6,
+									border: `2px dashed ${drag ? "#ea580c" : file ? "rgba(234,88,12,0.45)" : "rgba(0,0,0,0.12)"}`,
+									background: drag ? "rgba(234,88,12,0.06)" : "rgba(0,0,0,0.02)",
+									transition: "all 0.2s",
+								}}
+							>
+								{file ? (
+									<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+										<Film size={15} style={{ color: "#ea580c" }} />
+										<span
+											style={{
+												color: "#52525b",
+												fontSize: 13,
+												maxWidth: 200,
+												overflow: "hidden",
+												textOverflow: "ellipsis",
+												whiteSpace: "nowrap",
+											}}
+										>
+											{file.name}
+										</span>
+										<button
+											onClick={(e) => {
+												e.stopPropagation();
+												setFile(null);
+											}}
+											style={{ color: "#71717a", display: "flex" }}
+										>
+											<X size={13} />
+										</button>
+									</div>
+								) : (
+									<>
+										<Upload size={18} style={{ color: "#a1a1aa" }} />
+										<span style={{ color: "#71717a", fontSize: 12 }}>
+											Drop MP4 here or click to browse
+										</span>
+									</>
+								)}
+								<input
+									ref={fileRef}
+									type="file"
+									accept="video/*"
+									style={{ display: "none" }}
+									onChange={(e) => {
+										const f = e.target.files?.[0];
+										e.target.value = "";
+										pickVideoFile(f);
+									}}
+								/>
+							</div>
+							{videoPreviewUrl && (
+								<div
+									style={{
+										marginBottom: 12,
+										padding: "10px 12px 12px",
+										borderRadius: 14,
+										background: "rgba(0,0,0,0.02)",
+										border: "1px solid rgba(0,0,0,0.06)",
+									}}
+								>
+									<p style={{ fontSize: 12, color: "#71717a", marginBottom: 8 }}>
+										Video preview
+									</p>
+									<StudioVideoPlayer src={videoPreviewUrl} footerLabel="Preview" />
+								</div>
+							)}
+						</>
 					)}
 					{fileError && mode === "file" && (
 						<p
@@ -2651,9 +3096,25 @@ function TranslateForm({
 							/>
 						</div>
 					</div>
+					
+					{freeDurationBlocked && (
+						<p
+							style={{
+								fontSize: 12,
+								color: "#b91c1c",
+								background: "rgba(239,68,68,0.08)",
+								border: "1px solid rgba(239,68,68,0.2)",
+								borderRadius: 10,
+								padding: "8px 10px",
+								marginBottom: 10,
+							}}
+						>
+							Free plan supports videos up to 30 seconds. Upgrade to translate longer videos.
+						</p>
+					)}
 					<button
 						onClick={submit}
-						disabled={!canSubmit}
+						disabled={!canSubmitWithLimits}
 						style={{
 							display: "flex",
 							alignItems: "center",
@@ -2664,13 +3125,14 @@ function TranslateForm({
 							fontWeight: 600,
 							background: "#ea580c",
 							color: "#fff",
-							opacity: canSubmit ? 1 : 0.35,
+							opacity: canSubmitWithLimits ? 1 : 0.35,
 							transition: "opacity 0.2s, transform 0.1s",
 							flexShrink: 0,
 						}}
 						className="my-2 w-full"
 						onMouseEnter={(e) => {
-							if (canSubmit) e.currentTarget.style.transform = "scale(1.03)";
+							if (canSubmitWithLimits)
+								e.currentTarget.style.transform = "scale(1.03)";
 						}}
 						onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
 					>
@@ -2686,6 +3148,38 @@ function TranslateForm({
 						Translate
 						{selectedLangs.length > 1 ? ` (${selectedLangs.length})` : ""}
 					</button>
+					{longMediaEta && (
+						<p
+							style={{
+								fontSize: 12,
+								color: "#c2410c",
+								border: "1px solid rgba(234,88,12,0.2)",
+								borderRadius: 10,
+							}}
+							className="p-2 my-4 text-xs"
+						>
+							{longMediaEta}
+						</p>
+					)}
+					{busy && (
+						<button
+							type="button"
+							onClick={() => submitAbortRef.current?.abort()}
+							style={{
+								width: "100%",
+								marginTop: 4,
+								padding: "10px 14px",
+								borderRadius: 10,
+								fontSize: 13,
+								fontWeight: 600,
+								color: "#b91c1c",
+								background: "rgba(239,68,68,0.08)",
+								border: "1px solid rgba(239,68,68,0.25)",
+							}}
+						>
+							Cancel translation
+						</button>
+					)}
 				</>
 			) : (
 				<>
@@ -2845,7 +3339,133 @@ function TranslateForm({
 					</p>
 				</div>
 			</details>
+			<InsufficientCreditsModal
+				open={showCreditsModal}
+				onClose={() => {
+					setShowCreditsModal(false);
+					setCreditsModalDetail(null);
+				}}
+				detail={creditsModalDetail}
+			/>
 		</div>
+	);
+}
+
+/** Opens from TranslateForm when estimated billable minutes exceed remaining balance. */
+function InsufficientCreditsModal({ open, onClose, detail }) {
+	const suggestedIdx =
+		detail != null
+			? sliderIndexForAtLeastMinutes(detail.needMoreMinutes)
+			: 0;
+	return (
+		<AnimatePresence>
+			{open && detail ? (
+				<motion.div
+					initial={{ opacity: 0 }}
+					animate={{ opacity: 1 }}
+					exit={{ opacity: 0 }}
+					style={{
+						position: "fixed",
+						inset: 0,
+						zIndex: 220,
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						padding: 16,
+						background: "rgba(0,0,0,0.45)",
+					}}
+					onClick={onClose}
+				>
+					<motion.div
+						initial={{ scale: 0.94, opacity: 0, y: 12 }}
+						animate={{ scale: 1, opacity: 1, y: 0 }}
+						exit={{ scale: 0.94, opacity: 0, y: 12 }}
+						transition={{ type: "spring", stiffness: 320, damping: 28 }}
+						onClick={(e) => e.stopPropagation()}
+						style={{
+							width: "100%",
+							maxWidth: 420,
+							maxHeight: "90vh",
+							overflowY: "auto",
+							borderRadius: 18,
+							padding: "28px 24px",
+							background: "#fff",
+							border: "1px solid rgba(0,0,0,0.08)",
+							boxShadow: "0 24px 64px rgba(0,0,0,0.15)",
+						}}
+					>
+						<h3
+							className="aantraa-font"
+							style={{
+								fontSize: 22,
+								fontWeight: 700,
+								color: "#18181b",
+								marginBottom: 8,
+							}}
+						>
+							Add credits
+						</h3>
+						<p
+							style={{
+								fontSize: 14,
+								color: "#71717a",
+								marginBottom: 12,
+								lineHeight: 1.5,
+							}}
+						>
+							This run may use about{" "}
+							<strong>{detail.estimatedTotalMinutes}</strong> minutes
+							{detail.langCount > 1 ? (
+								<>
+									{" "}
+									({detail.langCount} languages × ~{detail.perJobMinutes}{" "}
+									min each)
+								</>
+							) : null}
+							. You have{" "}
+							<strong>{detail.remainingMinutes.toFixed(1)}</strong> minutes
+							remaining.
+						</p>
+						<p
+							style={{
+								fontSize: 13,
+								color: "#52525b",
+								marginBottom: 14,
+								lineHeight: 1.45,
+							}}
+						>
+							Buy at least{" "}
+							<strong>{Math.ceil(detail.needMoreMinutes)}</strong> more minutes
+							with the slider, complete checkout, then try Translate again.
+						</p>
+						<UsagePricingPanel
+							key={`${detail.needMoreMinutes}-${detail.estimatedTotalMinutes}`}
+							compact
+							suggestedSliderIndex={suggestedIdx}
+							onRequireLogin={() => {}}
+						/>
+						<button
+							type="button"
+							onClick={onClose}
+							style={{
+								width: "100%",
+								marginTop: 14,
+								padding: "10px 14px",
+								borderRadius: 10,
+								fontSize: 13,
+								fontWeight: 600,
+								color: "#52525b",
+								background: "rgba(0,0,0,0.04)",
+								border: "1px solid rgba(0,0,0,0.1)",
+								cursor: "pointer",
+							}}
+						>
+							Close
+						</button>
+					</motion.div>
+				</motion.div>
+			) : null}
+		</AnimatePresence>
 	);
 }
 
@@ -2887,7 +3507,7 @@ function UpgradePriceModal({ open, onClose }) {
 						}}
 					>
 						<h3
-							className="vaantra-font"
+							className="aantraa-font"
 							style={{
 								fontSize: 22,
 								fontWeight: 700,
@@ -2983,7 +3603,7 @@ function Landing() {
 		},
 		{
 			q: "Is the original speaker's voice preserved?",
-			a: "Yes — vaantra uses voice cloning to maintain the original speaker's timbre and rhythm in the translated dub.",
+			a: "Yes — aantraa uses voice cloning to maintain the original speaker's timbre and rhythm in the translated dub.",
 		},
 		{
 			q: "Can I translate to multiple languages at the same time?",
@@ -3057,7 +3677,7 @@ function Landing() {
 				/>
 			</div>
 
-			<LandingMarketingNav onSignIn={() => setShowLogin(true)} />
+			<Navbar variant="marketing" onSignIn={() => setShowLogin(true)} />
 
 			{/* Hero */}
 			<section
@@ -3129,7 +3749,7 @@ function Landing() {
 				>
 					<div className="landing-hero-copy" style={{ flex: "1 1 340px", minWidth: 0 }}>
 						<motion.h1
-							className="vaantra-font"
+							className="aantraa-font"
 							initial={{ opacity: 0, y: 20 }}
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
@@ -3142,7 +3762,7 @@ function Landing() {
 								marginBottom: "clamp(20px, 3vw, 28px)",
 							}}
 						>
-							Vaantra<span style={{ color: "#ea580c" }}>.</span>
+							aantraa<span style={{ color: "#ea580c" }}>.</span>
 						</motion.h1>
 
 						<motion.h2
@@ -3184,7 +3804,7 @@ function Landing() {
 							}}
 						>
 							<p style={{ margin: "0 0 16px" }}>
-								Vaantra translates audio, text, and video into 90+ languages with
+								aantraa translates audio, text, and video into 90+ languages with
 								voice-cloned output.
 							</p>
 						</div>
@@ -3276,7 +3896,7 @@ function Landing() {
 					].map(([n, l]) => (
 						<div key={l} style={{ textAlign: "center" }}>
 							<div
-								className="vaantra-font"
+								className="aantraa-font"
 								style={{ fontSize: 28, fontWeight: 700, color: "#18181b" }}
 							>
 								{n}
@@ -3299,7 +3919,7 @@ function Landing() {
 			>
 				<div style={{ maxWidth: 1000, margin: "0 auto" }}>
 					<h2
-						className="vaantra-font"
+						className="aantraa-font"
 						style={{
 							textAlign: "center",
 							fontSize: "clamp(1.8rem,4vw,2.8rem)",
@@ -3395,7 +4015,7 @@ function Landing() {
 			>
 				<div style={{ maxWidth: 720, margin: "0 auto" }}>
 					<h2
-						className="vaantra-font"
+						className="aantraa-font"
 						style={{
 							textAlign: "center",
 							fontSize: "clamp(1.8rem,4vw,2.8rem)",
@@ -3510,7 +4130,7 @@ function Landing() {
 									}}
 								>
 									<span
-										className="vaantra-font"
+										className="aantraa-font"
 										style={{
 											fontSize: plan.kind === "contact" ? 32 : 38,
 											fontWeight: 700,
@@ -3572,7 +4192,7 @@ function Landing() {
 									<button
 										type="button"
 										onClick={() => {
-											window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("More credits — vaantra")}&body=${encodeURIComponent("Hi,\n\nI'd like to discuss volume credits or a team plan.\n\n")}`;
+											window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("More credits — aantraa")}&body=${encodeURIComponent("Hi,\n\nI'd like to discuss volume credits or a team plan.\n\n")}`;
 										}}
 										style={{
 											padding: "11px",
@@ -3608,7 +4228,7 @@ function Landing() {
 			>
 				<div style={{ maxWidth: 680, margin: "0 auto" }}>
 					<h2
-						className="vaantra-font"
+						className="aantraa-font"
 						style={{
 							textAlign: "center",
 							fontSize: "clamp(1.8rem,4vw,2.8rem)",
@@ -3690,7 +4310,7 @@ function Landing() {
 				</div>
 			</section>
 
-			<LandingMarketingFooter />
+			<Footer variant="marketing" />
 
 			<LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
 		</div>
@@ -3853,6 +4473,7 @@ export function Dashboard({ user, onLogout }) {
 	const [editingSidebarId, setEditingSidebarId] = useState(null);
 	const [editingName, setEditingName] = useState("");
 	const [viewNew, setViewNew] = useState(true);
+	const [newTranslationTab, setNewTranslationTab] = useState("video");
 	const [showUpgrade, setShowUpgrade] = useState(false);
 	const [windowW, setWindowW] = useState(
 		typeof window !== "undefined" ? window.innerWidth : 1200,
@@ -4688,12 +5309,11 @@ export function Dashboard({ user, onLogout }) {
 				}}
 			>
 				<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-					<div
-						className="vaantra-font"
-						style={{ fontSize: 20, fontWeight: 700, color: "#18181b" }}
-					>
-						vaantra<span style={{ color: "#ea580c" }}>.</span>
-					</div>
+					<img
+						src="/aantra-logo.png"
+						alt="aantraa"
+						style={{ height: 28, width: "auto", display: "block" }}
+					/>
 					<span
 						style={{
 							fontSize: 9,
@@ -4974,13 +5594,13 @@ export function Dashboard({ user, onLogout }) {
 					style={{
 						display: "flex",
 						justifyContent: "space-between",
-						alignItems: "baseline",
-						marginBottom: 6,
+						alignItems: "center",
+						marginBottom: 8,
 					}}
 				>
-					<span style={{ fontSize: 12, color: "#52525b" }}>Used (billed)</span>
+					<span style={{ fontSize: 12, color: "#52525b" }}>Usage</span>
 					<span style={{ fontSize: 14, fontWeight: 700, color: "#18181b" }}>
-						{usageMinutes.used.toFixed(1)} min
+						{usageMinutes.used.toFixed(1)}/{usageMinutes.credited.toFixed(1)} min
 					</span>
 				</div>
 				<div
@@ -5002,40 +5622,6 @@ export function Dashboard({ user, onLogout }) {
 						}}
 					/>
 				</div>
-				<div
-					style={{
-						display: "flex",
-						justifyContent: "space-between",
-						alignItems: "baseline",
-						marginBottom: 8,
-					}}
-				>
-					<span style={{ fontSize: 12, color: "#52525b" }}>Purchased</span>
-					<span style={{ fontSize: 14, fontWeight: 700, color: "#18181b" }}>
-						{usageMinutes.credited.toFixed(1)} min
-					</span>
-				</div>
-				<div
-					style={{
-						height: 8,
-						background: "rgba(234,88,12,0.12)",
-						borderRadius: 6,
-						overflow: "hidden",
-						marginBottom: 8,
-					}}
-				>
-					<div
-						style={{
-							width: `${usageMinutes.credited > 0 ? Math.min(100, (usageMinutes.used / usageMinutes.credited) * 100) : 0}%`,
-							height: "100%",
-							background: "rgba(234,88,12,0.45)",
-							borderRadius: 6,
-							transition: "width 0.35s ease",
-						}}
-					/>
-				</div>
-				
-				
 				<button
 					type="button"
 					onClick={() => setShowUpgrade(true)}
@@ -5240,12 +5826,11 @@ export function Dashboard({ user, onLogout }) {
 					</span>
 					<div style={{ flex: 1 }} />
 					{!sidebarOpen && (
-						<div
-							className="vaantra-font"
-							style={{ fontSize: 18, fontWeight: 700, color: "#18181b" }}
-						>
-							vaantra<span style={{ color: "#ea580c" }}>.</span>
-						</div>
+						<img
+							src="/aantra-logo.png"
+							alt="aantraa"
+							style={{ height: 26, width: "auto", display: "block" }}
+						/>
 					)}
 				</div>
 
@@ -5268,6 +5853,60 @@ export function Dashboard({ user, onLogout }) {
 							>
 								<div
 									style={{
+										display: "grid",
+										gridTemplateColumns: "1fr 1fr",
+										gap: 8,
+										marginBottom: 12,
+										padding: 5,
+										background: "rgba(0,0,0,0.03)",
+										border: "1px solid rgba(0,0,0,0.06)",
+										borderRadius: 14,
+									}}
+								>
+									{[
+										{ id: "video", label: "Translate video", Icon: Video },
+										{ id: "voice", label: "Translate audio", Icon: Mic2 },
+									].map(({ id, label, Icon }) => (
+										<button
+											key={id}
+											type="button"
+											onClick={() => setNewTranslationTab(id)}
+											style={{
+												flex: 1,
+												minWidth: 160,
+												display: "flex",
+												alignItems: "center",
+												justifyContent: "center",
+												gap: 9,
+												padding: "11px 14px",
+												borderRadius: 11,
+												fontSize: 13.5,
+												fontWeight: 600,
+												border:
+													newTranslationTab === id
+														? "1px solid rgba(234,88,12,0.35)"
+														: "1px solid rgba(0,0,0,0.06)",
+												background:
+													newTranslationTab === id
+														? "linear-gradient(180deg, rgba(234,88,12,0.14), rgba(234,88,12,0.08))"
+														: "#fff",
+												color:
+													newTranslationTab === id ? "#c2410c" : "#71717a",
+												cursor: "pointer",
+												boxShadow:
+													newTranslationTab === id
+														? "0 4px 14px rgba(234,88,12,0.1)"
+														: "0 1px 2px rgba(0,0,0,0.03)",
+												transition: "all 0.2s ease",
+											}}
+										>
+											<Icon size={16} />
+											{label}
+										</button>
+									))}
+								</div>
+								<div
+									style={{
 										borderRadius: 18,
 										padding: "28px 24px",
 										background: "#fff",
@@ -5275,7 +5914,7 @@ export function Dashboard({ user, onLogout }) {
 									}}
 								>
 									<h2
-										className="vaantra-font"
+										className="aantraa-font"
 										style={{
 											fontSize: 24,
 											fontWeight: 700,
@@ -5286,11 +5925,35 @@ export function Dashboard({ user, onLogout }) {
 										New Translation
 									</h2>
 									{pageReady ? (
-										<NewTranslationPanel addVideo={addVideo} />
+										<NewTranslationPanel
+											addVideo={addVideo}
+											tab={newTranslationTab}
+											onTabChange={setNewTranslationTab}
+											showTabs={false}
+											usageMinutesUsed={usageMinutes.used}
+											usageMinutesCredited={usageMinutes.credited}
+										/>
 									) : (
 										<NewTranslationFormSkeleton />
 									)}
+								
 								</div>
+								<div
+									className="flex-col flex justify-end mt-10"
+									>
+										<div className="">
+											<span>For long form videos or APIs </span>
+											<img className="h-6" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyOCAyOCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjZDVkNWQ1IiBzdHlsZT0ib3BhY2l0eToxOyI+PHBhdGggIGQ9Ik0xOS40MDEgMy4zNzhhLjc1Ljc1IDAgMCAwLTEuMDIzLS4yOEMxMy4wNzIgNi4xMzIgMTMgMTEuMjY5IDEzIDE0Ljc1djcuNjlsLTQuNzItNC43MmEuNzUuNzUgMCAxIDAtMS4wNiAxLjA2bDYgNmEuNzUuNzUgMCAwIDAgMS4wNiAwbDYtNmEuNzUuNzUgMCAwIDAtMS4wNi0xLjA2bC00LjcyIDQuNzJ2LTcuNjljMC0zLjUxOC4xMjgtNy43OCA0LjYyMi0xMC4zNDlhLjc1Ljc1IDAgMCAwIC4yOC0xLjAyMyIvPjwvc3ZnPg==" />
+										</div>
+										<a
+											href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Long-form video / Enterprise — aantraa")}&body=${encodeURIComponent("Hi,\n\nI'm interested in long-form video translation or an enterprise plan.\n\n")}`}
+											className="flex items-center gap-2 p-2 border border-zinc-200 rounded-xl bg-zinc-50 text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition-colors"
+										>
+											<Mail size={15} aria-hidden />
+											Contact us
+										</a>
+										
+									</div>
 							</motion.div>
 						) : selected ? (
 							<motion.div
@@ -5325,7 +5988,7 @@ export function Dashboard({ user, onLogout }) {
 											>
 												<div>
 													<h2
-														className="vaantra-font"
+														className="aantraa-font"
 														style={{
 															fontSize: 22,
 															fontWeight: 700,
@@ -6295,7 +6958,7 @@ export function Dashboard({ user, onLogout }) {
 							>
 								<Languages size={52} style={{ color: "#d4d4d8" }} />
 								<h3
-									className="vaantra-font"
+									className="aantraa-font"
 									style={{ fontSize: 20, fontWeight: 700, color: "#a1a1aa" }}
 								>
 									No translation selected
@@ -6332,93 +6995,5 @@ export function Dashboard({ user, onLogout }) {
 
 // ─── Landing route (/) — signed-in users are sent to /app ───────────────────
 export default function Home() {
-	const router = useRouter();
-	const [user, setUser] = useState(null);
-	const [authReady, setAuthReady] = useState(false);
-
-	useEffect(() => {
-		const unsub = onAuthStateChange((firebaseUser) => {
-			setAuthReady(true);
-			if (firebaseUser) {
-				setUser({
-					name:
-						firebaseUser.displayName ||
-						firebaseUser.email?.split("@")[0] ||
-						"User",
-					email: firebaseUser.email,
-					avatar: firebaseUser.photoURL || firebaseUser.displayName?.[0] || "U",
-					uid: firebaseUser.uid,
-				});
-			} else {
-				setUser(null);
-			}
-		});
-		return () => unsub();
-	}, []);
-
-	useEffect(() => {
-		if (authReady && user) {
-			let dest = "/app";
-			try {
-				if (sessionStorage.getItem("pendingUsagePurchase")) {
-					sessionStorage.removeItem("pendingUsagePurchase");
-					dest = "/app?upgrade=1";
-				}
-			} catch {
-				/* ignore */
-			}
-			router.replace(dest);
-		}
-	}, [authReady, user, router]);
-
-	if (!authReady) {
-		return (
-			<div
-				style={{
-					fontFamily: "'DM Sans', system-ui, sans-serif",
-					background: "#f5f4f0",
-					minHeight: "100vh",
-				}}
-			>
-				<GlobalStyles />
-			</div>
-		);
-	}
-
-	if (user) {
-		return (
-			<div
-				style={{
-					fontFamily: "'DM Sans', system-ui, sans-serif",
-					background: "#f5f4f0",
-					minHeight: "100vh",
-				}}
-			>
-				<GlobalStyles />
-			</div>
-		);
-	}
-
-	return (
-		<div
-			style={{
-				fontFamily: "'DM Sans', system-ui, sans-serif",
-				background: "#f5f4f0",
-				minHeight: "100vh",
-			}}
-		>
-			<GlobalStyles />
-			<AnimatePresence mode="wait">
-				<motion.div
-					key="land"
-					initial={{ opacity: 0 }}
-					animate={{ opacity: 1 }}
-					exit={{ opacity: 0 }}
-					transition={{ duration: 0.3 }}
-				>
-					<Landing />
-				</motion.div>
-			</AnimatePresence>
-		</div>
-	);
+	return <HomePage LandingComponent={Landing} GlobalStylesComponent={GlobalStyles} />;
 }

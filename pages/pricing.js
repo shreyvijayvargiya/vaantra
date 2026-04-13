@@ -149,7 +149,7 @@ const PricingPage = () => {
 				<section className="flex-1 py-16 px-4 sm:px-6 lg:px-8">
 					<div className="max-w-xl mx-auto">
 						<div className="text-center mb-12">
-							<h1 className="vaantra-font text-4xl sm:text-5xl font-bold text-zinc-900 mb-4 tracking-tight">
+							<h1 className="aantraa-font text-4xl sm:text-5xl font-bold text-zinc-900 mb-4 tracking-tight">
 								Usage-based{" "}
 								<span style={{ color: "#ea580c" }}>pricing</span>
 							</h1>

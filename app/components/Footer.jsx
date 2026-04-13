@@ -3,8 +3,13 @@ import Link from "next/link";
 import { Mail, Twitter, Github, Linkedin, Send, Sparkles } from "lucide-react";
 import { addSubscriber } from "../../lib/api/subscribers";
 import { toast } from "sonner";
+import LandingMarketingFooter from "./LandingMarketingFooter";
 
-const Footer = () => {
+const Footer = ({ variant }) => {
+	if (variant === "marketing") {
+		return <LandingMarketingFooter />;
+	}
+
 	const currentYear = new Date().getFullYear();
 	const [newsletterEmail, setNewsletterEmail] = useState("");
 	const [newsletterName, setNewsletterName] = useState("");

@@ -62,10 +62,13 @@ export default function LandingMarketingNav({ onSignIn }) {
 		<nav style={navStyle}>
 			<Link
 				href="/"
-				className="vaantra-font"
-				style={{ fontSize: 22, fontWeight: 700, color: "#18181b" }}
+				style={{ display: "flex", alignItems: "center", lineHeight: 0 }}
 			>
-				vaantra<span style={{ color: "#ea580c" }}>.</span>
+				<img
+					src="/aantra-logo.png"
+					alt="aantraa"
+					style={{ height: 34, width: "auto", display: "block" }}
+				/>
 			</Link>
 			<div
 				style={{

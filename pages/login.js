@@ -141,7 +141,7 @@ export default function LoginPage() {
 									margin: "0 0 16px",
 								}}
 							>
-								Vaantra translates audio, text, and video into 90+ languages with
+								aantraa translates audio, text, and video into 90+ languages with
 								voice-cloned output.
 							</p>
 							
@@ -175,7 +175,7 @@ export default function LoginPage() {
 										"0 24px 64px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)",
 								}}
 							>
-								<h2 className="vaantra-font text-2xl font-bold text-zinc-900 mb-2">
+								<h2 className="aantraa-font text-2xl font-bold text-zinc-900 mb-2">
 									Get Started
 								</h2>
 								<p className="text-sm text-zinc-600 mb-8">

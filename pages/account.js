@@ -187,7 +187,7 @@ export default function AccountPage() {
 				<div className="max-w-3xl mx-auto space-y-8">
 					<div>
 						<h1
-							className="vaantra-font text-3xl sm:text-4xl font-bold text-zinc-900 tracking-tight"
+							className="aantraa-font text-3xl sm:text-4xl font-bold text-zinc-900 tracking-tight"
 						>
 							Account
 						</h1>

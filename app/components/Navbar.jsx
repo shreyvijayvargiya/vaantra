@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAppQueryClient } from "../../lib/hooks/useQueryClient";
 import { useSubscription } from "../../lib/hooks/useSubscription";
 import LoginModal from "../../lib/ui/LoginModal";
+import LandingMarketingNav from "./LandingMarketingNav";
 import {
 	getUserCookie,
 	removeUserCookie,
@@ -15,7 +16,11 @@ import {
 import { signOutUser, onAuthStateChange } from "../../lib/api/auth";
 import { toast } from "sonner";
 
-const Navbar = () => {
+const Navbar = ({ variant, onSignIn }) => {
+	if (variant === "marketing") {
+		return <LandingMarketingNav onSignIn={onSignIn} />;
+	}
+
 	const router = useRouter();
 	const queryClient = useAppQueryClient();
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -152,9 +157,11 @@ const Navbar = () => {
 					<div className="flex items-center justify-between h-16">
 						{/* Logo */}
 						<Link href="/" className="flex items-center">
-							<span className="text-lg font-semibold -rotate-3 text-zinc-900 p-1 border border-dashed border-zinc-200">
-								YourApp
-							</span>
+							<img
+								src="/aantra-logo.png"
+								alt="aantraa"
+								className="h-8 w-auto"
+							/>
 						</Link>
 
 						{/* Desktop Navigation */}

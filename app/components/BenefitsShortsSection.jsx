@@ -318,7 +318,7 @@ export default function BenefitsShortsSection() {
 			`}</style>
 			<div style={{ maxWidth: 1100, margin: "0 auto" }}>
 				<h2
-					className="vaantra-font"
+					className="aantraa-font"
 					style={{
 						textAlign: "center",
 						fontSize: "clamp(1.65rem,3.8vw,2.45rem)",
@@ -330,7 +330,7 @@ export default function BenefitsShortsSection() {
 					}}
 				>
 					See why teams dub with{" "}
-					<span style={{ color: "#ea580c" }}>vaantra</span>
+					<span style={{ color: "#ea580c" }}>aantraa</span>
 				</h2>
 				<p
 					style={{
@@ -525,7 +525,7 @@ export default function BenefitsShortsSection() {
 						}}
 					>
 						<h3
-							className="vaantra-font"
+							className="aantraa-font"
 							style={{
 								fontSize: 18,
 								fontWeight: 700,
