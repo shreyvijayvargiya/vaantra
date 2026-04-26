@@ -36,7 +36,6 @@ const MyApp = ({ Component, pageProps }) => {
 			</PersistGate>
 		</Provider>
 	);
-	console.log(process.env.NEXT_PUBLIC_TRANSLATE_API_URL, "env")
 
 	return (
 		<QueryClientProvider client={queryClient}>

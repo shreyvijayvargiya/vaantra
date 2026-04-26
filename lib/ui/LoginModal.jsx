@@ -187,6 +187,10 @@ const LoginModal = ({ isOpen, onClose }) => {
 								) : (
 									// Login form
 									<div className="space-y-4">
+										<div className="space-y-2">
+											<h1 className="text-2xl font-bold">Aantraa</h1>
+											<h2 className="text-lg font-medium">AI video and audio translation Tool and API</h2>
+										</div>
 										<motion.button
 											whileHover={{ scale: 1.02 }}
 											whileTap={{ scale: 0.98 }}

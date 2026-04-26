@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import LoginModal from "../lib/ui/LoginModal";
-import BenefitsShortsSection from "../app/components/BenefitsShortsSection";
+import TopTargetLanguagesSection from "../app/components/TopTargetLanguagesSection";
 import Navbar from "../app/components/Navbar";
 import Footer from "../app/components/Footer";
 import HomePage from "../app/components/Home";
@@ -26,6 +26,7 @@ import {
 } from "../lib/utils/translationStorage";
 import {
 	incrementUserUsageMinutesClient,
+	QUERY_KEY_USER_USAGE,
 	subscribeUserUsage,
 } from "../lib/api/userUsage";
 import { UsagePricingPanel } from "../lib/ui/UsagePricingPanel";
@@ -36,6 +37,7 @@ import {
 	HeroSocialCluster,
 } from "../app/components/LandingHeroBadges";
 import {
+	PRICE_PER_MINUTE_INR,
 	PRICE_PER_MINUTE_USD,
 	sliderIndexForAtLeastMinutes,
 	USAGE_MINUTE_STEPS,
@@ -1597,11 +1599,6 @@ function CopyTextBlock({
 	);
 }
 
-// ─── Translate Form ──────────────────────────────────────────────────────────
-/**
- * Video-translate API auth: `NEXT_PUBLIC_TRANSLATE_API_URL` optional static Bearer,
- * otherwise Firebase ID token. Adds `X-User-Id` when a user is signed in.
- */
 async function getTranslateAuthHeaders() {
 	const env = process.env.NEXT_PUBLIC_TRANSLATE_API_TOKEN?.trim();
 	const headers = {};
@@ -3521,7 +3518,6 @@ function UpgradePriceModal({ open, onClose }) {
 							Choose how many minutes of video you want to translate and pay for it.
 						</p>
 						<UsagePricingPanel
-							successReturnPath="/app"
 							onRequireLogin={() => {}}
 						/>
 						<a
@@ -3551,7 +3547,53 @@ function UpgradePriceModal({ open, onClose }) {
 function Landing() {
 	const [showLogin, setShowLogin] = useState(false);
 	const [faqOpen, setFaqOpen] = useState(null);
+	const [landingPricingCurrency, setLandingPricingCurrency] = useState("usd");
 	const router = useRouter();
+
+	const payPerUsePlan = useMemo(
+		() => ({
+			kind: "usage",
+			name: "Pay per use",
+			price:
+				landingPricingCurrency === "inr"
+					? `₹${PRICE_PER_MINUTE_INR.toLocaleString("en-IN")}`
+					: `$${PRICE_PER_MINUTE_USD.toFixed(2)}`,
+			unit:
+				landingPricingCurrency === "inr"
+					? "per minute of video or audio (INR)"
+					: "per minute of video or audio (USD)",
+			highlight: true,
+			features: [
+				`Includes ${FREE_CREDITS_PER_MONTH} free starter jobs / month`,
+				`Slider: pick minutes (${USAGE_MINUTE_STEPS[0]}–${USAGE_MINUTE_STEPS[USAGE_MINUTE_STEPS.length - 1]}) — same packs as checkout; pay the total shown`,
+				"Powered by Polar checkout",
+				"Fair use: usage tracked in minutes per completed job",
+			],
+			cta: "Get started",
+		}),
+		[landingPricingCurrency],
+	);
+
+	const pricingPlans = useMemo(
+		() => [
+			payPerUsePlan,
+			{
+				kind: "contact",
+				name: "More credits",
+				price: "Custom",
+				unit: "volume & teams",
+				highlight: false,
+				features: [
+					"Bulk credit packs and discounted rates",
+					"Studios, agencies, and education pricing",
+					"API access and higher throughput",
+					"Invoicing and custom agreements",
+				],
+				cta: "Contact us",
+			},
+		],
+		[payPerUsePlan],
+	);
 
 
 
@@ -4003,7 +4045,7 @@ function Landing() {
 				</div>
 			</section>
 
-			<BenefitsShortsSection />
+			<TopTargetLanguagesSection />
 
 			{/* Pricing */}
 			<section
@@ -4046,36 +4088,7 @@ function Landing() {
 							gap: 16,
 						}}
 					>
-						{[
-							{
-								kind: "usage",
-								name: "Pay per use",
-								price: `$${PRICE_PER_MINUTE_USD.toFixed(2)}`,
-								unit: "per minute of video or audio (USD)",
-								highlight: true,
-								features: [
-									`Includes ${FREE_CREDITS_PER_MONTH} free starter jobs / month`,
-									"Slider: pick minutes (5–400) — pay the USD total shown",
-									"Powered by Polar checkout",
-									"Fair use: usage tracked in minutes per completed job",
-								],
-								cta: "Get started",
-							},
-							{
-								kind: "contact",
-								name: "More credits",
-								price: "Custom",
-								unit: "volume & teams",
-								highlight: false,
-								features: [
-									"Bulk credit packs and discounted rates",
-									"Studios, agencies, and education pricing",
-									"API access and higher throughput",
-									"Invoicing and custom agreements",
-								],
-								cta: "Contact us",
-							},
-						].map((plan) => (
+						{pricingPlans.map((plan) => (
 							<motion.div
 								key={plan.kind}
 								initial={{ opacity: 0, y: 16 }}
@@ -4178,7 +4191,8 @@ function Landing() {
 								{plan.kind === "usage" ? (
 									<UsagePricingPanel
 										compact
-										successReturnPath="/"
+										defaultCurrency={landingPricingCurrency}
+										onCurrencyChange={setLandingPricingCurrency}
 										onRequireLogin={() => {
 											try {
 												sessionStorage.setItem("pendingUsagePurchase", "1");
@@ -4548,14 +4562,20 @@ export function Dashboard({ user, onLogout }) {
 		return subscribeUserUsage(uid, (data) => {
 			if (!data) {
 				setUsageMinutes({ used: 0, credited: 0 });
+				queryClient.setQueryData(QUERY_KEY_USER_USAGE(uid), {
+					used: 0,
+					credited: 0,
+				});
 				return;
 			}
-			setUsageMinutes({
+			const nextUsage = {
 				used: data.usageMinutesUsed,
 				credited: data.usageMinutesCredited,
-			});
+			};
+			setUsageMinutes(nextUsage);
+			queryClient.setQueryData(QUERY_KEY_USER_USAGE(uid), nextUsage);
 		});
-	}, [uid]);
+	}, [uid, queryClient]);
 
 	useEffect(() => {
 		if (!router.isReady) return;
@@ -5646,6 +5666,32 @@ export function Dashboard({ user, onLogout }) {
 					borderTop: "1px solid rgba(0,0,0,0.06)",
 				}}
 			>
+				<button
+					type="button"
+					onClick={() => {
+						router.push("/account");
+						if (isMobile) setSidebarOpen(false);
+					}}
+					style={{
+						width: "100%",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						gap: 7,
+						padding: "8px 10px",
+						marginBottom: 10,
+						borderRadius: 9,
+						fontSize: 12.5,
+						fontWeight: 600,
+						background: "rgba(0,0,0,0.03)",
+						border: "1px solid rgba(0,0,0,0.08)",
+						color: "#52525b",
+						cursor: "pointer",
+					}}
+				>
+					<ExternalLink size={13} />
+					Account
+				</button>
 				<div style={{ display: "flex", alignItems: "center", gap: 10 }}>
 					{typeof user.avatar === "string" && user.avatar.startsWith("http") ? (
 						<img
@@ -6040,9 +6086,11 @@ export function Dashboard({ user, onLogout }) {
 												<div
 													style={{
 														display: "flex",
-														gap: 8,
+														gap: 4,
 														flexWrap: "wrap",
 														marginBottom: 20,
+														borderBottom: "1px solid rgba(0,0,0,0.1)",
+														paddingBottom: 2,
 													}}
 												>
 													{selectedDetail.jobs.map((job, i) => (
@@ -6051,15 +6099,16 @@ export function Dashboard({ user, onLogout }) {
 															type="button"
 															onClick={() => setDetailTab(i)}
 															style={{
-																padding: "8px 12px",
-																borderRadius: 10,
+																padding: "10px 12px",
+																borderRadius: "10px 10px 0 0",
 																fontSize: 13,
 																fontWeight: 600,
-																border: `1px solid ${detailTab === i ? "rgba(234,88,12,0.45)" : "rgba(0,0,0,0.1)"}`,
+																border: "none",
+																borderBottom: `2px solid ${detailTab === i ? "#ea580c" : "transparent"}`,
 																background:
 																	detailTab === i
-																		? "rgba(234,88,12,0.1)"
-																		: "#fff",
+																		? "rgba(234,88,12,0.08)"
+																		: "transparent",
 																color: detailTab === i ? "#c2410c" : "#52525b",
 																display: "inline-flex",
 																alignItems: "center",

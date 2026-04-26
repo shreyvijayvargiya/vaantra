@@ -12,7 +12,7 @@ const NAV_LINKS = [
 const navStyle = {
 	position: "sticky",
 	top: 0,
-	zIndex: 100,
+	zIndex: 10,
 	display: "flex",
 	alignItems: "center",
 	justifyContent: "space-between",

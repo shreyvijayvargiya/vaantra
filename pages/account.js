@@ -21,7 +21,7 @@ import {
 	removeUserCookie,
 	setUserCookie,
 } from "../lib/utils/cookies";
-import { subscribeUserUsage } from "../lib/api/userUsage";
+import { QUERY_KEY_USER_USAGE, subscribeUserUsage } from "../lib/api/userUsage";
 import { useTranslationGroups } from "../lib/hooks/useTranslationHistory";
 import {
 	PRICE_PER_MINUTE_USD,
@@ -35,7 +35,6 @@ export default function AccountPage() {
 	const queryClient = useQueryClient();
 	const authUnsubscribeRef = useRef(null);
 	const [authReady, setAuthReady] = useState(false);
-	const [usage, setUsage] = useState({ used: 0, credited: 0 });
 	const [loggingOut, setLoggingOut] = useState(false);
 
 	const { data: user } = useQuery({
@@ -97,19 +96,34 @@ export default function AccountPage() {
 		return () => unsub();
 	}, [router.isReady, router]);
 
+	const { data: usage = { used: 0, credited: 0 } } = useQuery({
+		queryKey: QUERY_KEY_USER_USAGE(uid || "anonymous"),
+		enabled: Boolean(uid),
+		queryFn: async () => {
+			const cached = queryClient.getQueryData(QUERY_KEY_USER_USAGE(uid));
+			return cached || { used: 0, credited: 0 };
+		},
+		initialData: uid
+			? queryClient.getQueryData(QUERY_KEY_USER_USAGE(uid)) || {
+					used: 0,
+					credited: 0,
+				}
+			: { used: 0, credited: 0 },
+		staleTime: Infinity,
+	});
+
 	useEffect(() => {
 		if (!uid) return;
 		return subscribeUserUsage(uid, (data) => {
-			if (!data) {
-				setUsage({ used: 0, credited: 0 });
-				return;
-			}
-			setUsage({
-				used: data.usageMinutesUsed,
-				credited: data.usageMinutesCredited,
-			});
+			const nextUsage = !data
+				? { used: 0, credited: 0 }
+				: {
+						used: data.usageMinutesUsed,
+						credited: data.usageMinutesCredited,
+					};
+			queryClient.setQueryData(QUERY_KEY_USER_USAGE(uid), nextUsage);
 		});
-	}, [uid]);
+	}, [uid, queryClient]);
 
 	const { data: groups } = useTranslationGroups(uid);
 
@@ -131,6 +145,67 @@ export default function AccountPage() {
 		}
 		return n;
 	}, [groups]);
+
+	const usageRows = useMemo(() => {
+		const rows = [];
+		const allGroups = Array.isArray(groups) ? groups : [];
+		for (const group of allGroups) {
+			const jobs = Array.isArray(group?.jobs) ? group.jobs : [];
+			for (const job of jobs) {
+				if (job?.status !== "done") continue;
+				const isAudio = String(job?.id || "").startsWith("voice_");
+				const rawMinutes = Number(job?.durationMinutes);
+				const minutes = Number.isFinite(rawMinutes) && rawMinutes > 0 ? rawMinutes : 1;
+				const costUsd = minutes * PRICE_PER_MINUTE_USD;
+				const timestamp =
+					job?.completedAt ||
+					job?.updatedAt ||
+					job?.createdAt ||
+					group?.updatedAt ||
+					group?.createdAt ||
+					Date.now();
+				const date = new Date(timestamp);
+				rows.push({
+					id: `${group?.id || "group"}_${job?.id || Math.random().toString(36).slice(2)}`,
+					date,
+					type: isAudio ? "Audio" : "Video",
+					language: job?.outputLanguage || job?.lang || "—",
+					minutes,
+					costUsd,
+				});
+			}
+		}
+		return rows.sort((a, b) => b.date.getTime() - a.date.getTime());
+	}, [groups]);
+
+	const usageTotals = useMemo(() => {
+		const totals = {
+			audioMinutes: 0,
+			videoMinutes: 0,
+			audioCostUsd: 0,
+			videoCostUsd: 0,
+		};
+		for (const row of usageRows) {
+			if (row.type === "Audio") {
+				totals.audioMinutes += row.minutes;
+				totals.audioCostUsd += row.costUsd;
+			} else {
+				totals.videoMinutes += row.minutes;
+				totals.videoCostUsd += row.costUsd;
+			}
+		}
+		return totals;
+	}, [usageRows]);
+
+	const totalTrackedMinutes = usageTotals.audioMinutes + usageTotals.videoMinutes;
+	const audioPct =
+		totalTrackedMinutes > 0
+			? (usageTotals.audioMinutes / totalTrackedMinutes) * 100
+			: 0;
+	const videoPct =
+		totalTrackedMinutes > 0
+			? (usageTotals.videoMinutes / totalTrackedMinutes) * 100
+			: 0;
 
 	const displayName =
 		user?.displayName || auth.currentUser?.displayName || "User";
@@ -184,8 +259,9 @@ export default function AccountPage() {
 		>
 			<LandingMarketingNav />
 			<main className="flex-1 px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-				<div className="max-w-3xl mx-auto space-y-8">
-					<div>
+				<div className="max-w-5xl mx-auto space-y-8">
+					<div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+						<div>
 						<h1
 							className="aantraa-font text-3xl sm:text-4xl font-bold text-zinc-900 tracking-tight"
 						>
@@ -194,6 +270,22 @@ export default function AccountPage() {
 						<p className="mt-2 text-zinc-600 text-sm sm:text-base">
 							Profile, usage, and your monthly free jobs.
 						</p>
+						</div>
+						<div className="flex items-center gap-2">
+							<Link
+								href="/app"
+								className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-zinc-900 text-white hover:bg-zinc-800 transition-colors"
+							>
+								<LayoutDashboard className="w-4 h-4" />
+								Dashboard
+							</Link>
+							<Link
+								href="/pricing"
+								className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-zinc-200 text-zinc-700 hover:bg-zinc-50 transition-colors"
+							>
+								Buy minutes
+							</Link>
+						</div>
 					</div>
 
 					{/* Profile */}
@@ -207,7 +299,7 @@ export default function AccountPage() {
 							<User className="w-5 h-5 text-amber-600" aria-hidden />
 							<h2 className="text-lg font-semibold text-zinc-900">Profile</h2>
 						</div>
-						<div className="flex flex-col sm:flex-row sm:items-center gap-6">
+						<div className="grid gap-6 lg:grid-cols-[auto,1fr,auto] lg:items-center">
 							{photoURL ? (
 								<img
 									src={photoURL}
@@ -241,13 +333,6 @@ export default function AccountPage() {
 								</div>
 							</div>
 							<div className="flex flex-col sm:items-end gap-3">
-								<Link
-									href="/app"
-									className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-zinc-900 text-white hover:bg-zinc-800 transition-colors"
-								>
-									<LayoutDashboard className="w-4 h-4" />
-									Open dashboard
-								</Link>
 								<button
 									type="button"
 									onClick={handleLogout}
@@ -278,7 +363,7 @@ export default function AccountPage() {
 							Purchased balance and billed usage (same as your app sidebar).
 						</p>
 
-						<div className="grid gap-6 sm:grid-cols-2">
+						<div className="grid gap-4 lg:grid-cols-3">
 							<div className="rounded-xl bg-zinc-50 border border-zinc-100 p-5">
 								<p className="text-xs font-medium uppercase tracking-wide text-zinc-400 mb-1">
 									Usage allowed (purchased)
@@ -312,6 +397,20 @@ export default function AccountPage() {
 									{USAGE_MINUTE_STEPS[USAGE_MINUTE_STEPS.length - 1]} min
 								</p>
 							</div>
+							<div className="rounded-xl bg-white border border-zinc-200 p-5">
+								<p className="text-xs font-medium uppercase tracking-wide text-zinc-400 mb-1">
+									Remaining balance
+								</p>
+								<p className="text-3xl font-bold text-zinc-900 tabular-nums">
+									{remainingPurchased.toFixed(1)}
+									<span className="text-lg font-semibold text-zinc-500 ml-1">
+										min
+									</span>
+								</p>
+								<p className="text-xs text-zinc-500 mt-2">
+									Available for your next video/audio jobs.
+								</p>
+							</div>
 						</div>
 
 						<div className="mt-6">
@@ -336,6 +435,124 @@ export default function AccountPage() {
 							>
 								Buy more minutes →
 							</Link>
+						</div>
+					</motion.section>
+
+					{/* Usage analytics */}
+					<motion.section
+						initial={{ opacity: 0, y: 10 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.35, delay: 0.08 }}
+						className="rounded-2xl border border-zinc-200/90 bg-white p-6 sm:p-8 shadow-sm"
+					>
+						<div className="flex items-center gap-2 mb-2">
+							<BarChart2 className="w-5 h-5 text-amber-600" aria-hidden />
+							<h2 className="text-lg font-semibold text-zinc-900">
+								Usage breakdown
+							</h2>
+						</div>
+						<p className="text-sm text-zinc-500 mb-6">
+							Completed jobs by type with billed minutes and estimated USD
+							cost at ${PRICE_PER_MINUTE_USD.toFixed(2)}/min.
+						</p>
+
+						<div className="grid gap-4 sm:grid-cols-2 mb-6">
+							<div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+								<p className="text-xs uppercase tracking-wide text-zinc-500 font-medium mb-1">
+									Video translation
+								</p>
+								<p className="text-2xl font-bold text-zinc-900 tabular-nums">
+									{usageTotals.videoMinutes.toFixed(1)} min
+								</p>
+								<p className="text-sm text-zinc-600 tabular-nums">
+									${usageTotals.videoCostUsd.toFixed(2)}
+								</p>
+							</div>
+							<div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4">
+								<p className="text-xs uppercase tracking-wide text-amber-800/80 font-medium mb-1">
+									Audio translation
+								</p>
+								<p className="text-2xl font-bold text-zinc-900 tabular-nums">
+									{usageTotals.audioMinutes.toFixed(1)} min
+								</p>
+								<p className="text-sm text-zinc-600 tabular-nums">
+									${usageTotals.audioCostUsd.toFixed(2)}
+								</p>
+							</div>
+						</div>
+
+						<div className="mb-6">
+							<div className="h-3 w-full rounded-full bg-zinc-100 overflow-hidden flex">
+								<div
+									className="h-full bg-zinc-800 transition-all"
+									style={{ width: `${videoPct}%` }}
+								/>
+								<div
+									className="h-full bg-amber-500 transition-all"
+									style={{ width: `${audioPct}%` }}
+								/>
+							</div>
+							<div className="mt-2 flex items-center justify-between text-xs text-zinc-600">
+								<span className="tabular-nums">Video {videoPct.toFixed(0)}%</span>
+								<span className="tabular-nums">Audio {audioPct.toFixed(0)}%</span>
+							</div>
+						</div>
+
+						<div className="overflow-x-auto rounded-xl border border-zinc-200">
+							<table className="w-full min-w-[680px] text-sm">
+								<thead className="bg-zinc-50 text-zinc-600">
+									<tr>
+										<th className="text-left font-semibold px-4 py-3">Date</th>
+										<th className="text-left font-semibold px-4 py-3">Type</th>
+										<th className="text-left font-semibold px-4 py-3">Language</th>
+										<th className="text-right font-semibold px-4 py-3">Minutes</th>
+										<th className="text-right font-semibold px-4 py-3">
+											Estimated cost
+										</th>
+									</tr>
+								</thead>
+								<tbody>
+									{usageRows.length === 0 ? (
+										<tr>
+											<td
+												colSpan={5}
+												className="px-4 py-6 text-center text-zinc-500"
+											>
+												No completed usage yet.
+											</td>
+										</tr>
+									) : (
+										usageRows.map((row) => (
+											<tr
+												key={row.id}
+												className="border-t border-zinc-100 text-zinc-700"
+											>
+												<td className="px-4 py-3 whitespace-nowrap">
+													{row.date.toLocaleString()}
+												</td>
+												<td className="px-4 py-3">
+													<span
+														className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+															row.type === "Audio"
+																? "bg-amber-100 text-amber-800"
+																: "bg-zinc-200 text-zinc-800"
+														}`}
+													>
+														{row.type}
+													</span>
+												</td>
+												<td className="px-4 py-3">{row.language}</td>
+												<td className="px-4 py-3 text-right tabular-nums">
+													{row.minutes.toFixed(1)}
+												</td>
+												<td className="px-4 py-3 text-right tabular-nums font-medium text-zinc-900">
+													${row.costUsd.toFixed(2)}
+												</td>
+											</tr>
+										))
+									)}
+								</tbody>
+							</table>
 						</div>
 					</motion.section>
 
@@ -374,6 +591,9 @@ export default function AccountPage() {
 								}}
 							/>
 						</div>
+						<p className="mt-4 text-xs text-zinc-500">
+							These monthly free jobs are separate from purchased minute packs.
+						</p>
 					</motion.section>
 				</div>
 			</main>

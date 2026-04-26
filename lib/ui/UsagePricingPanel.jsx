@@ -210,6 +210,8 @@ export function UsagePricingPanel({
 	defaultCurrency = "usd",
 	/** When set (e.g. modal opens), snaps the minute slider to this index. */
 	suggestedSliderIndex,
+	/** Fires when the user changes currency (e.g. syncs headline pricing on the landing card). */
+	onCurrencyChange,
 }) {
 	const [sliderIdx, setSliderIdx] = useState(2);
 	const [currency, setCurrency] = useState(
@@ -232,6 +234,10 @@ export function UsagePricingPanel({
 		setSliderIdx(i);
 	}, [suggestedSliderIndex]);
 
+	useEffect(() => {
+		onCurrencyChange?.(currency);
+	}, [currency, onCurrencyChange]);
+
 	const minutes = useMemo(
 		() => minutesFromSliderIndex(sliderIdx),
 		[sliderIdx],
@@ -246,6 +252,8 @@ export function UsagePricingPanel({
 		() => getUsageTotalMajorForMinutes(minutes, currency),
 		[minutes, currency],
 	);
+	const sliderMax = USAGE_MINUTE_STEPS.length - 1;
+	const sliderProgressPct = sliderMax > 0 ? (sliderIdx / sliderMax) * 100 : 0;
 
 	const pay = async () => {
 		setErr(null);
@@ -317,15 +325,89 @@ export function UsagePricingPanel({
 			>
 				Minutes of video translation
 			</label>
-			<input
-				type="range"
-				min={0}
-				max={USAGE_MINUTE_STEPS.length - 1}
-				step={1}
-				value={sliderIdx}
-				onChange={(e) => setSliderIdx(Number(e.target.value))}
-				style={{ width: "100%", marginBottom: 8 }}
-			/>
+			<div
+				style={{
+					borderRadius: 16,
+					border: "1px solid rgba(0,0,0,0.08)",
+					background:
+						"linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(250,250,250,1) 100%)",
+					padding: "14px 14px 12px",
+					marginBottom: 8,
+				}}
+			>
+				<div
+					style={{
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "space-between",
+						marginBottom: 10,
+						gap: 12,
+					}}
+				>
+					<p style={{ fontSize: 12, color: "#71717a", margin: 0, fontWeight: 500 }}>
+						Selected pack
+					</p>
+					<div
+						style={{
+							padding: "6px 10px",
+							borderRadius: 999,
+							background: "rgba(234,88,12,0.12)",
+							color: "#c2410c",
+							fontSize: 12,
+							fontWeight: 700,
+							lineHeight: 1,
+						}}
+					>
+						{minutes} min
+					</div>
+				</div>
+				<input
+					type="range"
+					min={0}
+					max={sliderMax}
+					step={1}
+					value={sliderIdx}
+					onChange={(e) => setSliderIdx(Number(e.target.value))}
+					style={{
+						width: "100%",
+						marginBottom: 10,
+						accentColor: "#ea580c",
+						background: `linear-gradient(90deg, #ea580c 0%, #ea580c ${sliderProgressPct}%, #e4e4e7 ${sliderProgressPct}%, #e4e4e7 100%)`,
+						borderRadius: 999,
+						height: 6,
+					}}
+				/>
+				<div
+					style={{
+						display: "grid",
+						gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+						gap: 6,
+					}}
+				>
+					{USAGE_MINUTE_STEPS.map((step, i) => {
+						const active = i === sliderIdx;
+						return (
+							<button
+								key={step}
+								type="button"
+								onClick={() => setSliderIdx(i)}
+								style={{
+									borderRadius: 8,
+									border: `1px solid ${active ? "rgba(234,88,12,0.35)" : "rgba(0,0,0,0.1)"}`,
+									background: active ? "rgba(234,88,12,0.1)" : "#fff",
+									padding: "5px 6px",
+									fontSize: 11,
+									fontWeight: active ? 700 : 600,
+									color: active ? "#c2410c" : "#52525b",
+									cursor: "pointer",
+								}}
+							>
+								{step}m
+							</button>
+						);
+					})}
+				</div>
+			</div>
 			<div
 				style={{
 					display: "flex",
