@@ -3412,8 +3412,14 @@ function TranslateForm({
 		setSelectedLangs([]);
 	};
 
+	const isUrlInvalid =
+		mode === "url" &&
+		Boolean(url.trim()) &&
+		!isHttpOrHttpsUrl(url.trim());
 	const canSubmit =
-		selectedLangs.length > 0 && (mode === "url" ? url.trim() : file) && !busy;
+		selectedLangs.length > 0 &&
+		(mode === "url" ? url.trim() && !isUrlInvalid : file) &&
+		!busy;
 	const detectedDurationSec =
 		mode === "file"
 			? fileDurationSec
@@ -3448,7 +3454,8 @@ function TranslateForm({
 		(Boolean(ytPreviewId) || isHttpOrHttpsUrl(trimmedUrlForPreview));
 
 	const hasVideoSourceForEstimate =
-		(mode === "url" && Boolean(url.trim())) || (mode === "file" && Boolean(file));
+		(mode === "url" && Boolean(url.trim()) && !isUrlInvalid) ||
+		(mode === "file" && Boolean(file));
 
 	const showForm = !localTrack;
 
@@ -3499,30 +3506,59 @@ function TranslateForm({
 					{/* Input area */}
 					{mode === "url" ? (
 						<>
-							<input
-								value={url}
-								onChange={(e) => setUrl(e.target.value)}
-								placeholder="https://example.com/video.mp4"
+						<input
+							value={url}
+							onChange={(e) => setUrl(e.target.value)}
+							placeholder="https://example.com/video.mp4"
+							style={{
+								width: "100%",
+								padding: "11px 14px",
+								borderRadius: 10,
+								fontSize: 13,
+								marginBottom: isUrlInvalid ? 6 : 12,
+								background: "#fff",
+								border: isUrlInvalid
+									? "1px solid rgba(239,68,68,0.6)"
+									: "1px solid rgba(0,0,0,0.1)",
+								color: "#18181b",
+								outline: "none",
+								transition: "border-color 0.2s",
+							}}
+							onFocus={(e) =>
+								(e.target.style.borderColor = isUrlInvalid
+									? "rgba(239,68,68,0.8)"
+									: "rgba(234,88,12,0.5)")
+							}
+							onBlur={(e) =>
+								(e.target.style.borderColor = isUrlInvalid
+									? "rgba(239,68,68,0.6)"
+									: "rgba(0,0,0,0.1)")
+							}
+						/>
+						{isUrlInvalid && (
+							<div
 								style={{
-									width: "100%",
-									padding: "11px 14px",
-									borderRadius: 10,
-									fontSize: 13,
+									display: "flex",
+									alignItems: "center",
+									gap: 6,
 									marginBottom: 12,
-									background: "#fff",
-									border: "1px solid rgba(0,0,0,0.1)",
-									color: "#18181b",
-									outline: "none",
-									transition: "border-color 0.2s",
+									padding: "8px 12px",
+									borderRadius: 9,
+									background: "rgba(239,68,68,0.07)",
+									border: "1px solid rgba(239,68,68,0.22)",
 								}}
-								onFocus={(e) =>
-									(e.target.style.borderColor = "rgba(234,88,12,0.5)")
-								}
-								onBlur={(e) =>
-									(e.target.style.borderColor = "rgba(0,0,0,0.1)")
-								}
-							/>
-							{showUrlVideoPreview && (
+							>
+								<AlertCircle size={14} style={{ color: "#ef4444", flexShrink: 0 }} />
+								<span style={{ fontSize: 12.5, color: "#b91c1c", lineHeight: 1.4 }}>
+									Invalid URL — please enter a valid{" "}
+									<code style={{ fontFamily: "'DM Mono', monospace", fontSize: 11.5 }}>
+										https://
+									</code>{" "}
+									link or a YouTube URL.
+								</span>
+							</div>
+						)}
+						{showUrlVideoPreview && (
 								<div
 									style={{
 										marginBottom: 12,
