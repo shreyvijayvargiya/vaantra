@@ -24,11 +24,11 @@ import {
 import { QUERY_KEY_USER_USAGE, subscribeUserUsage } from "../lib/api/userUsage";
 import { useTranslationGroups } from "../lib/hooks/useTranslationHistory";
 import {
+	FREE_STARTER_MINUTES,
 	PRICE_PER_MINUTE_USD,
 	USAGE_MINUTE_STEPS,
 } from "../lib/utils/usagePricing";
-
-const FREE_CREDITS_PER_MONTH = 10;
+import { getStoredBillableMinutes } from "../lib/utils/translationJobStats";
 
 export default function AccountPage() {
 	const router = useRouter();
@@ -127,24 +127,10 @@ export default function AccountPage() {
 
 	const { data: groups } = useTranslationGroups(uid);
 
-	const usedThisMonth = useMemo(() => {
-		const now = new Date();
-		let n = 0;
-		const videos = Array.isArray(groups) ? groups : [];
-		for (const v of videos) {
-			const jobs = v.jobs?.length ? v.jobs : [];
-			for (const j of jobs) {
-				if (j.status !== "done") continue;
-				const d = new Date(j.createdAt || v.createdAt);
-				if (
-					d.getMonth() === now.getMonth() &&
-					d.getFullYear() === now.getFullYear()
-				)
-					n++;
-			}
-		}
-		return n;
-	}, [groups]);
+	const starterMinutesConsumed = Math.min(
+		usage.used,
+		FREE_STARTER_MINUTES,
+	);
 
 	const usageRows = useMemo(() => {
 		const rows = [];
@@ -154,9 +140,9 @@ export default function AccountPage() {
 			for (const job of jobs) {
 				if (job?.status !== "done") continue;
 				const isAudio = String(job?.id || "").startsWith("voice_");
-				const rawMinutes = Number(job?.durationMinutes);
-				const minutes = Number.isFinite(rawMinutes) && rawMinutes > 0 ? rawMinutes : 1;
-				const costUsd = minutes * PRICE_PER_MINUTE_USD;
+				const minutes = getStoredBillableMinutes(job);
+				const costUsd =
+					minutes != null ? minutes * PRICE_PER_MINUTE_USD : null;
 				const timestamp =
 					job?.completedAt ||
 					job?.updatedAt ||
@@ -186,6 +172,7 @@ export default function AccountPage() {
 			videoCostUsd: 0,
 		};
 		for (const row of usageRows) {
+			if (row.minutes == null || row.costUsd == null) continue;
 			if (row.type === "Audio") {
 				totals.audioMinutes += row.minutes;
 				totals.audioCostUsd += row.costUsd;
@@ -268,7 +255,7 @@ export default function AccountPage() {
 							Account
 						</h1>
 						<p className="mt-2 text-zinc-600 text-sm sm:text-base">
-							Profile, usage, and your monthly free jobs.
+							Profile, usage, and your one-time starter allowance.
 						</p>
 						</div>
 						<div className="flex items-center gap-2">
@@ -543,10 +530,14 @@ export default function AccountPage() {
 												</td>
 												<td className="px-4 py-3">{row.language}</td>
 												<td className="px-4 py-3 text-right tabular-nums">
-													{row.minutes.toFixed(1)}
+													{row.minutes != null
+														? row.minutes.toFixed(1)
+														: "—"}
 												</td>
 												<td className="px-4 py-3 text-right tabular-nums font-medium text-zinc-900">
-													${row.costUsd.toFixed(2)}
+													{row.costUsd != null
+														? `$${row.costUsd.toFixed(2)}`
+														: "—"}
 												</td>
 											</tr>
 										))
@@ -556,7 +547,7 @@ export default function AccountPage() {
 						</div>
 					</motion.section>
 
-					{/* Free jobs */}
+					{/* Starter minutes (one-time) */}
 					<motion.section
 						initial={{ opacity: 0, y: 10 }}
 						animate={{ opacity: 1, y: 0 }}
@@ -566,33 +557,36 @@ export default function AccountPage() {
 						<div className="flex items-center gap-2 mb-2">
 							<Gift className="w-5 h-5 text-amber-600" aria-hidden />
 							<h2 className="text-lg font-semibold text-zinc-900">
-								Free jobs this month
+								Free starter minutes
 							</h2>
 						</div>
 						<p className="text-sm text-zinc-500 mb-6">
-							Completed translation jobs counted toward your monthly free
-							allowance (same logic as the app).
+							New accounts get a one-time pool of starter minutes. This allowance
+							does not reset each month. Usage shown here is the portion of your
+							total billed minutes that counts toward that starter pool (capped at{" "}
+							{FREE_STARTER_MINUTES} min).
 						</p>
 						<div className="flex flex-wrap items-baseline gap-2">
 							<span className="text-4xl font-bold text-zinc-900 tabular-nums">
-								{usedThisMonth}
+								{starterMinutesConsumed.toFixed(1)}
 							</span>
 							<span className="text-xl text-zinc-400">/</span>
 							<span className="text-2xl font-semibold text-zinc-600 tabular-nums">
-								{FREE_CREDITS_PER_MONTH}
+								{FREE_STARTER_MINUTES}
 							</span>
-							<span className="text-sm text-zinc-500 ml-1">jobs used</span>
+							<span className="text-sm text-zinc-500 ml-1">minutes</span>
 						</div>
 						<div className="mt-4 h-2 rounded-full bg-zinc-100 overflow-hidden">
 							<div
 								className="h-full rounded-full bg-zinc-400 transition-all"
 								style={{
-									width: `${Math.min(100, (usedThisMonth / FREE_CREDITS_PER_MONTH) * 100)}%`,
+									width: `${Math.min(100, (starterMinutesConsumed / FREE_STARTER_MINUTES) * 100)}%`,
 								}}
 							/>
 						</div>
 						<p className="mt-4 text-xs text-zinc-500">
-							These monthly free jobs are separate from purchased minute packs.
+							After starter minutes, continue with purchased minute packs (see
+							Translation minutes above).
 						</p>
 					</motion.section>
 				</div>

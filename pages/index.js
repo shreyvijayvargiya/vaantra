@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import LoginModal from "../lib/ui/LoginModal";
 import TopTargetLanguagesSection from "../app/components/TopTargetLanguagesSection";
+import { TranslationGroupStatsPanel } from "../app/components/TranslationGroupStats";
 import Navbar from "../app/components/Navbar";
 import Footer from "../app/components/Footer";
 import HomePage from "../app/components/Home";
@@ -37,12 +38,14 @@ import {
 	HeroSocialCluster,
 } from "../app/components/LandingHeroBadges";
 import {
+	FREE_STARTER_MINUTES,
 	PRICE_PER_MINUTE_INR,
 	PRICE_PER_MINUTE_USD,
 	sliderIndexForAtLeastMinutes,
 	USAGE_MINUTE_STEPS,
 } from "../lib/utils/usagePricing";
 import {
+	formatDurationClock,
 	probeAudioDurationSeconds,
 	probeVideoDurationSeconds,
 	secondsToBillableMinutes,
@@ -110,10 +113,9 @@ import {
 
 // ─── Contact & billing (UI only; API later) ───────────────────────────────────
 const CONTACT_EMAIL = "shreyvijayvargiya26@gmail.com";
-const X_PROFILE_URL = "https://x.com/shreyvijayvargiya26";
-const FREE_CREDITS_PER_MONTH = 10;
+
 /** Dashboard video file upload cap */
-const VIDEO_UPLOAD_MAX_MB = 5;
+const VIDEO_UPLOAD_MAX_MB = 500;
 const VIDEO_UPLOAD_MAX_BYTES = VIDEO_UPLOAD_MAX_MB * 1024 * 1024;
 
 // ─── Language list ──────────────────────────────────────────────────────────
@@ -881,7 +883,7 @@ function getLongMediaEtaLine(durationSec) {
 }
 
 /** Dark chrome + custom controls; matches `VoiceStyleAudioPlayer` styling for video translation. */
-function StudioVideoPlayer({ src, footerLabel = "Video" }) {
+function StudioVideoPlayer({ src, footerLabel = "Video", showUrlOnError = false }) {
 	const videoRef = useRef(null);
 	const [playing, setPlaying] = useState(false);
 	const [duration, setDuration] = useState(0);
@@ -948,6 +950,106 @@ function StudioVideoPlayer({ src, footerLabel = "Video" }) {
 	const pct = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
 
 	if (loadError) {
+		const showLinkFallback =
+			showUrlOnError &&
+			typeof src === "string" &&
+			isHttpOrHttpsUrl(src);
+		if (showLinkFallback) {
+			return (
+				<div
+					style={{
+						borderRadius: 16,
+						overflow: "hidden",
+						background:
+							"linear-gradient(145deg, #18181b 0%, #27272a 45%, #1c1917 100%)",
+						border: "1px solid rgba(255,255,255,0.06)",
+					}}
+				>
+					<div
+						style={{
+							borderRadius: 12,
+							overflow: "hidden",
+							position: "relative",
+							background: "#0c0c0e",
+							aspectRatio: "16/9",
+							maxHeight: 320,
+							width: "100%",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							padding: "20px 16px",
+							boxSizing: "border-box",
+						}}
+					>
+						<div
+							style={{
+								textAlign: "center",
+								maxWidth: "100%",
+							}}
+						>
+							<p
+								style={{
+									margin: "0 0 10px",
+									fontSize: 13,
+									color: "rgba(255,255,255,0.82)",
+									lineHeight: 1.45,
+								}}
+							>
+								This link doesn’t load as a raw video file in the browser.
+								Open it externally or use a direct MP4/WebM URL when available.
+							</p>
+							<a
+								href={src}
+								target="_blank"
+								rel="noopener noreferrer"
+								style={{
+									display: "inline-flex",
+									alignItems: "center",
+									gap: 6,
+									fontSize: 13,
+									fontWeight: 600,
+									color: "#fb923c",
+									marginBottom: 12,
+								}}
+							>
+								<ExternalLink size={15} aria-hidden />
+								Open source
+							</a>
+							<p
+								style={{
+									margin: 0,
+									fontSize: 11,
+									fontFamily: "'DM Mono', monospace",
+									color: "rgba(255,255,255,0.55)",
+									wordBreak: "break-all",
+									lineHeight: 1.5,
+									textAlign: "left",
+								}}
+							>
+								{src}
+							</p>
+						</div>
+					</div>
+					<div
+						style={{
+							padding: "8px 12px",
+							background: "rgba(0,0,0,0.45)",
+							borderTop: "1px solid rgba(255,255,255,0.06)",
+						}}
+					>
+						<span
+							style={{
+								fontSize: 11,
+								fontFamily: "'DM Mono', monospace",
+								color: "rgba(255,255,255,0.8)",
+							}}
+						>
+							{footerLabel}
+						</span>
+					</div>
+				</div>
+			);
+		}
 		return (
 			<p style={{ color: "#a1a1aa", fontSize: 13, margin: 0 }}>
 				Could not load video.
@@ -1175,8 +1277,6 @@ function StudioYouTubePreview({ videoId, durationHintSec = 0 }) {
 				background:
 					"linear-gradient(145deg, #18181b 0%, #27272a 45%, #1c1917 100%)",
 				border: "1px solid rgba(255,255,255,0.06)",
-				boxShadow:
-					"0 12px 40px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)",
 			}}
 		>
 			<div
@@ -1204,6 +1304,182 @@ function StudioYouTubePreview({ videoId, durationHintSec = 0 }) {
 					}}
 				/>
 			</div>
+		</div>
+	);
+}
+
+function isHttpOrHttpsUrl(s) {
+	try {
+		const u = new URL(s.trim());
+		return u.protocol === "http:" || u.protocol === "https:";
+	} catch {
+		return false;
+	}
+}
+
+/** Numeric tweet id from x.com / twitter.com status URLs (for embed preview). */
+function parseTweetStatusId(input) {
+	if (!input || typeof input !== "string") return null;
+	try {
+		const u = new URL(input.trim());
+		const host = u.hostname.replace(/^www\./, "").toLowerCase();
+		if (
+			host !== "x.com" &&
+			host !== "twitter.com" &&
+			host !== "mobile.twitter.com"
+		)
+			return null;
+		const m = u.pathname.match(/\/status\/(\d+)/);
+		return m && /^\d+$/.test(m[1]) ? m[1] : null;
+	} catch {
+		return null;
+	}
+}
+
+/** Skip native video/audio for YouTube or X/Twitter page URLs — use embeds or open in a new tab. */
+function shouldUseNativeMediaForUrl(url) {
+	if (!url?.trim()) return false;
+	const s = url.trim();
+	if (getYouTubeVideoId(s)) return false;
+	if (parseTweetStatusId(s)) return false;
+	return isHttpOrHttpsUrl(s);
+}
+
+function SourceUrlLinkBar({ url }) {
+	const [copied, setCopied] = useState(false);
+	const trimmed = url?.trim();
+	if (!trimmed || !isHttpOrHttpsUrl(trimmed)) return null;
+	return (
+		<div
+			style={{
+				marginTop: 10,
+				padding: "12px 14px",
+				borderRadius: 12,
+				border: "1px solid rgba(0,0,0,0.08)",
+			}}
+		>
+			<p
+				style={{
+					fontSize: 10,
+					fontWeight: 700,
+					letterSpacing: "0.08em",
+					textTransform: "uppercase",
+					color: "#71717a",
+					margin: "0 0 8px",
+				}}
+			>
+				Source URL
+			</p>
+			<a
+				href={trimmed}
+				target="_blank"
+				rel="noopener noreferrer"
+				style={{
+					display: "block",
+					fontSize: 13,
+					color: "#c2410c",
+					fontWeight: 500,
+					wordBreak: "break-all",
+					lineHeight: 1.45,
+				}}
+			>
+				{trimmed}
+			</a>
+			<div
+				style={{
+					display: "flex",
+					flexWrap: "wrap",
+					gap: 10,
+					marginTop: 10,
+					alignItems: "center",
+				}}
+			>
+				<button
+					type="button"
+					onClick={() => {
+						void navigator.clipboard?.writeText(trimmed);
+						setCopied(true);
+						setTimeout(() => setCopied(false), 2000);
+					}}
+					style={{
+						display: "inline-flex",
+						alignItems: "center",
+						gap: 6,
+						padding: "8px 12px",
+						borderRadius: 8,
+						fontSize: 12,
+						fontWeight: 600,
+						border: "1px solid rgba(0,0,0,0.1)",
+						background: "#fafafa",
+						color: copied ? "#16a34a" : "#52525b",
+						cursor: "pointer",
+					}}
+				>
+					<Copy size={14} aria-hidden />
+					{copied ? "Copied" : "Copy URL"}
+				</button>
+				<a
+					href={trimmed}
+					target="_blank"
+					rel="noopener noreferrer"
+					style={{
+						display: "inline-flex",
+						alignItems: "center",
+						gap: 6,
+						padding: "8px 12px",
+						borderRadius: 8,
+						fontSize: 12,
+						fontWeight: 600,
+						background: "rgba(234,88,12,0.1)",
+						color: "#c2410c",
+						border: "1px solid rgba(234,88,12,0.25)",
+					}}
+				>
+					<ExternalLink size={14} aria-hidden />
+					Open in new tab
+				</a>
+			</div>
+		</div>
+	);
+}
+
+function StudioTweetEmbedPreview({ tweetId }) {
+	const embedSrc = `https://platform.twitter.com/embed/Tweet.html?id=${encodeURIComponent(tweetId)}&theme=light&dnt=true`;
+	return (
+		<div
+			style={{
+				borderRadius: 16,
+				overflow: "hidden",
+				background:
+					"linear-gradient(145deg, #18181b 0%, #27272a 45%, #1c1917 100%)",
+				border: "1px solid rgba(255,255,255,0.06)",
+
+			}}
+		>
+			<div
+				style={{
+					borderRadius: 12,
+					overflow: "hidden",
+					position: "relative",
+					background: "#fff",
+					width: "100%",
+					minHeight: 280,
+					maxHeight: 520,
+				}}
+			>
+				<iframe
+					src={embedSrc}
+					title="X post preview"
+					sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms"
+					referrerPolicy="strict-origin-when-cross-origin"
+					style={{
+						width: "100%",
+						height: "420px",
+						border: "none",
+						display: "block",
+					}}
+				/>
+			</div>
 			<div
 				style={{
 					padding: "8px 12px",
@@ -1218,23 +1494,53 @@ function StudioYouTubePreview({ videoId, durationHintSec = 0 }) {
 						color: "rgba(255,255,255,0.8)",
 					}}
 				>
-					{durationHintSec > 0
-						? `Duration ${formatAudioClock(durationHintSec)} · `
-						: ""}
-					Preview
+					Preview · X / Twitter embed
 				</span>
 			</div>
 		</div>
 	);
 }
 
-function isHttpOrHttpsUrl(s) {
-	try {
-		const u = new URL(s.trim());
-		return u.protocol === "http:" || u.protocol === "https:";
-	} catch {
-		return false;
+/** YouTube iframe, X/Tweet embed, or native video — with optional URL strip below (dashboard). */
+function OriginalSourceMediaPreview({
+	url,
+	footerLabel = "Source video",
+	showLinkBar = true,
+	youtubeDurationHintSec = 0,
+}) {
+	const trimmed = url?.trim();
+	if (!trimmed) return null;
+	const ytId = getYouTubeVideoId(trimmed);
+	if (ytId) {
+		return (
+			<>
+				<StudioYouTubePreview
+					videoId={ytId}
+					durationHintSec={youtubeDurationHintSec}
+				/>
+				{showLinkBar ? <SourceUrlLinkBar url={trimmed} /> : null}
+			</>
+		);
 	}
+	const tweetId = parseTweetStatusId(trimmed);
+	if (tweetId) {
+		return (
+			<>
+				<StudioTweetEmbedPreview tweetId={tweetId} />
+				{showLinkBar ? <SourceUrlLinkBar url={trimmed} /> : null}
+			</>
+		);
+	}
+	return (
+		<>
+			<StudioVideoPlayer
+				src={trimmed}
+				footerLabel={footerLabel}
+				showUrlOnError
+			/>
+			{showLinkBar ? <SourceUrlLinkBar url={trimmed} /> : null}
+		</>
+	);
 }
 
 /** Dark, Spotify-inspired player with animated waveform bars (voice translation). */
@@ -1600,24 +1906,29 @@ function CopyTextBlock({
 }
 
 async function getTranslateAuthHeaders() {
-	const env = process.env.NEXT_PUBLIC_TRANSLATE_API_TOKEN?.trim();
 	const headers = {};
-	if (env) {
-		headers.Authorization = `Bearer ${env}`;
-	}
-	const user = auth.currentUser;
-	if (user) {
-		if (!env) {
-			const idToken = await user.getIdToken();
-			headers.Authorization = `Bearer ${idToken}`;
+	try {
+		const u = auth.currentUser;
+		if (u) {
+			const idToken = await u.getIdToken();
+			if (idToken) {
+				headers.Authorization = `Bearer ${idToken}`;
+				return headers;
+			}
 		}
-		headers["X-User-Id"] = user.uid;
+	} catch {
+		// fall back to static token
+	}
+	const env = process.env.NEXT_PUBLIC_TRANSLATE_API_TOKEN?.trim();
+	if (env) {
+		const t = env.replace(/^Bearer\s+/i, "");
+		headers.Authorization = `Bearer ${t}`;
 	}
 	return headers;
 }
 
 /**
- * One job: caption SSE (`/api/video-translate/caption?stream=1`) for progress + result.
+ * One job: caption SSE (`/api/groq/video-translate/caption?stream=1`) for progress + result.
  * `applyPatch` receives `{ jobId, lang, ...partialJob }`.
  */
 function runCaptionSseForJob({
@@ -1735,7 +2046,86 @@ function mergeTranscriptIntoPrompt(prev, incoming) {
 	return `${p}\n\n${t}`;
 }
 
-function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
+function EstimateCurrencyTabs({ value, onChange }) {
+	return (
+		<div
+			style={{
+				display: "flex",
+				justifyContent: "flex-end",
+				marginBottom: 10,
+			}}
+		>
+			<div
+				role="tablist"
+				aria-label="Estimate currency"
+				style={{
+					display: "inline-flex",
+					padding: 3,
+					gap: 2,
+					background: "rgba(255,255,255,0.75)",
+					borderRadius: 10,
+					border: "1px solid rgba(0,0,0,0.08)",
+					boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+				}}
+			>
+				{[
+					{ code: "usd", label: "USD" },
+					{ code: "inr", label: "INR" },
+				].map(({ code, label }) => (
+					<button
+						key={code}
+						type="button"
+						role="tab"
+						aria-selected={value === code}
+						onClick={() => onChange(code)}
+						style={{
+							padding: "7px 14px",
+							borderRadius: 8,
+							fontSize: 12,
+							fontWeight: 600,
+							border: "none",
+							cursor: "pointer",
+							transition: "background 0.15s, color 0.15s",
+							background:
+								value === code
+									? "rgba(234,88,12,0.18)"
+									: "transparent",
+							color: value === code ? "#c2410c" : "#71717a",
+						}}
+					>
+						{label}
+					</button>
+				))}
+			</div>
+		</div>
+	);
+}
+
+/** @param {"usd" | "inr"} currency */
+function formatEstimateMoneyTotal(minutes, currency) {
+	const m = Number(minutes);
+	if (!Number.isFinite(m) || m <= 0) return null;
+	if (currency === "inr") {
+		const total = m * PRICE_PER_MINUTE_INR;
+		return `₹${total.toLocaleString("en-IN")}`;
+	}
+	const total = m * PRICE_PER_MINUTE_USD;
+	return `$${total.toFixed(2)}`;
+}
+
+/** @param {"usd" | "inr"} currency */
+function estimateRateLabel(currency) {
+	return currency === "inr"
+		? `₹${PRICE_PER_MINUTE_INR}/min`
+		: `$${PRICE_PER_MINUTE_USD.toFixed(2)}/min`;
+}
+
+function VoiceTranslateForm({
+	compact = false,
+	onVoiceJobCreated,
+	usageMinutesUsed,
+	usageMinutesCredited,
+}) {
 	const [text, setText] = useState("");
 	const [selectedLangs, setSelectedLangs] = useState([]);
 	const [busy, setBusy] = useState(false);
@@ -1755,6 +2145,9 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 	const speechHeardRef = useRef(false);
 	const [audioDurationSec, setAudioDurationSec] = useState(0);
 	const [audioPreviewUrl, setAudioPreviewUrl] = useState("");
+	const [estimateCurrency, setEstimateCurrency] = useState("usd");
+	const [showCreditsModal, setShowCreditsModal] = useState(false);
+	const [creditsModalDetail, setCreditsModalDetail] = useState(null);
 	const submitAbortRef = useRef(null);
 
 	useEffect(() => {
@@ -1958,6 +2351,38 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 			return;
 		}
 
+		const durationSecForCredits = hasAudio ? audioDurationSec : 0;
+		const perJobBillableMin =
+			durationSecForCredits > 0
+				? secondsToBillableMinutes(durationSecForCredits)
+				: 0;
+		const estimatedTotalMinutes =
+			perJobBillableMin > 0 ? perJobBillableMin * langs.length : 0;
+		const usageProvided =
+			typeof usageMinutesUsed === "number" &&
+			typeof usageMinutesCredited === "number";
+		if (
+			auth.currentUser &&
+			usageProvided &&
+			estimatedTotalMinutes > 0
+		) {
+			const remaining = Math.max(
+				0,
+				usageMinutesCredited - usageMinutesUsed,
+			);
+			if (estimatedTotalMinutes > remaining) {
+				setCreditsModalDetail({
+					estimatedTotalMinutes,
+					remainingMinutes: remaining,
+					needMoreMinutes: estimatedTotalMinutes - remaining,
+					perJobMinutes: perJobBillableMin,
+					langCount: langs.length,
+				});
+				setShowCreditsModal(true);
+				return;
+			}
+		}
+
 		setBusy(true);
 		setErr(null);
 		setResults(null);
@@ -2029,6 +2454,10 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 					typeof crypto !== "undefined" && crypto.randomUUID
 						? crypto.randomUUID()
 						: `grp_${Date.now()}`;
+				const voiceDurMin =
+					hasAudio && audioDurationSec > 0
+						? secondsToBillableMinutes(audioDurationSec)
+						: null;
 				const jobs = batch.map((r, idx) => ({
 					id: `voice_${gid}_${idx}`,
 					lang: r.lang,
@@ -2041,6 +2470,7 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 					transcriptOriginal: hasText ? text.trim() : null,
 					sourceVideoUrl: null,
 					videoTranslateId: `voice_${gid}_${idx}`,
+					durationMinutes: voiceDurMin,
 				}));
 				onVoiceJobCreated({
 					id: gid,
@@ -2079,6 +2509,14 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 		!freeDurationBlocked,
 	);
 	const longMediaEta = getLongMediaEtaLine(audioDurationSec);
+	const audioBillableMin =
+		hasAudio && audioDurationSec > 0
+			? secondsToBillableMinutes(audioDurationSec)
+			: null;
+	const voiceEstimateTotalMin =
+		audioBillableMin != null && selectedLangs.length > 0
+			? audioBillableMin * selectedLangs.length
+			: null;
 
 	return (
 		<div>
@@ -2216,20 +2654,139 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 					<VoiceStyleAudioPlayer src={audioPreviewUrl} />
 				</div>
 			)}
+			{(hasAudio || text.trim()) && (
+				<div
+					style={{
+						marginBottom: 14,
+						padding: "14px 16px",
+						borderRadius: 14,
+						background: "linear-gradient(180deg, rgba(254,243,232,0.65), rgba(234,88,12,0.06))",
+						border: "1px solid rgba(234,88,12,0.22)",
+						boxShadow: "0 2px 12px rgba(234,88,12,0.06)",
+					}}
+				>
+					<div
+						style={{
+							fontSize: 13,
+							fontWeight: 700,
+							color: "#c2410c",
+							letterSpacing: "0.02em",
+							marginBottom: 2,
+						}}
+					>
+						Estimate
+					</div>
+					{audioBillableMin != null ? (
+						<EstimateCurrencyTabs
+							value={estimateCurrency}
+							onChange={setEstimateCurrency}
+						/>
+					) : (
+						<div style={{ height: 8 }} />
+					)}
+					<div
+						style={{
+							display: "flex",
+							flexWrap: "wrap",
+							alignItems: "center",
+							gap: "8px 14px",
+							fontSize: 13,
+							color: "#52525b",
+							lineHeight: 1.5,
+						}}
+					>
+						{audioBillableMin != null ? (
+							selectedLangs.length > 0 ? (
+								<>
+									<span>
+										Source ~{formatDurationClock(audioDurationSec)} (
+										{audioBillableMin} min billed / language)
+									</span>
+									<span style={{ color: "#d4d4d8" }} aria-hidden>
+										·
+									</span>
+									<span>
+										{selectedLangs.length} language
+										{selectedLangs.length !== 1 ? "s" : ""}
+									</span>
+									<span style={{ color: "#d4d4d8" }} aria-hidden>
+										·
+									</span>
+									<span style={{ fontWeight: 600, color: "#18181b" }}>
+										~{voiceEstimateTotalMin} min credit total
+									</span>
+									<span style={{ color: "#d4d4d8" }} aria-hidden>
+										·
+									</span>
+									<span style={{ fontWeight: 600, color: "#18181b" }}>
+										~
+										{formatEstimateMoneyTotal(
+											voiceEstimateTotalMin,
+											estimateCurrency,
+										) ?? "—"}{" "}
+										<span style={{ fontWeight: 500, color: "#71717a" }}>
+											{estimateCurrency === "inr" ? "INR" : "USD"}
+										</span>
+									</span>
+									<span style={{ color: "#a1a1aa", fontSize: 12 }}>
+										(at {estimateRateLabel(estimateCurrency)})
+									</span>
+								</>
+							) : (
+								<>
+									<span>
+										Source ~{formatDurationClock(audioDurationSec)} (
+										{audioBillableMin} min billed per language)
+									</span>
+									<span style={{ color: "#d4d4d8" }} aria-hidden>
+										·
+									</span>
+									<span style={{ color: "#71717a" }}>
+										Select target languages to see total minutes and cost.
+									</span>
+									<span style={{ color: "#a1a1aa", fontSize: 12 }}>
+										({estimateRateLabel(estimateCurrency)} each)
+									</span>
+								</>
+							)
+						) : hasAudio ? (
+							<span style={{ color: "#71717a" }}>Reading audio length…</span>
+						) : Boolean(text.trim()) && !hasAudio ? (
+							<span style={{ color: "#71717a" }}>
+								Text-only: billed minutes follow the generated audio length once
+								the job completes.
+							</span>
+						) : (
+							<span style={{ color: "#71717a" }}>
+								Upload or record audio to see minutes and cost before you run.
+							</span>
+						)}
+					</div>
+					{longMediaEta ? (
+						<p
+							style={{
+								marginTop: 12,
+								marginBottom: 0,
+								fontSize: 12,
+								lineHeight: 1.5,
+								color: "#9a3412",
+								padding: "10px 12px",
+								background: "rgba(234,88,12,0.08)",
+								borderRadius: 10,
+								border: "1px solid rgba(234,88,12,0.18)",
+							}}
+						>
+							{longMediaEta}
+						</p>
+					) : null}
+				</div>
+			)}
 			<LangMultiSelect
 				selected={selectedLangs}
 				onChange={setSelectedLangs}
 				fullWidth
 			/>
-			
-			{longMediaEta && (
-				<p
-					
-					className="my-2 p-2"
-				>
-					{longMediaEta}
-				</p>
-			)}
+
 			{freeDurationBlocked && (
 				<p
 					style={{
@@ -2364,6 +2921,14 @@ function VoiceTranslateForm({ compact = false, onVoiceJobCreated }) {
 					))}
 				</div>
 			)}
+			<InsufficientCreditsModal
+				open={showCreditsModal}
+				onClose={() => {
+					setShowCreditsModal(false);
+					setCreditsModalDetail(null);
+				}}
+				detail={creditsModalDetail}
+			/>
 		</div>
 	);
 }
@@ -2453,7 +3018,12 @@ function NewTranslationPanel({
 					<p className="text-sm text-zinc-600 my-4">
 						Record, upload, or paste text to translate audio quickly
 					</p>
-					<VoiceTranslateForm compact onVoiceJobCreated={addVideo} />
+					<VoiceTranslateForm
+						compact
+						onVoiceJobCreated={addVideo}
+						usageMinutesUsed={usageMinutesUsed}
+						usageMinutesCredited={usageMinutesCredited}
+					/>
 				</>
 			)}
 		</>
@@ -2485,6 +3055,7 @@ function TranslateForm({
 	const [videoPreviewUrl, setVideoPreviewUrl] = useState("");
 	const [urlDurationSec, setUrlDurationSec] = useState(0);
 	const [youtubeDurationSec, setYoutubeDurationSec] = useState(0);
+	const [estimateCurrency, setEstimateCurrency] = useState("usd");
 	const fileRef = useRef();
 	const localTrackRef = useRef(null);
 	const submitAbortRef = useRef(null);
@@ -2693,6 +3264,8 @@ function TranslateForm({
 			durationSecForCredits > 0
 				? secondsToBillableMinutes(durationSecForCredits)
 				: 0;
+		const clientDurationMinutesHint =
+			durationSecForCredits > 0 ? perJobBillableMin : null;
 		const estimatedTotalMinutes =
 			perJobBillableMin > 0
 				? perJobBillableMin * selectedLangs.length
@@ -2709,17 +3282,8 @@ function TranslateForm({
 				0,
 				usageMinutesCredited - usageMinutesUsed,
 			);
-			if (estimatedTotalMinutes > remaining) {
-				setCreditsModalDetail({
-					estimatedTotalMinutes,
-					remainingMinutes: remaining,
-					needMoreMinutes: estimatedTotalMinutes - remaining,
-					perJobMinutes: perJobBillableMin,
-					langCount: selectedLangs.length,
-				});
-				setShowCreditsModal(true);
-				return;
-			}
+			
+			
 		}
 
 		setBusy(true);
@@ -2800,6 +3364,8 @@ function TranslateForm({
 					resultUrl: postFields.resultUrl ?? extractResultUrl(data) ?? null,
 					sourceVideoUrl: postFields.sourceVideoUrl ?? null,
 					videoTranslateId: postFields.videoTranslateId ?? videoId,
+					durationMinutes:
+						postFields.durationMinutes ?? clientDurationMinutesHint ?? null,
 				});
 			}
 
@@ -2863,6 +3429,15 @@ function TranslateForm({
 			? "YouTube URL detected. If this video is longer than 2 minutes, processing can take several minutes after you click Translate."
 			: null);
 
+	const estimatePerJobMin =
+		detectedDurationSec > 0
+			? secondsToBillableMinutes(detectedDurationSec)
+			: null;
+	const estimateTotalBillableMin =
+		estimatePerJobMin != null && selectedLangs.length > 0
+			? estimatePerJobMin * selectedLangs.length
+			: null;
+
 	const trimmedUrlForPreview = mode === "url" ? url.trim() : "";
 	const ytPreviewId = trimmedUrlForPreview
 		? getYouTubeVideoId(trimmedUrlForPreview)
@@ -2871,6 +3446,9 @@ function TranslateForm({
 		mode === "url" &&
 		Boolean(trimmedUrlForPreview) &&
 		(Boolean(ytPreviewId) || isHttpOrHttpsUrl(trimmedUrlForPreview));
+
+	const hasVideoSourceForEstimate =
+		(mode === "url" && Boolean(url.trim())) || (mode === "file" && Boolean(file));
 
 	const showForm = !localTrack;
 
@@ -2950,7 +3528,6 @@ function TranslateForm({
 										marginBottom: 12,
 										padding: "10px 12px 12px",
 										borderRadius: 14,
-										background: "rgba(0,0,0,0.02)",
 										border: "1px solid rgba(0,0,0,0.06)",
 									}}
 								>
@@ -2963,17 +3540,12 @@ function TranslateForm({
 									>
 										Video preview
 									</p>
-									{ytPreviewId ? (
-										<StudioYouTubePreview
-											videoId={ytPreviewId}
-											durationHintSec={youtubeDurationSec}
-										/>
-									) : (
-										<StudioVideoPlayer
-											src={trimmedUrlForPreview}
-											footerLabel="Preview"
-										/>
-									)}
+									<OriginalSourceMediaPreview
+										url={trimmedUrlForPreview}
+										footerLabel="Preview"
+										showLinkBar={false}
+										youtubeDurationHintSec={youtubeDurationSec}
+									/>
 								</div>
 							)}
 						</>
@@ -3070,6 +3642,137 @@ function TranslateForm({
 							)}
 						</>
 					)}
+					{hasVideoSourceForEstimate && (
+							<div
+								style={{
+									marginBottom: 14,
+									padding: "14px 16px",
+									borderRadius: 14,
+									background:
+										"linear-gradient(180deg, rgba(254,243,232,0.65), rgba(234,88,12,0.06))",
+									border: "1px solid rgba(234,88,12,0.22)",
+									boxShadow: "0 2px 12px rgba(234,88,12,0.06)",
+								}}
+							>
+								<div
+									style={{
+										fontSize: 13,
+										fontWeight: 700,
+										color: "#c2410c",
+										letterSpacing: "0.02em",
+										marginBottom: 2,
+									}}
+								>
+									Estimate
+								</div>
+								{estimatePerJobMin != null ? (
+									<EstimateCurrencyTabs
+										value={estimateCurrency}
+										onChange={setEstimateCurrency}
+									/>
+								) : (
+									<div style={{ height: 8 }} />
+								)}
+								<div
+									style={{
+										display: "flex",
+										flexWrap: "wrap",
+										alignItems: "center",
+										gap: "8px 14px",
+										fontSize: 13,
+										color: "#52525b",
+										lineHeight: 1.5,
+									}}
+								>
+									{estimatePerJobMin != null ? (
+										selectedLangs.length > 0 ? (
+											<>
+												<span>
+													Source ~{formatDurationClock(detectedDurationSec)} (
+													{estimatePerJobMin} min billed / language)
+												</span>
+												<span style={{ color: "#d4d4d8" }} aria-hidden>
+													·
+												</span>
+												<span>
+													{selectedLangs.length} language
+													{selectedLangs.length !== 1 ? "s" : ""}
+												</span>
+												<span style={{ color: "#d4d4d8" }} aria-hidden>
+													·
+												</span>
+												<span style={{ fontWeight: 600, color: "#18181b" }}>
+													~{estimateTotalBillableMin} min total
+												</span>
+												<span style={{ color: "#d4d4d8" }} aria-hidden>
+													·
+												</span>
+												<span style={{ fontWeight: 600, color: "#18181b" }}>
+													~
+													{formatEstimateMoneyTotal(
+														estimateTotalBillableMin,
+														estimateCurrency,
+													) ?? "—"}{" "}
+													<span style={{ fontWeight: 500, color: "#71717a" }}>
+														{estimateCurrency === "inr" ? "INR" : "USD"}
+													</span>
+												</span>
+												<span style={{ color: "#a1a1aa", fontSize: 12 }}>
+													(at {estimateRateLabel(estimateCurrency)})
+												</span>
+											</>
+										) : (
+											<>
+												<span>
+													Source ~{formatDurationClock(detectedDurationSec)} (
+													{estimatePerJobMin} min billed per language)
+												</span>
+												<span style={{ color: "#d4d4d8" }} aria-hidden>
+													·
+												</span>
+												<span style={{ color: "#71717a" }}>
+													Select target languages to see total minutes and cost.
+												</span>
+												<span style={{ color: "#a1a1aa", fontSize: 12 }}>
+													({estimateRateLabel(estimateCurrency)} each)
+												</span>
+											</>
+										)
+									) : mode === "file" && file ? (
+										<span style={{ color: "#71717a" }}>
+											Reading video length…
+										</span>
+									) : mode === "url" && url.trim() ? (
+										<span style={{ color: "#71717a" }}>
+											{isYouTubeUrl && youtubeDurationSec === 0
+												? "Fetching YouTube duration…"
+												: "Detecting video length… (direct URLs need CORS; use upload if this stays blank.)"}
+										</span>
+									) : (
+										<span style={{ color: "#71717a" }}>
+											Duration not available — try upload or a YouTube link.
+										</span>
+									)}
+								</div>
+								{longMediaEta ? (
+									<p
+										style={{
+											marginTop: 12,
+											marginBottom: 0,
+											fontSize: 12,
+											lineHeight: 1.5,
+											color: "#9a3412",
+											padding: "10px 12px",
+											background: "rgba(234,88,12,0.08)",
+											borderRadius: 10,
+											border: "1px solid rgba(234,88,12,0.18)",
+										}}
+									>
+										{longMediaEta}
+									</p>
+								) : null}
+							</div>
+						)}
 					{fileError && mode === "file" && (
 						<p
 							style={{
@@ -3145,19 +3848,6 @@ function TranslateForm({
 						Translate
 						{selectedLangs.length > 1 ? ` (${selectedLangs.length})` : ""}
 					</button>
-					{longMediaEta && (
-						<p
-							style={{
-								fontSize: 12,
-								color: "#c2410c",
-								border: "1px solid rgba(234,88,12,0.2)",
-								borderRadius: 10,
-							}}
-							className="p-2 my-4 text-xs"
-						>
-							{longMediaEta}
-						</p>
-					)}
 					{busy && (
 						<button
 							type="button"
@@ -3466,6 +4156,121 @@ function InsufficientCreditsModal({ open, onClose, detail }) {
 	);
 }
 
+/** Centered confirm dialog before removing a translation from history (sidebar / detail). */
+function DeleteTranslationConfirmModal({ open, title, onClose, onConfirm }) {
+	return (
+		<AnimatePresence>
+			{open ? (
+				<motion.div
+					initial={{ opacity: 0 }}
+					animate={{ opacity: 1 }}
+					exit={{ opacity: 0 }}
+					style={{
+						position: "fixed",
+						inset: 0,
+						zIndex: 230,
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						padding: 16,
+						background: "rgba(0,0,0,0.45)",
+					}}
+					onClick={onClose}
+				>
+					<motion.div
+						initial={{ scale: 0.94, opacity: 0, y: 12 }}
+						animate={{ scale: 1, opacity: 1, y: 0 }}
+						exit={{ scale: 0.94, opacity: 0, y: 12 }}
+						transition={{ type: "spring", stiffness: 320, damping: 28 }}
+						onClick={(e) => e.stopPropagation()}
+						style={{
+							width: "100%",
+							maxWidth: 400,
+							borderRadius: 18,
+							padding: "26px 22px",
+							background: "#fff",
+							border: "1px solid rgba(0,0,0,0.08)",
+							boxShadow: "0 24px 64px rgba(0,0,0,0.15)",
+						}}
+					>
+						<h3
+							className="aantraa-font"
+							style={{
+								fontSize: 20,
+								fontWeight: 700,
+								color: "#18181b",
+								marginBottom: 10,
+							}}
+						>
+							Delete this translation?
+						</h3>
+						<p
+							style={{
+								fontSize: 14,
+								color: "#71717a",
+								lineHeight: 1.55,
+								marginBottom: 22,
+							}}
+						>
+							{title ? (
+								<>
+									This will permanently remove{" "}
+									<strong style={{ color: "#18181b" }}>{title}</strong> from
+									your history. This cannot be undone.
+								</>
+							) : (
+								"This will permanently remove this translation from your history. This cannot be undone."
+							)}
+						</p>
+						<div
+							style={{
+								display: "flex",
+								gap: 10,
+								flexWrap: "wrap",
+								justifyContent: "flex-end",
+							}}
+						>
+							<button
+								type="button"
+								onClick={onClose}
+								style={{
+									padding: "10px 18px",
+									borderRadius: 10,
+									fontSize: 13.5,
+									fontWeight: 600,
+									color: "#52525b",
+									background: "rgba(0,0,0,0.04)",
+									border: "1px solid rgba(0,0,0,0.1)",
+									cursor: "pointer",
+								}}
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								onClick={onConfirm}
+								style={{
+									padding: "10px 18px",
+									borderRadius: 10,
+									fontSize: 13.5,
+									fontWeight: 600,
+									color: "#fff",
+									background: "#dc2626",
+									border: "none",
+									cursor: "pointer",
+									boxShadow: "0 4px 14px rgba(220,38,38,0.35)",
+								}}
+							>
+								Delete
+							</button>
+						</div>
+					</motion.div>
+				</motion.div>
+			) : null}
+		</AnimatePresence>
+	);
+}
+
 // ─── Upgrade modal (Polar usage checkout) ───────────────────────────────────
 function UpgradePriceModal({ open, onClose }) {
 	return (
@@ -3543,6 +4348,131 @@ function UpgradePriceModal({ open, onClose }) {
 	);
 }
 
+// ─── Translation Example Row ──────────────────────────────────────────────────
+function TranslationExampleRow({
+	originalEmbed,
+	originalFlag,
+	originalLang,
+	translatedSrc,
+	translatedFlag,
+	translatedLang,
+}) {
+	return (
+		<motion.div
+			initial={{ opacity: 0, y: 24 }}
+			whileInView={{ opacity: 1, y: 0 }}
+			viewport={{ once: true, margin: "-60px" }}
+			transition={{ duration: 0.5, ease: "easeOut" }}
+			style={{
+				display: "grid",
+				gridTemplateColumns: "1fr auto 1fr",
+				alignItems: "center",
+				gap: "clamp(12px, 3vw, 32px)",
+			}}
+		>
+			{/* Original */}
+			<div style={{ display: "flex", flexDirection: "column", gap: 12, background: "rgba(234,88,12,0.02)" }} className="p-2 border border-orange-100 rounded-xl">
+				{originalEmbed}
+				<div
+					style={{
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "start",
+						gap: 8,
+						padding: "8px 14px",
+					}}
+				>
+					<span style={{ fontSize: 20, lineHeight: 1 }}>{originalFlag}</span>
+					<span style={{ fontSize: 13.5, fontWeight: 600, color: "#18181b" }}>
+						{originalLang}
+					</span>
+					<span
+						style={{
+							fontSize: 11,
+							color: "#a1a1aa",
+							marginLeft: 4,
+							fontFamily: "'DM Mono', monospace",
+						}}
+					>
+						original
+					</span>
+				</div>
+			</div>
+
+			{/* Arrow */}
+			<div
+				style={{
+					display: "flex",
+					flexDirection: "column",
+					alignItems: "center",
+					gap: 6,
+					flexShrink: 0,
+				}}
+			>
+				<div
+					style={{
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+					}}
+				>
+					
+					<div className="flex items-center gap-2 -rotate-90">
+						<img className="h-10" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyOCAyOCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjZDVkNWQ1IiBzdHlsZT0ib3BhY2l0eToxOyI+PHBhdGggIGQ9Ik0xOS40MDEgMy4zNzhhLjc1Ljc1IDAgMCAwLTEuMDIzLS4yOEMxMy4wNzIgNi4xMzIgMTMgMTEuMjY5IDEzIDE0Ljc1djcuNjlsLTQuNzItNC43MmEuNzUuNzUgMCAxIDAtMS4wNiAxLjA2bDYgNmEuNzUuNzUgMCAwIDAgMS4wNiAwbDYtNmEuNzUuNzUgMCAwIDAtMS4wNi0xLjA2bC00LjcyIDQuNzJ2LTcuNjljMC0zLjUxOC4xMjgtNy43OCA0LjYyMi0xMC4zNDlhLjc1Ljc1IDAgMCAwIC4yOC0xLjAyMyIvPjwvc3ZnPg==" />
+					</div>
+				</div>
+				<span
+					style={{
+						fontSize: 10.5,
+						fontFamily: "'DM Mono', monospace",
+						color: "#a1a1aa",
+						textTransform: "uppercase",
+						letterSpacing: "0.06em",
+					}}
+				>
+					Aantraa
+				</span>
+			</div>
+
+			{/* Translated */}
+			<div style={{ display: "flex", flexDirection: "column", gap: 12, borderRadius: 10,
+						background: "rgba(234,88,12,0.1)",
+						padding: "8px 8px",
+						border: "1px solid rgba(234,88,12,0.18)",
+						boxShadow: "0 1px 4px rgba(234,88,12,0.08)", }}
+			>
+				<StudioVideoPlayer src={translatedSrc} />
+				<div
+					style={{
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "start",
+						gap: 8,
+						padding: "8px 14px",
+						
+					}}
+				>
+					<span style={{ fontSize: 20, lineHeight: 1 }}>{translatedFlag}</span>
+					<span style={{ fontSize: 13.5, fontWeight: 600, color: "#c2410c" }}>
+						{translatedLang}
+					</span>
+					<span
+						style={{
+							fontSize: 11,
+							color: "#ea580c",
+							marginLeft: 4,
+							fontFamily: "'DM Mono', monospace",
+							opacity: 0.7,
+						}}
+					>
+						translated
+					</span>
+				</div>
+			</div>
+		</motion.div>
+	);
+}
+
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 function Landing() {
 	const [showLogin, setShowLogin] = useState(false);
@@ -3564,7 +4494,7 @@ function Landing() {
 					: "per minute of video or audio (USD)",
 			highlight: true,
 			features: [
-				`Includes ${FREE_CREDITS_PER_MONTH} free starter jobs / month`,
+				`One-time ${FREE_STARTER_MINUTES} free starter minutes for new accounts (not a monthly reset)`,
 				`Slider: pick minutes (${USAGE_MINUTE_STEPS[0]}–${USAGE_MINUTE_STEPS[USAGE_MINUTE_STEPS.length - 1]}) — same packs as checkout; pay the total shown`,
 				"Powered by Polar checkout",
 				"Fair use: usage tracked in minutes per completed job",
@@ -3885,19 +4815,19 @@ function Landing() {
 						}}
 					>
 						<div className="flex justify-between items-start my-2 w-full px-2">
-						<motion.button
-							className="landing-hero-trial w-fit p-1 text-xs border border-orange-400 rounded-xl bg-gradient-to-r from-orange-50 to-orange-100"
-							initial={{ opacity: 0, y: 6 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ delay: 0.45, duration: 0.45 }}
-							onClick={() => router.push("/login")}
-						>
-							Start with free 10 minutes credits
-						</motion.button>
-						<div className="flex items-center gap-2">
-						<img className="h-6" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyOCAyOCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjZDVkNWQ1IiBzdHlsZT0ib3BhY2l0eToxOyI+PHBhdGggIGQ9Ik0xOS40MDEgMy4zNzhhLjc1Ljc1IDAgMCAwLTEuMDIzLS4yOEMxMy4wNzIgNi4xMzIgMTMgMTEuMjY5IDEzIDE0Ljc1djcuNjlsLTQuNzItNC43MmEuNzUuNzUgMCAxIDAtMS4wNiAxLjA2bDYgNmEuNzUuNzUgMCAwIDAgMS4wNiAwbDYtNmEuNzUuNzUgMCAwIDAtMS4wNi0xLjA2bC00LjcyIDQuNzJ2LTcuNjljMC0zLjUxOC4xMjgtNy43OCA0LjYyMi0xMC4zNDlhLjc1Ljc1IDAgMCAwIC4yOC0xLjAyMyIvPjwvc3ZnPg==" />
-						<span className="text-sm text-zinc-400">Try demo</span>
-						</div>
+							<motion.button
+								className="landing-hero-trial w-fit p-1 text-xs border border-orange-400 rounded-xl bg-gradient-to-r from-orange-50 to-orange-100"
+								initial={{ opacity: 0, y: 6 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ delay: 0.45, duration: 0.45 }}
+								onClick={() => router.push("/login")}
+							>
+								Start with {FREE_STARTER_MINUTES} free starter minutes
+							</motion.button>
+							<div className="flex items-center gap-2">
+								<img className="h-6" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyOCAyOCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjZDVkNWQ1IiBzdHlsZT0ib3BhY2l0eToxOyI+PHBhdGggIGQ9Ik0xOS40MDEgMy4zNzhhLjc1Ljc1IDAgMCAwLTEuMDIzLS4yOEMxMy4wNzIgNi4xMzIgMTMgMTEuMjY5IDEzIDE0Ljc1djcuNjlsLTQuNzItNC43MmEuNzUuNzUgMCAxIDAtMS4wNiAxLjA2bDYgNmEuNzUuNzUgMCAwIDAgMS4wNiAwbDYtNmEuNzUuNzUgMCAwIDAtMS4wNi0xLjA2bC00LjcyIDQuNzJ2LTcuNjljMC0zLjUxOC4xMjgtNy43OCA0LjYyMi0xMC4zNDlhLjc1Ljc1IDAgMCAwIC4yOC0xLjAyMyIvPjwvc3ZnPg==" />
+								<span className="text-sm text-zinc-400">Try demo</span>
+							</div>
 						</div>
 						<div
 							style={{
@@ -4046,6 +4976,146 @@ function Landing() {
 			</section>
 
 			<TopTargetLanguagesSection />
+
+			{/* Translation Examples */}
+			<section
+				id="examples"
+				style={{
+					borderTop: "1px solid rgba(0,0,0,0.06)",
+					padding: "80px clamp(20px,5vw,64px)",
+					background: "#faf9f7",
+				}}
+			>
+				<div style={{ maxWidth: 1100, margin: "0 auto" }}>
+					<h2
+						className="aantraa-font"
+						style={{
+							textAlign: "center",
+							fontSize: "clamp(1.8rem,4vw,2.8rem)",
+							fontWeight: 700,
+							color: "#18181b",
+							marginBottom: 12,
+						}}
+					>
+						See it in action
+					</h2>
+					<p
+						style={{
+							textAlign: "center",
+							fontSize: 15,
+							color: "#71717a",
+							lineHeight: 1.65,
+							maxWidth: 520,
+							margin: "0 auto 56px",
+						}}
+					>
+						Real translations made with aantra — original on the left, translated on the right.
+					</p>
+
+					<div style={{ display: "flex", flexDirection: "column", gap: 56 }}>
+
+						{/* Example 1: YouTube → French */}
+						<TranslationExampleRow
+							originalEmbed={<StudioYouTubePreview videoId="-TPy0RGf0Ho" />}
+							originalFlag="🇺🇸"
+							originalLang="English"
+							translatedSrc="https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYnqoNOUaFQlNLrmkEMC8dWyZ6SRh5OUeiAcGg"
+							translatedFlag="🇫🇷"
+							translatedLang="French"
+						/>
+
+						{/* Example 2: YouTube → Spanish */}
+						<TranslationExampleRow
+							originalEmbed={<StudioYouTubePreview videoId="-TPy0RGf0Ho" />}
+							originalFlag="🇺🇸"
+							originalLang="English"
+							translatedSrc="https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYlZJsGO6dfoO9Ag1tqIsK3DTaY4ieUpPFhvj5"
+							translatedFlag="🇪🇸"
+							translatedLang="Spanish"
+						/>
+
+						{/* Example 3: YouTube HNWocWivh3A → Spanish */}
+						<TranslationExampleRow
+							originalEmbed={<StudioYouTubePreview videoId="HNWocWivh3A" />}
+							originalFlag="🇺🇸"
+							originalLang="English"
+							translatedSrc="https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYnoD6l7aFQlNLrmkEMC8dWyZ6SRh5OUeiAcGg"
+							translatedFlag="🇪🇸"
+							translatedLang="Spanish"
+						/>
+
+						{/* Example 4: Twitter/X tweet → Hindi */}
+						<TranslationExampleRow
+							originalEmbed={
+								<div
+									style={{
+										borderRadius: 16,
+										overflow: "hidden",
+										background:
+											"linear-gradient(145deg, #18181b 0%, #27272a 45%, #1c1917 100%)",
+										border: "1px solid rgba(255,255,255,0.06)",
+										boxShadow:
+											"0 12px 40px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)",
+									}}
+								>
+									<div
+										style={{
+											borderRadius: 12,
+											overflow: "hidden",
+											position: "relative",
+											background: "#000",
+											aspectRatio: "16/9",
+											maxHeight: 320,
+											width: "100%",
+										}}
+									>
+										<iframe
+											src="https://platform.twitter.com/embed/Tweet.html?id=2053230433299771580&theme=dark"
+											title="Original tweet"
+											style={{
+												width: "100%",
+												height: "100%",
+												border: "none",
+												display: "block",
+											}}
+											allowFullScreen
+										/>
+									</div>
+									<div
+										style={{
+											padding: "8px 12px",
+											background: "rgba(0,0,0,0.45)",
+											borderTop: "1px solid rgba(255,255,255,0.06)",
+											display: "flex",
+											alignItems: "center",
+											gap: 8,
+										}}
+									>
+										<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ color: "rgba(255,255,255,0.7)", flexShrink: 0 }}>
+											<path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.74l7.73-8.835L1.254 2.25H8.08l4.261 5.635L18.244 2.25Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z" />
+										</svg>
+										<span
+											style={{
+												fontSize: 11,
+												fontFamily: "'DM Mono', monospace",
+												color: "rgba(255,255,255,0.8)",
+											}}
+										>
+											Original tweet · @elonmusk
+										</span>
+									</div>
+								</div>
+							}
+							originalFlag="🇺🇸"
+							originalLang="English"
+							translatedSrc="https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYdk7jrjutB0mAHE68ivjy7GN4WZpIoQk2Ydcg"
+							translatedFlag="🇮🇳"
+							translatedLang="Hindi"
+						/>
+
+					</div>
+				</div>
+			</section>
 
 			{/* Pricing */}
 			<section
@@ -4457,16 +5527,21 @@ export function AppAuthLoadingShell() {
 						marginBottom: 28,
 					}}
 				/>
-				<div
-					className="app-skeleton-pulse"
-					style={{
-						height: 180,
-						borderRadius: 16,
-						background: "rgba(0,0,0,0.06)",
-						maxWidth: 560,
-						margin: "0 auto",
-					}}
-				/>
+					{[1, 2, 3, 4].map(i => {
+						return (
+								<div
+								className="my-2 app-skeleton-pulse"
+								key={i}
+								style={{
+									height: 180,
+									borderRadius: 16,
+									background: "rgba(0,0,0,0.06)",
+									maxWidth: 560,
+									margin: "0 auto",
+								}}
+							/>
+						);
+					})}
 			</div>
 		</div>
 	);
@@ -4489,6 +5564,7 @@ export function Dashboard({ user, onLogout }) {
 	const [viewNew, setViewNew] = useState(true);
 	const [newTranslationTab, setNewTranslationTab] = useState("video");
 	const [showUpgrade, setShowUpgrade] = useState(false);
+	const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 	const [windowW, setWindowW] = useState(
 		typeof window !== "undefined" ? window.innerWidth : 1200,
 	);
@@ -4507,6 +5583,15 @@ export function Dashboard({ user, onLogout }) {
 		if (queryVideos !== undefined) return queryVideos;
 		return localFallback;
 	}, [uid, queryVideos, localFallback]);
+
+	const pendingDeleteGroup = useMemo(() => {
+		if (!deleteConfirmId) return null;
+		return videos.find((v) => v.id === deleteConfirmId) ?? null;
+	}, [deleteConfirmId, videos]);
+
+	const pendingDeleteTitle = pendingDeleteGroup
+		? pendingDeleteGroup.label?.trim() || sidebarTitle(pendingDeleteGroup)
+		: "";
 
 	const patchVideos = useCallback(
 		(updater) => {
@@ -4548,6 +5633,8 @@ export function Dashboard({ user, onLogout }) {
 		if (raw == null || raw === "") return null;
 		return String(Array.isArray(raw) ? raw[0] : raw);
 	}, [router.isReady, router.query.id]);
+
+	const isStatsRoute = router.pathname === "/app/[id]/stats";
 
 	const pageReady = router.isReady && storageHydrated;
 
@@ -4609,7 +5696,10 @@ export function Dashboard({ user, onLogout }) {
 			} else {
 				setSelected(null);
 				setViewNew(true);
-				router.replace("/app");
+				// Stats page loads the group via its own query; avoid bouncing to /app while history is still loading.
+				if (router.pathname !== "/app/[id]/stats") {
+					router.replace("/app");
+				}
 			}
 			return;
 		}
@@ -4617,7 +5707,7 @@ export function Dashboard({ user, onLogout }) {
 			setSelected(null);
 			setViewNew(true);
 		}
-	}, [routeVideoId, videos, router, pageReady]);
+	}, [routeVideoId, videos, router, pageReady, router.pathname]);
 
 	const isVoiceTranslationGroup = useMemo(() => {
 		if (!selected?.jobs?.length) return false;
@@ -4663,24 +5753,6 @@ export function Dashboard({ user, onLogout }) {
 			Math.min(d, Math.max(0, jobsForTabs.length - 1)),
 		);
 	}, [jobsForTabs.length]);
-
-	const usedThisMonth = useMemo(() => {
-		const now = new Date();
-		let n = 0;
-		for (const v of videos) {
-			const jobs = v.jobs?.length ? v.jobs : [];
-			for (const j of jobs) {
-				if (j.status !== "done") continue;
-				const d = new Date(j.createdAt || v.createdAt);
-				if (
-					d.getMonth() === now.getMonth() &&
-					d.getFullYear() === now.getFullYear()
-				)
-					n++;
-			}
-		}
-		return n;
-	}, [videos]);
 
 	useEffect(() => {
 		const h = () => {
@@ -4855,6 +5927,16 @@ export function Dashboard({ user, onLogout }) {
 		},
 		[existingJobLangs],
 	);
+
+	/** Drop a staged language tab (translation not started yet) and fix active tab index. */
+	const removeStagedLanguageAt = useCallback((tabIndex, lang) => {
+		setStagedLangs((prev) => prev.filter((l) => l !== lang));
+		setDetailTab((d) => {
+			if (tabIndex < d) return d - 1;
+			if (tabIndex === d) return Math.max(0, d - 1);
+			return d;
+		});
+	}, []);
 
 	const submitAppendTranslation = useCallback(
 		async (lang) => {
@@ -5285,9 +6367,8 @@ export function Dashboard({ user, onLogout }) {
 		};
 	}, [selected?.id, selected?.jobs, updateJob]);
 
-	const deleteVideo = useCallback(
-		(id, e) => {
-			e?.stopPropagation();
+	const performDeleteTranslation = useCallback(
+		(id) => {
 			patchVideos((prev) => prev.filter((v) => v.id !== id));
 			void deleteTranslationGroupDoc(uid, id);
 			if (selected?.id === id) {
@@ -5561,7 +6642,10 @@ export function Dashboard({ user, onLogout }) {
 										<button
 											type="button"
 											title="Delete"
-											onClick={(e) => deleteVideo(v.id, e)}
+											onClick={(e) => {
+												e.stopPropagation();
+												setDeleteConfirmId(v.id);
+											}}
 											style={{
 												padding: "8px 8px 8px 4px",
 												border: "none",
@@ -5864,11 +6948,13 @@ export function Dashboard({ user, onLogout }) {
 						<Menu size={17} />
 					</button>
 					<span style={{ fontSize: 15, fontWeight: 500, color: "#18181b" }}>
-						{viewNew && !selected
-							? "New Translation"
-							: selected
-								? selected.label || sidebarTitle(selected)
-								: "Dashboard"}
+						{isStatsRoute
+							? "Usage stats"
+							: viewNew && !selected
+								? "New Translation"
+								: selected
+									? selected.label || sidebarTitle(selected)
+									: "Dashboard"}
 					</span>
 					<div style={{ flex: 1 }} />
 					{!sidebarOpen && (
@@ -5889,7 +6975,37 @@ export function Dashboard({ user, onLogout }) {
 					}}
 				>
 					<AnimatePresence mode="wait">
-						{viewNew && !selected ? (
+						{isStatsRoute ? (
+							routeVideoId ? (
+								<motion.div
+									key="stats"
+									initial={{ opacity: 0, y: 12 }}
+									animate={{ opacity: 1, y: 0 }}
+									exit={{ opacity: 0 }}
+									style={{ width: "100%" }}
+								>
+									<TranslationGroupStatsPanel
+										uid={uid}
+										groupId={routeVideoId}
+										onBack={() =>
+											router.push(
+												`/app/${encodeURIComponent(routeVideoId)}`,
+											)
+										}
+									/>
+								</motion.div>
+							) : (
+								<motion.div
+									key="stats-loading"
+									initial={{ opacity: 0 }}
+									animate={{ opacity: 1 }}
+									exit={{ opacity: 0 }}
+									style={{ color: "#71717a", fontSize: 14 }}
+								>
+									Loading…
+								</motion.div>
+							)
+						) : viewNew && !selected ? (
 							<motion.div
 								key="new"
 								initial={{ opacity: 0, y: 12 }}
@@ -6030,9 +7146,10 @@ export function Dashboard({ user, onLogout }) {
 													justifyContent: "space-between",
 													marginBottom: 24,
 													gap: 12,
+													flexWrap: "wrap",
 												}}
 											>
-												<div>
+												<div style={{ minWidth: 0, flex: "1 1 200px" }}>
 													<h2
 														className="aantraa-font"
 														style={{
@@ -6045,16 +7162,56 @@ export function Dashboard({ user, onLogout }) {
 														{selected.label || sidebarTitle(selected)}
 													</h2>
 												</div>
-											{((!isVoiceTranslationGroup && appendSourceVideoUrl) ||
-												(isVoiceTranslationGroup && appendVoiceSourceText)) && (
-												
-													<LangMultiSelect
-														selected={langPickerSelected}
-														onChange={setLangPickerSelected}
-														lockedLangs={existingJobLangs}
-														fullWidth
-													/>
-											)}
+												<div
+													style={{
+														display: "flex",
+														alignItems: "flex-start",
+														gap: 10,
+														flexWrap: "wrap",
+														justifyContent: "flex-end",
+														flex: "1 1 240px",
+													}}
+												>
+													{selected?.id ? (
+														<button
+															type="button"
+															onClick={() =>
+																router.push(
+																	`/app/${encodeURIComponent(selected.id)}/stats`,
+																)
+															}
+															style={{
+																display: "inline-flex",
+																alignItems: "center",
+																gap: 6,
+																padding: "10px 14px",
+																borderRadius: 10,
+																fontSize: 13,
+																fontWeight: 600,
+																border: "1px solid rgba(0,0,0,0.1)",
+																background: "#fafafa",
+																color: "#3f3f46",
+																cursor: "pointer",
+																whiteSpace: "nowrap",
+															}}
+														>
+															<BarChart2 size={16} aria-hidden />
+															Stats
+														</button>
+													) : null}
+													{((!isVoiceTranslationGroup && appendSourceVideoUrl) ||
+														(isVoiceTranslationGroup &&
+															appendVoiceSourceText)) && (
+														<div style={{ flex: "1 1 220px", minWidth: 200 }}>
+															<LangMultiSelect
+																selected={langPickerSelected}
+																onChange={setLangPickerSelected}
+																lockedLangs={existingJobLangs}
+																fullWidth
+															/>
+														</div>
+													)}
+												</div>
 											</div>
 
 											{isVoiceTranslationGroup && !appendVoiceSourceText && (
@@ -6093,52 +7250,102 @@ export function Dashboard({ user, onLogout }) {
 														paddingBottom: 2,
 													}}
 												>
-													{selectedDetail.jobs.map((job, i) => (
-														<button
-															key={job.id}
-															type="button"
-															onClick={() => setDetailTab(i)}
-															style={{
-																padding: "10px 12px",
-																borderRadius: "10px 10px 0 0",
-																fontSize: 13,
-																fontWeight: 600,
-																border: "none",
-																borderBottom: `2px solid ${detailTab === i ? "#ea580c" : "transparent"}`,
-																background:
-																	detailTab === i
-																		? "rgba(234,88,12,0.08)"
-																		: "transparent",
-																color: detailTab === i ? "#c2410c" : "#52525b",
-																display: "inline-flex",
-																alignItems: "center",
-																gap: 6,
-																cursor: "pointer",
-															}}
-														>
-															<span aria-hidden>
-																{flagForLanguageName(job.lang)}
-															</span>
-															{job.lang}
-															{job.isStaged && (
-																<span
+													{selectedDetail.jobs.map((job, i) => {
+														const isActive = detailTab === i;
+														const tabShellStyle = {
+															display: "inline-flex",
+															alignItems: "stretch",
+															borderRadius: "10px 10px 0 0",
+															borderBottom: `2px solid ${isActive ? "#ea580c" : "transparent"}`,
+															background: isActive
+																? "rgba(234,88,12,0.08)"
+																: "transparent",
+															overflow: "hidden",
+														};
+														return (
+															<div key={job.id} style={tabShellStyle}>
+																<button
+																	type="button"
+																	onClick={() => setDetailTab(i)}
 																	style={{
-																		fontSize: 10,
+																		padding: "10px 12px",
+																		fontSize: 13,
 																		fontWeight: 600,
-																		color: "#a1a1aa",
+																		border: "none",
+																		background: "transparent",
+																		color: isActive ? "#c2410c" : "#52525b",
+																		display: "inline-flex",
+																		alignItems: "center",
+																		gap: 6,
+																		cursor: "pointer",
 																	}}
 																>
-																	· new
-																</span>
-															)}
-															{!job.isStaged &&
-																job.status !== "done" &&
-																job.status !== "error" &&
-																!String(job.id).startsWith("failed_") && (
-																	<Loader2 size={12} className="spin" />
-																)}
-														</button>
-													))}
+																	<span aria-hidden>
+																		{flagForLanguageName(job.lang)}
+																	</span>
+																	{job.lang}
+																	{job.isStaged && (
+																		<span
+																			style={{
+																				fontSize: 10,
+																				fontWeight: 600,
+																				color: "#a1a1aa",
+																			}}
+																		>
+																			· Not started
+																		</span>
+																	)}
+																	{!job.isStaged &&
+																		job.status !== "done" &&
+																		job.status !== "error" &&
+																		!String(job.id).startsWith(
+																			"failed_",
+																		) && (
+																			<Loader2 size={12} className="spin" />
+																		)}
+																</button>
+																{job.isStaged ? (
+																	<button
+																		type="button"
+																		aria-label={`Remove ${job.lang} — translation not started`}
+																		title="Remove language (not started)"
+																		onClick={(e) => {
+																			e.preventDefault();
+																			e.stopPropagation();
+																			removeStagedLanguageAt(i, job.lang);
+																		}}
+																		style={{
+																			display: "flex",
+																			alignItems: "center",
+																			justifyContent: "center",
+																			padding: "0 10px",
+																			border: "none",
+																			borderLeft:
+																				"1px solid rgba(0,0,0,0.06)",
+																			background: "transparent",
+																			color: "#a1a1aa",
+																			cursor: "pointer",
+																			flexShrink: 0,
+																		}}
+																		onMouseEnter={(e) => {
+																			e.currentTarget.style.color =
+																				"#dc2626";
+																			e.currentTarget.style.background =
+																				"rgba(239,68,68,0.06)";
+																		}}
+																		onMouseLeave={(e) => {
+																			e.currentTarget.style.color =
+																				"#a1a1aa";
+																			e.currentTarget.style.background =
+																				"transparent";
+																		}}
+																	>
+																		<X size={14} strokeWidth={2.25} />
+																	</button>
+																) : null}
+															</div>
+														);
+													})}
 												</div>
 											)}
 
@@ -6237,8 +7444,8 @@ export function Dashboard({ user, onLogout }) {
 														source video.
 													</p>
 													<div style={{ marginBottom: 16 }}>
-														<StudioVideoPlayer
-															src={appendSourceVideoUrl}
+														<OriginalSourceMediaPreview
+															url={appendSourceVideoUrl}
 															footerLabel="Source preview"
 														/>
 													</div>
@@ -6309,18 +7516,7 @@ export function Dashboard({ user, onLogout }) {
 																	borderBottom: "1px solid rgba(234, 88, 12, 0.12)",
 																}}
 															>
-																<p
-																	style={{
-																		fontSize: 10,
-																		fontWeight: 700,
-																		letterSpacing: "0.12em",
-																		textTransform: "uppercase",
-																		color: "#c2410c",
-																		margin: "0 0 4px",
-																	}}
-																>
-																	This language
-																</p>
+																
 																<p
 																	style={{
 																		fontSize: 15,
@@ -6332,17 +7528,6 @@ export function Dashboard({ user, onLogout }) {
 																	Translation ·{" "}
 																	{selectedDetail.j.outputLanguage ||
 																		selectedDetail.j.lang}
-																</p>
-																<p
-																	style={{
-																		fontSize: 12,
-																		color: "#71717a",
-																		margin: "6px 0 0",
-																		lineHeight: 1.45,
-																	}}
-																>
-																	Translated audio and script for the tab you
-																	selected above.
 																</p>
 															</div>
 															<div
@@ -6475,17 +7660,6 @@ export function Dashboard({ user, onLogout }) {
 																>
 																	Original transcript
 																</p>
-																<p
-																	style={{
-																		fontSize: 12,
-																		color: "#71717a",
-																		margin: "6px 0 0",
-																		lineHeight: 1.45,
-																	}}
-																>
-																	Text you submitted before translation (same for
-																	all language tabs).
-																</p>
 															</div>
 															{selectedDetail.j.transcriptOriginal ? (
 																<CopyTextBlock
@@ -6592,7 +7766,25 @@ export function Dashboard({ user, onLogout }) {
 																>
 																	Dubbed video
 																</span>
+																
 																{selectedDetail.j.resultUrl ? (
+																	<div className="flex gap-2">
+																		<button
+																			type="button"
+																			onClick={() => {
+																				if (selectedDetail.j.resultUrl)
+																					window.open(
+																						selectedDetail.j.resultUrl,
+																						"_blank",
+																						"noopener,noreferrer",
+																					);
+																			}}
+																			disabled={!selectedDetail.j.resultUrl}
+																			className={`flex gap-1 items-center ${selectedDetail.j.resultUrl ? "bg-orange-600 p-1.5 text-white text-sm rounded" : "bg-zinc-50"}`}
+																		>
+																			<ExternalLink size={14} aria-hidden />
+																			Open dubbed video
+																		</button>
 																	<a
 																		href={selectedDetail.j.resultUrl}
 																		download
@@ -6614,6 +7806,7 @@ export function Dashboard({ user, onLogout }) {
 																		<Download size={14} aria-hidden />
 																		Download
 																	</a>
+																	</div>
 																) : null}
 															</div>
 															<div style={{ marginBottom: 18 }}>
@@ -6659,23 +7852,11 @@ export function Dashboard({ user, onLogout }) {
 																			animatedAudio
 																		/>
 																	)}
-																	{selectedDetail.j.caption && (
-																		<CopyTextBlock
-																			label={`Caption (${selectedDetail.j.outputLanguage || selectedDetail.j.lang || "output"})`}
-																			text={selectedDetail.j.caption}
-																			audioSrc={
-																				selectedDetail.j.resultUrl ||
-																				undefined
-																			}
-																			audioDownloadName={`caption-audio-${(selectedDetail.j.outputLanguage || selectedDetail.j.lang || "output").replace(/[^\w-]+/g, "_")}.mp4`}
-																			audioPreviewLabel="Caption language audio (dubbed)"
-																			animatedAudio
-																		/>
-																	)}
+																	
 																</div>
 															)}
 															{selectedDetail.j.captionUrl && (
-																<p
+																<div
 																	style={{
 																		fontSize: 13,
 																		marginTop: 8,
@@ -6701,7 +7882,7 @@ export function Dashboard({ user, onLogout }) {
 																	>
 																		Open caption file
 																	</a>
-																</p>
+																</div>
 															)}
 														</div>
 
@@ -6738,32 +7919,13 @@ export function Dashboard({ user, onLogout }) {
 																>
 																	Original video & transcript
 																</p>
-																<p
-																	style={{
-																		fontSize: 12,
-																		color: "#71717a",
-																		margin: "6px 0 0",
-																		lineHeight: 1.45,
-																	}}
-																>
-																	What you uploaded or linked before translation.
-																</p>
 															</div>
-															<p
-																style={{
-																	fontSize: 12,
-																	fontWeight: 600,
-																	color: "#52525b",
-																	margin: "0 0 8px",
-																}}
-															>
-																Original video
-															</p>
+															
 															<div style={{ marginBottom: 18 }}>
 																{selected.sourceVideoUrl ||
 																selectedDetail.j.sourceVideoUrl ? (
-																	<StudioVideoPlayer
-																		src={
+																	<OriginalSourceMediaPreview
+																		url={
 																			selected.sourceVideoUrl ||
 																			selectedDetail.j.sourceVideoUrl
 																		}
@@ -6788,20 +7950,7 @@ export function Dashboard({ user, onLogout }) {
 																	</div>
 																)}
 															</div>
-															{selectedDetail.j.transcriptOriginal && (
-																<CopyTextBlock
-																	label="Original transcript"
-																	text={selectedDetail.j.transcriptOriginal}
-																	audioSrc={
-																		selected.sourceVideoUrl ||
-																		selectedDetail.j.sourceVideoUrl ||
-																		undefined
-																	}
-																	audioDownloadName="original-source.mp4"
-																	audioPreviewLabel="Original audio (from source video)"
-																	animatedAudio
-																/>
-															)}
+															
 														</div>
 
 														<div
@@ -6811,34 +7960,6 @@ export function Dashboard({ user, onLogout }) {
 																flexWrap: "wrap",
 															}}
 														>
-															<button
-																type="button"
-																onClick={() => {
-																	if (selectedDetail.j.resultUrl)
-																		window.open(
-																			selectedDetail.j.resultUrl,
-																			"_blank",
-																			"noopener,noreferrer",
-																		);
-																}}
-																disabled={!selectedDetail.j.resultUrl}
-																style={{
-																	flex: 1,
-																	minWidth: 120,
-																	padding: "10px",
-																	borderRadius: 10,
-																	fontSize: 13.5,
-																	fontWeight: 600,
-																	background: "#ea580c",
-																	color: "#fff",
-																	opacity: selectedDetail.j.resultUrl ? 1 : 0.45,
-																	cursor: selectedDetail.j.resultUrl
-																		? "pointer"
-																		: "not-allowed",
-																}}
-															>
-																Open dubbed video
-															</button>
 															<button
 																type="button"
 																style={{
@@ -6975,7 +8096,8 @@ export function Dashboard({ user, onLogout }) {
 									}}
 								>
 									<button
-										onClick={() => deleteVideo(selected.id)}
+										type="button"
+										onClick={() => setDeleteConfirmId(selected.id)}
 										style={{
 											display: "flex",
 											alignItems: "center",
@@ -6985,6 +8107,7 @@ export function Dashboard({ user, onLogout }) {
 											fontSize: 12.5,
 											color: "#a1a1aa",
 											border: "1px solid rgba(0,0,0,0.08)",
+											cursor: "pointer",
 										}}
 									>
 										<Trash2 size={12} /> Delete
@@ -7037,6 +8160,15 @@ export function Dashboard({ user, onLogout }) {
 			<UpgradePriceModal
 				open={showUpgrade}
 				onClose={() => setShowUpgrade(false)}
+			/>
+			<DeleteTranslationConfirmModal
+				open={Boolean(deleteConfirmId)}
+				title={pendingDeleteTitle}
+				onClose={() => setDeleteConfirmId(null)}
+				onConfirm={() => {
+					if (deleteConfirmId) performDeleteTranslation(deleteConfirmId);
+					setDeleteConfirmId(null);
+				}}
 			/>
 		</div>
 	);

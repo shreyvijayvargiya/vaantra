@@ -22,6 +22,7 @@ import {
 import { onAuthStateChange } from "../lib/api/auth";
 import { toast } from "sonner";
 import { UsagePricingPanel } from "../lib/ui/UsagePricingPanel";
+import { FREE_STARTER_MINUTES } from "../lib/utils/usagePricing";
 
 const PricingPage = () => {
 	const queryClient = useQueryClient();
@@ -191,8 +192,8 @@ const PricingPage = () => {
 								<span className="text-amber-600 font-bold">•</span>
 								<span>
 									<strong className="text-zinc-800">Free tier:</strong> new
-									accounts get monthly free translation jobs before you buy
-									minutes.
+									accounts get {FREE_STARTER_MINUTES} one-time starter minutes
+									before you buy packs.
 								</span>
 							</li>
 							<li className="flex gap-2">

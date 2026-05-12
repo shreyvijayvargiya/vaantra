@@ -36,7 +36,7 @@ export default async function handler(req, res) {
 
 		// Prepare email data
 		const emailData = {
-			from: process.env.RESEND_FROM_EMAIL || "connect@ihatereading.in",
+			from: process.env.RESEND_FROM_EMAIL || "connect@aantraa.site.in",
 			subject: subject,
 			html: content,
 		};

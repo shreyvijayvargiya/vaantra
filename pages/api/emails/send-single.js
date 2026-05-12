@@ -34,7 +34,7 @@ export default async function handler(req, res) {
 
 		// Send email using Resend
 		const emailData = await resend.emails.send({
-			from: process.env.RESEND_FROM_EMAIL || "connect@ihatereading.in",
+			from: process.env.RESEND_FROM_EMAIL || "connect@aantraa.site.in",
 			to: [email],
 			subject: subject,
 			html: content,

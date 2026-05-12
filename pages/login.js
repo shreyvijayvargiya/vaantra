@@ -12,6 +12,7 @@ import {
 } from "../app/components/LandingHeroBadges";
 import { signInWithGoogle, onAuthStateChange } from "../lib/api/auth";
 import { toast } from "sonner";
+import { FREE_STARTER_MINUTES } from "../lib/utils/usagePricing";
 import {
 	getUserCookie,
 	removeUserCookie,
@@ -154,7 +155,8 @@ export default function LoginPage() {
 									margin: 0,
 								}}
 							>
-								Get started with 10 miuntes free credits — no card required to try
+								Get started with {FREE_STARTER_MINUTES} free starter minutes
+								(one-time) — no card required to try
 							</p>
 						</motion.div>
 					</div>

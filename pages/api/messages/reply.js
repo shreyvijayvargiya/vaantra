@@ -51,11 +51,11 @@ export default async function handler(req, res) {
 
 		// Send email using Resend
 		const emailData = await resend.emails.send({
-			from: process.env.RESEND_FROM_EMAIL || "connect@ihatereading.in",
+			from: process.env.RESEND_FROM_EMAIL || "connect@aantraa.site.in",
 			to: [to],
 			subject: subject,
 			html: htmlContent,
-			replyTo: process.env.RESEND_FROM_EMAIL || "connect@ihatereading.in",
+			replyTo: process.env.RESEND_FROM_EMAIL || "connect@aantraa.site.in",
 		});
 
 		// Mark message as replied in Firestore if messageId is provided

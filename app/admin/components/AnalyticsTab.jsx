@@ -151,7 +151,7 @@ const generateMockPages = () => [
 ];
 
 const generateMockReferrers = () => [
-	{ source: "ihatereading.in", visitors: 2 },
+	{ source: "aantraa.site.in", visitors: 2 },
 	{ source: "shreyvijayvargiya26.medium.com", visitors: 2 },
 	{ source: "t.co", visitors: 2 },
 	{ source: "blog.startupstash.com", visitors: 1 },
