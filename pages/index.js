@@ -655,9 +655,65 @@ function LangMultiSelect({
 }
 
 // ─── Status Progress Visualizer ──────────────────────────────────────────────
-function StatusProgress({ status, jobId }) {
+const STEP_PCTS = { uploading: 10, queued: 28, processing: 55, translating: 82, done: 100 };
+const STEP_FLOORS = { uploading: 0, queued: 10, processing: 28, translating: 55 };
+const STEP_DURATIONS = { uploading: 30, queued: 90, processing: 360, translating: 180 };
+
+function StatusProgress({ status, jobId, createdAt, detectedDurationSec }) {
 	const curIdx = STEPS.findIndex((s) => s.key === status);
 	const isErr = status === "error";
+	const isCancelled = status === "cancelled";
+	const isActive = !isErr && !isCancelled && status !== "done";
+
+	const [elapsed, setElapsed] = useState(() => {
+		if (!createdAt || !isActive) return 0;
+		return Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000));
+	});
+
+	useEffect(() => {
+		if (!isActive) return;
+		const start = createdAt ? new Date(createdAt).getTime() : Date.now();
+		setElapsed(Math.max(0, Math.floor((Date.now() - start) / 1000)));
+		const id = setInterval(
+			() => setElapsed(Math.max(0, Math.floor((Date.now() - start) / 1000))),
+			1000,
+		);
+		return () => clearInterval(id);
+	}, [status, createdAt, isActive]);
+
+	let progressPct;
+	if (status === "done") {
+		progressPct = 100;
+	} else if (isErr) {
+		const frozenIdx = curIdx >= 0 ? curIdx : 1;
+		progressPct = STEP_PCTS[STEPS[frozenIdx]?.key] ?? 15;
+	} else if (isCancelled) {
+		progressPct = STEP_PCTS[status] ?? 15;
+	} else {
+		const floor = STEP_FLOORS[status] ?? 0;
+		const ceiling = STEP_PCTS[status] ?? 10;
+		const dur = STEP_DURATIONS[status] ?? 60;
+		const fraction = Math.min(0.92, elapsed / dur);
+		progressPct = floor + fraction * (ceiling - floor);
+	}
+
+	const estimatedTotalSec = detectedDurationSec
+		? Math.max(120, Math.round(detectedDurationSec * 0.55 + 90))
+		: null;
+	const remainingSec =
+		estimatedTotalSec && isActive
+			? Math.max(0, estimatedTotalSec - elapsed)
+			: null;
+
+	const elapsedLabel =
+		elapsed > 0
+			? `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")} elapsed`
+			: null;
+	const etaLabel =
+		remainingSec != null
+			? `~${Math.max(1, Math.round(remainingSec / 60))} min left`
+			: null;
+
 	return (
 		<div style={{ padding: "20px 0 8px" }}>
 			<div
@@ -756,20 +812,95 @@ function StatusProgress({ status, jobId }) {
 				})}
 			</div>
 
+		{/* Progress bar */}
+		<div
+			style={{
+				margin: "0 2px 6px",
+				height: 5,
+				borderRadius: 3,
+				background: "rgba(0,0,0,0.07)",
+				overflow: "hidden",
+			}}
+		>
 			<motion.div
-				key={status}
-				initial={{ opacity: 0, y: 6 }}
-				animate={{ opacity: 1, y: 0 }}
-				transition={{ duration: 0.3 }}
+				animate={{ width: `${progressPct}%` }}
+				transition={{ duration: 0.9, ease: "easeInOut" }}
 				style={{
-					padding: "18px 20px",
-					borderRadius: 12,
-					textAlign: "center",
-					background: isErr ? "rgba(239,68,68,0.06)" : "rgba(0,0,0,0.03)",
-					border: `1px solid ${isErr ? "rgba(239,68,68,0.25)" : "rgba(0,0,0,0.06)"}`,
+					height: "100%",
+					borderRadius: 3,
+					background:
+						isErr || isCancelled
+							? "rgba(0,0,0,0.18)"
+							: "linear-gradient(90deg, #fb923c, #ea580c)",
+					boxShadow: isActive ? "0 0 7px rgba(234,88,12,0.4)" : "none",
+				}}
+			/>
+		</div>
+
+		{/* Elapsed + ETA row */}
+		{(elapsedLabel || etaLabel) && (
+			<div
+				style={{
+					display: "flex",
+					justifyContent: "space-between",
+					fontSize: 10.5,
+					color: "#a1a1aa",
+					marginBottom: 10,
+					fontFamily: "'DM Mono', monospace",
+					padding: "0 2px",
 				}}
 			>
-				{isErr ? (
+				<span>{elapsedLabel ?? ""}</span>
+				{etaLabel && <span>{etaLabel}</span>}
+			</div>
+		)}
+
+		<motion.div
+			key={status}
+			initial={{ opacity: 0, y: 6 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ duration: 0.3 }}
+			style={{
+				padding: "18px 20px",
+				borderRadius: 12,
+				textAlign: "center",
+				background: isCancelled
+					? "rgba(0,0,0,0.03)"
+					: isErr
+						? "rgba(239,68,68,0.06)"
+						: "rgba(0,0,0,0.03)",
+				border: `1px solid ${
+					isErr
+						? "rgba(239,68,68,0.25)"
+						: isCancelled
+							? "rgba(0,0,0,0.08)"
+							: "rgba(0,0,0,0.06)"
+				}`,
+			}}
+		>
+			{isCancelled ? (
+				<>
+					<X size={20} style={{ color: "#a1a1aa", marginBottom: 6 }} />
+					<p style={{ color: "#71717a", fontWeight: 500, fontSize: 14 }}>
+						Cancelled
+					</p>
+					<p style={{ color: "#a1a1aa", fontSize: 12, marginTop: 4, lineHeight: 1.45 }}>
+						This job was cancelled. Use the Resume button to restart.
+					</p>
+					{jobId && (
+						<p
+							style={{
+								color: "#71717a",
+								fontSize: 11,
+								marginTop: 6,
+								fontFamily: "DM Mono",
+							}}
+						>
+							{jobId}
+						</p>
+					)}
+				</>
+			) : isErr ? (
 					<>
 						<AlertCircle
 							size={22}
@@ -2835,7 +2966,6 @@ function VoiceTranslateForm({
 					onClick={() => submitAbortRef.current?.abort()}
 					style={{
 						width: "100%",
-						marginTop: 8,
 						padding: "10px 14px",
 						borderRadius: 10,
 						fontSize: 13,
@@ -3208,6 +3338,7 @@ function TranslateForm({
 			(j) =>
 				j.status !== "done" &&
 				j.status !== "error" &&
+				j.status !== "cancelled" &&
 				!String(j.id).startsWith("failed_") &&
 				!String(j.id).startsWith("voice_"),
 		);
@@ -3282,8 +3413,17 @@ function TranslateForm({
 				0,
 				usageMinutesCredited - usageMinutesUsed,
 			);
-			
-			
+			if (estimatedTotalMinutes > remaining) {
+				setCreditsModalDetail({
+					estimatedTotalMinutes,
+					remainingMinutes: remaining,
+					needMoreMinutes: estimatedTotalMinutes - remaining,
+					perJobMinutes: perJobBillableMin,
+					langCount: selectedLangs.length,
+				});
+				setShowCreditsModal(true);
+				return;
+			}
 		}
 
 		setBusy(true);
@@ -3369,30 +3509,30 @@ function TranslateForm({
 				});
 			}
 
-			const anyOk = jobs.some((j) => !String(j.id).startsWith("failed_"));
-			if (!anyOk) {
-				setBusy(false);
-				setLocalTrack({ groupId, jobs });
-				return;
-			}
+		const anyOk = jobs.some((j) => !String(j.id).startsWith("failed_"));
+		if (!anyOk) {
+			setBusy(false);
+			setLocalTrack({ groupId, jobs, _sourceUrl: mode === "url" ? url.trim() : null });
+			return;
+		}
 
-			const sourceVideoUrl =
-				jobs.find((j) => j.sourceVideoUrl)?.sourceVideoUrl ?? null;
+		const sourceVideoUrl =
+			jobs.find((j) => j.sourceVideoUrl)?.sourceVideoUrl ?? null;
 
-			if (onJobCreated) {
-				onJobCreated({
-					id: groupId,
-					label: null,
-					jobs,
-					createdAt: new Date().toISOString(),
-					sourceVideoUrl,
-				});
-				setFile(null);
-				setUrl("");
-				setSelectedLangs([]);
-			} else {
-				setLocalTrack({ groupId, jobs });
-			}
+		if (onJobCreated) {
+			onJobCreated({
+				id: groupId,
+				label: null,
+				jobs,
+				createdAt: new Date().toISOString(),
+				sourceVideoUrl,
+			});
+			setFile(null);
+			setUrl("");
+			setSelectedLangs([]);
+		} else {
+			setLocalTrack({ groupId, jobs, _sourceUrl: mode === "url" ? url.trim() : null });
+		}
 		} catch (e) {
 			if (e?.name === "AbortError") {
 				console.info("Translation cancelled by user.");
@@ -3410,6 +3550,71 @@ function TranslateForm({
 		setFile(null);
 		setUrl("");
 		setSelectedLangs([]);
+	};
+
+	const cancelLocalJob = (jobId) => {
+		setLocalTrack((t) =>
+			t
+				? {
+						...t,
+						jobs: t.jobs.map((j) =>
+							j.id === jobId ? { ...j, status: "cancelled" } : j,
+						),
+					}
+				: t,
+		);
+	};
+
+	const resumeLocalJob = async (job) => {
+		const sourceUrl = localTrack?._sourceUrl;
+		if (!sourceUrl || !job?.lang) {
+			toast.error("Source URL not available for resume.");
+			return;
+		}
+		const postUrl = getTranslatePostUrl();
+		try {
+			const res = await fetch(postUrl, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					...(await getTranslateAuthHeaders()),
+				},
+				body: JSON.stringify({ video_url: sourceUrl, output_language: job.lang }),
+			});
+			const data = await res.json().catch(() => ({}));
+			const apiErr = getApiErrorMessage(data);
+			if (apiErr || !res.ok) {
+				toast.error(apiErr || "Failed to resume translation.");
+				return;
+			}
+			const videoId = parseVideoIdFromPostResponse(data);
+			if (!videoId) {
+				toast.error("Could not restart translation.");
+				return;
+			}
+			const initial = normalizeStatus(extractStatusField(data));
+			const postFields = extractJobFieldsFromGetResponse(data);
+			const newJob = {
+				id: videoId,
+				lang: job.lang,
+				status: initial,
+				createdAt: new Date().toISOString(),
+				...postFields,
+				resultUrl: postFields.resultUrl ?? extractResultUrl(data) ?? null,
+				sourceVideoUrl: postFields.sourceVideoUrl ?? sourceUrl,
+				videoTranslateId: postFields.videoTranslateId ?? videoId,
+			};
+			setLocalTrack((t) =>
+				t
+					? {
+							...t,
+							jobs: t.jobs.map((j) => (j.id === job.id ? newJob : j)),
+						}
+					: t,
+			);
+		} catch (e) {
+			toast.error(e?.message || "Failed to resume.");
+		}
 	};
 
 	const isUrlInvalid =
@@ -3907,41 +4112,101 @@ function TranslateForm({
 			) : (
 				<>
 					<div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-						{localTrack?.jobs.map((j) => (
-							<div
-								key={j.id}
+					{localTrack?.jobs.map((j) => (
+						<div
+							key={j.id}
+							style={{
+								paddingBottom: 8,
+								borderBottom: "1px solid rgba(0,0,0,0.06)",
+							}}
+						>
+							<p
 								style={{
-									paddingBottom: 8,
-									borderBottom: "1px solid rgba(0,0,0,0.06)",
+									fontSize: 12,
+									fontWeight: 600,
+									color: "#52525b",
+									marginBottom: 8,
 								}}
 							>
-								<p
+								<span style={{ marginRight: 6 }} aria-hidden>
+									{flagForLanguageName(j.lang)}
+								</span>
+								{j.lang}
+								<span
+									className="mono"
 									style={{
-										fontSize: 12,
-										fontWeight: 600,
-										color: "#52525b",
-										marginBottom: 8,
+										fontSize: 10,
+										color: "#a1a1aa",
+										marginLeft: 8,
+										fontWeight: 500,
 									}}
 								>
-									<span style={{ marginRight: 6 }} aria-hidden>
-										{flagForLanguageName(j.lang)}
-									</span>
-									{j.lang}
-									<span
-										className="mono"
+									{String(j.id).startsWith("failed_") ? "" : j.id}
+								</span>
+							</p>
+							<StatusProgress
+								status={j.status}
+								jobId={j.id}
+								createdAt={j.createdAt}
+								detectedDurationSec={
+									j.durationMinutes ? j.durationMinutes * 60 : null
+								}
+							/>
+							{/* Per-job cancel button */}
+							{j.status !== "done" &&
+								j.status !== "error" &&
+								j.status !== "cancelled" &&
+								!String(j.id).startsWith("failed_") && (
+									<button
+										type="button"
+										onClick={() => cancelLocalJob(j.id)}
 										style={{
-											fontSize: 10,
-											color: "#a1a1aa",
-											marginLeft: 8,
+											width: "100%",
+											marginTop: 8,
+											padding: "8px 14px",
+											borderRadius: 9,
+											fontSize: 12.5,
 											fontWeight: 500,
+											color: "#b91c1c",
+											background: "rgba(239,68,68,0.07)",
+											border: "1px solid rgba(239,68,68,0.2)",
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "center",
+											gap: 7,
 										}}
 									>
-										{String(j.id).startsWith("failed_") ? "" : j.id}
-									</span>
-								</p>
-								<StatusProgress status={j.status} jobId={j.id} />
-							</div>
-						))}
+										<X size={13} aria-hidden />
+										Cancel
+									</button>
+								)}
+							{/* Per-job resume button */}
+							{j.status === "cancelled" && localTrack?._sourceUrl && (
+								<button
+									type="button"
+									onClick={() => resumeLocalJob(j)}
+									style={{
+										width: "100%",
+										marginTop: 8,
+										padding: "8px 14px",
+										borderRadius: 9,
+										fontSize: 12.5,
+										fontWeight: 600,
+										color: "#fff",
+										background: "#ea580c",
+										border: "none",
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+										gap: 7,
+									}}
+								>
+									<RefreshCw size={13} aria-hidden />
+									Resume
+								</button>
+							)}
+						</div>
+					))}
 					</div>
 					{localTrack?.jobs.every(
 						(j) => j.status === "done" || j.status === "error",
@@ -6181,9 +6446,37 @@ export function Dashboard({ user, onLogout }) {
 		],
 	);
 
+	const cancelJob = useCallback(
+		(job) => {
+			if (!selected?.id || !job?.lang) return;
+			const groupId = selected.id;
+			const applyCancel = (g) => {
+				if (g.id !== groupId) return g;
+				const jobs = (g.jobs || []).map((j) =>
+					j.id === job.id ? { ...j, status: "cancelled" } : j,
+				);
+				const out = { ...g, jobs };
+				out.type = inferTranslationGroupType(out);
+				return out;
+			};
+			patchVideos((prev) => {
+				const next = prev.map(applyCancel);
+				const touched = next.find((g) => g.id === groupId);
+				if (touched) scheduleUpsertGroup(touched);
+				return next;
+			});
+			setSelected((s) => (s ? applyCancel(s) : s));
+		},
+		[selected?.id, patchVideos, scheduleUpsertGroup],
+	);
+
 	const retryFailedTranslation = useCallback(
 		async (failedJob) => {
-			if (!selected?.id || !failedJob?.lang || failedJob.status !== "error") {
+			if (
+				!selected?.id ||
+				!failedJob?.lang ||
+				(failedJob.status !== "error" && failedJob.status !== "cancelled")
+			) {
 				toast.error("Cannot retry this translation.");
 				return;
 			}
@@ -6367,16 +6660,17 @@ export function Dashboard({ user, onLogout }) {
 	useEffect(() => {
 		const sel = selectedRef.current;
 		if (!sel?.id || !sel.jobs?.length) return;
-		const pending = sel.jobs.filter(
-			(j) =>
-				j.status !== "done" &&
-				j.status !== "error" &&
-				!String(j.id).startsWith("failed_") &&
-				!String(j.id).startsWith("voice_"),
-		);
-		if (pending.length === 0) return;
-		const ac = new AbortController();
-		const groupId = sel.id;
+	const pending = sel.jobs.filter(
+		(j) =>
+			j.status !== "done" &&
+			j.status !== "error" &&
+			j.status !== "cancelled" &&
+			!String(j.id).startsWith("failed_") &&
+			!String(j.id).startsWith("voice_"),
+	);
+	if (pending.length === 0) return;
+	const ac = new AbortController();
+	const groupId = sel.id;
 
 		const applyPatch = (patch) => {
 			const { jobId, lang, ...rest } = patch;
@@ -7522,14 +7816,100 @@ export function Dashboard({ user, onLogout }) {
 												</div>
 											)}
 
-											{!selectedDetail.j.isStaged &&
-												selectedDetail.j.status !== "done" &&
-												selectedDetail.j.status !== "error" && (
+										{!selectedDetail.j.isStaged &&
+											selectedDetail.j.status !== "done" &&
+											selectedDetail.j.status !== "error" && (
+												<>
 													<StatusProgress
 														status={selectedDetail.j.status}
 														jobId={selectedDetail.j.id}
+														createdAt={selectedDetail.j.createdAt}
+														detectedDurationSec={
+															selectedDetail.j.durationMinutes
+																? selectedDetail.j.durationMinutes * 60
+																: null
+														}
 													/>
-												)}
+													{/* Cancel button — shown for active in-progress jobs */}
+													{selectedDetail.j.status !== "cancelled" && (
+														<button
+															type="button"
+															onClick={() => cancelJob(selectedDetail.j)}
+															disabled={appendBusy === selectedDetail.j.lang}
+															style={{
+																width: "100%",
+																marginTop: 10,
+																padding: "9px 16px",
+																borderRadius: 10,
+																fontSize: 13,
+																fontWeight: 500,
+																color: "#b91c1c",
+																background: "rgba(239,68,68,0.07)",
+																border: "1px solid rgba(239,68,68,0.2)",
+																display: "flex",
+																alignItems: "center",
+																justifyContent: "center",
+																gap: 7,
+																cursor: appendBusy === selectedDetail.j.lang ? "not-allowed" : "pointer",
+																opacity: appendBusy === selectedDetail.j.lang ? 0.5 : 1,
+															}}
+														>
+															<X size={14} aria-hidden />
+															Cancel translation
+														</button>
+													)}
+													{/* Resume button — shown only for cancelled jobs */}
+													{selectedDetail.j.status === "cancelled" &&
+														!isVoiceTranslationGroup &&
+														appendSourceVideoUrl && (
+															<button
+																type="button"
+																onClick={() =>
+																	retryFailedTranslation(selectedDetail.j)
+																}
+																disabled={appendBusy === selectedDetail.j.lang}
+																style={{
+																	width: "100%",
+																	marginTop: 10,
+																	padding: "9px 16px",
+																	borderRadius: 10,
+																	fontSize: 13,
+																	fontWeight: 600,
+																	color: "#fff",
+																	background:
+																		appendBusy === selectedDetail.j.lang
+																			? "rgba(234,88,12,0.5)"
+																			: "#ea580c",
+																	border: "none",
+																	display: "flex",
+																	alignItems: "center",
+																	justifyContent: "center",
+																	gap: 7,
+																	cursor:
+																		appendBusy === selectedDetail.j.lang
+																			? "wait"
+																			: "pointer",
+																}}
+															>
+																{appendBusy === selectedDetail.j.lang ? (
+																	<>
+																		<Loader2
+																			size={14}
+																			className="spin"
+																			aria-hidden
+																		/>
+																		Resuming…
+																	</>
+																) : (
+																	<>
+																		<RefreshCw size={14} aria-hidden />
+																		Resume translation
+																	</>
+																)}
+															</button>
+														)}
+												</>
+											)}
 
 											{selectedDetail.j.status === "done" &&
 												(isVoiceTranslationGroup ? (

@@ -1,226 +1,337 @@
-import React from "react";
 import Head from "next/head";
-import Navbar from "../app/components/Navbar";
-import Footer from "../app/components/Footer";
+import Link from "next/link";
+import LandingMarketingNav from "../app/components/LandingMarketingNav";
+import LandingMarketingFooter from "../app/components/LandingMarketingFooter";
 
-const PrivacyPage = () => {
+const LAST_UPDATED = "May 13, 2026";
+const CONTACT_EMAIL = "shreyvijayvargiya26@gmail.com";
+
+const sectionStyle = {
+	marginBottom: 32,
+};
+
+const h2Style = {
+	fontSize: "clamp(1.05rem, 2vw, 1.25rem)",
+	fontWeight: 700,
+	color: "#18181b",
+	marginBottom: 10,
+	marginTop: 36,
+	letterSpacing: "-0.01em",
+};
+
+const pStyle = {
+	fontSize: 14.5,
+	color: "#52525b",
+	lineHeight: 1.75,
+	marginBottom: 10,
+};
+
+const ulStyle = {
+	paddingLeft: 20,
+	marginBottom: 10,
+};
+
+const liStyle = {
+	fontSize: 14.5,
+	color: "#52525b",
+	lineHeight: 1.75,
+	marginBottom: 4,
+};
+
+export default function PrivacyPage() {
 	return (
 		<>
 			<Head>
-				<title>Privacy Policy - YourApp</title>
+				<title>Privacy Policy · aantraa</title>
 				<meta
 					name="description"
-					content="Read our privacy policy to understand how we collect, use, and protect your personal information."
+					content="How aantraa collects, uses, and protects your personal information when you use our AI video translation service."
 				/>
 			</Head>
-			<div className="min-h-screen flex flex-col">
-				<Navbar />
 
-				<section className="flex-1 py-12 px-4 sm:px-6 lg:px-8 bg-zinc-50">
-					<div className="max-w-4xl mx-auto">
-						<div className="bg-white rounded-2xl shadow-sm border border-zinc-200 p-8 md:p-12">
-							<h1 className="text-4xl font-bold text-zinc-900 mb-4">
+			<div
+				style={{
+					fontFamily: "'DM Sans', system-ui, sans-serif",
+					background: "#f5f4f0",
+					minHeight: "100vh",
+					display: "flex",
+					flexDirection: "column",
+				}}
+			>
+				<LandingMarketingNav />
+
+				<main
+					style={{
+						flex: 1,
+						padding: "56px clamp(20px, 5vw, 64px) 80px",
+					}}
+				>
+					<div style={{ maxWidth: 720, margin: "0 auto" }}>
+						{/* Header */}
+						<div style={{ marginBottom: 40 }}>
+							<span
+								style={{
+									display: "inline-block",
+									fontSize: 11.5,
+									fontWeight: 600,
+									letterSpacing: "0.08em",
+									textTransform: "uppercase",
+									color: "#ea580c",
+									background: "rgba(234,88,12,0.08)",
+									border: "1px solid rgba(234,88,12,0.18)",
+									borderRadius: 6,
+									padding: "3px 10px",
+									marginBottom: 16,
+								}}
+							>
+								Legal
+							</span>
+							<h1
+								className="aantraa-font"
+								style={{
+									fontSize: "clamp(2rem, 5vw, 3rem)",
+									fontWeight: 700,
+									color: "#18181b",
+									marginBottom: 10,
+									letterSpacing: "-0.02em",
+									lineHeight: 1.15,
+								}}
+							>
 								Privacy Policy
 							</h1>
-							<p className="text-sm text-zinc-600 mb-8">
-								Last updated:{" "}
-								{new Date().toLocaleDateString("en-US", {
-									year: "numeric",
-									month: "long",
-									day: "numeric",
-								})}
+							<p style={{ fontSize: 14, color: "#a1a1aa" }}>
+								Last updated: {LAST_UPDATED}
+							</p>
+						</div>
+
+						{/* Card */}
+						<div
+							style={{
+								background: "#fff",
+								borderRadius: 20,
+								border: "1px solid rgba(0,0,0,0.07)",
+								boxShadow: "0 2px 16px rgba(0,0,0,0.05)",
+								padding: "clamp(24px, 5vw, 48px)",
+							}}
+						>
+							<p style={pStyle}>
+								Welcome to <strong>aantraa</strong> ("we", "us", or "our"). We
+								operate the AI-powered video translation service at{" "}
+								<a
+									href="https://aantraa.video"
+									style={{ color: "#ea580c", fontWeight: 500 }}
+								>
+									aantraa.video
+								</a>
+								. This Privacy Policy explains how we collect, use, disclose,
+								and safeguard your information when you use our service.
 							</p>
 
-							<div className="prose prose-zinc max-w-none space-y-6">
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										1. Introduction
-									</h2>
-									<p className="text-zinc-700 leading-relaxed">
-										Welcome to YourApp. We are committed to protecting your
-										personal information and your right to privacy. This Privacy
-										Policy explains how we collect, use, disclose, and safeguard
-										your information when you use our service.
-									</p>
-								</section>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>1. Information We Collect</h2>
+								<p style={pStyle}>
+									We collect information you provide directly and information
+									collected automatically when you use our service:
+								</p>
+								<ul style={ulStyle}>
+									<li style={liStyle}>
+										<strong>Account data</strong> — name, email address, and
+										authentication credentials when you sign up via Google or
+										email.
+									</li>
+									<li style={liStyle}>
+										<strong>Usage data</strong> — translation jobs submitted,
+										source URLs or uploaded files, target languages selected,
+										minutes of video/audio processed, and job outputs.
+									</li>
+									<li style={liStyle}>
+										<strong>Billing data</strong> — payment method details
+										processed by our third-party payment provider (Polar). We do
+										not store raw card numbers.
+									</li>
+									<li style={liStyle}>
+										<strong>Device &amp; log data</strong> — IP address, browser
+										type, referring URLs, pages visited, and timestamps,
+										collected automatically via server logs and analytics.
+									</li>
+									<li style={liStyle}>
+										<strong>Cookies &amp; local storage</strong> — session
+										tokens and preference values to keep you signed in and
+										remember settings.
+									</li>
+								</ul>
+							</div>
 
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										2. Information We Collect
-									</h2>
-									<h3 className="text-xl font-semibold text-zinc-900 mt-6 mb-3">
-										2.1 Personal Information
-									</h3>
-									<p className="text-zinc-700 leading-relaxed mb-4">
-										We may collect personal information that you voluntarily
-										provide to us when you:
-									</p>
-									<ul className="list-disc list-inside text-zinc-700 space-y-2 ml-4">
-										<li>Register for an account</li>
-										<li>Subscribe to our newsletter</li>
-										<li>Make a purchase or transaction</li>
-										<li>Contact us for support</li>
-										<li>Participate in surveys or promotions</li>
-									</ul>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>2. How We Use Your Information</h2>
+								<ul style={ulStyle}>
+									<li style={liStyle}>
+										Provide, operate, and improve the aantraa translation
+										service.
+									</li>
+									<li style={liStyle}>
+										Process payments and track usage-based billing in minutes.
+									</li>
+									<li style={liStyle}>
+										Send transactional emails (job completion, receipts, account
+										alerts).
+									</li>
+									<li style={liStyle}>
+										Detect and prevent fraud, abuse, and violations of our Terms.
+									</li>
+									<li style={liStyle}>
+										Analyse aggregate usage patterns to improve product quality.
+									</li>
+									<li style={liStyle}>
+										Comply with applicable legal obligations.
+									</li>
+								</ul>
+							</div>
 
-									<h3 className="text-xl font-semibold text-zinc-900 mt-6 mb-3">
-										2.2 Automatically Collected Information
-									</h3>
-									<p className="text-zinc-700 leading-relaxed">
-										When you visit our website, we automatically collect certain
-										information about your device, including information about
-										your web browser, IP address, time zone, and some of the
-										cookies that are installed on your device.
-									</p>
-								</section>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>3. Sharing Your Information</h2>
+								<p style={pStyle}>
+									We do not sell your personal information. We may share it
+									only in these circumstances:
+								</p>
+								<ul style={ulStyle}>
+									<li style={liStyle}>
+										<strong>Service providers</strong> — Firebase (auth &amp;
+										database), Uploadthing (file storage), Polar (payments),
+										ElevenLabs / Sieve (AI translation processing), Vercel
+										(hosting), PostHog (analytics). Each is bound by data
+										processing agreements.
+									</li>
+									<li style={liStyle}>
+										<strong>Legal requirements</strong> — when required by law,
+										court order, or valid government request.
+									</li>
+									<li style={liStyle}>
+										<strong>Business transfer</strong> — in the event of a
+										merger, acquisition, or asset sale your data may transfer as
+										a business asset.
+									</li>
+								</ul>
+							</div>
 
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										3. How We Use Your Information
-									</h2>
-									<p className="text-zinc-700 leading-relaxed mb-4">
-										We use the information we collect to:
-									</p>
-									<ul className="list-disc list-inside text-zinc-700 space-y-2 ml-4">
-										<li>Provide, operate, and maintain our service</li>
-										<li>Improve, personalize, and expand our service</li>
-										<li>Understand and analyze how you use our service</li>
-										<li>
-											Develop new products, services, features, and
-											functionality
-										</li>
-										<li>
-											Communicate with you for customer service and support
-										</li>
-										<li>Send you marketing and promotional communications</li>
-										<li>Find and prevent fraud</li>
-									</ul>
-								</section>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>4. Data Retention</h2>
+								<p style={pStyle}>
+									We retain your account data for as long as your account is
+									active. Translation job outputs are stored to allow you to
+									download results; you can delete individual jobs from your
+									dashboard at any time. We delete inactive accounts and their
+									associated data after 12 months of inactivity.
+								</p>
+							</div>
 
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										4. Information Sharing and Disclosure
-									</h2>
-									<p className="text-zinc-700 leading-relaxed mb-4">
-										We do not sell, trade, or rent your personal information to
-										third parties. We may share your information in the
-										following situations:
-									</p>
-									<ul className="list-disc list-inside text-zinc-700 space-y-2 ml-4">
-										<li>
-											<strong>Service Providers:</strong> We may share your
-											information with third-party service providers who perform
-											services on our behalf
-										</li>
-										<li>
-											<strong>Legal Requirements:</strong> We may disclose your
-											information if required by law or in response to valid
-											requests by public authorities
-										</li>
-										<li>
-											<strong>Business Transfers:</strong> We may share or
-											transfer your information in connection with any merger,
-											sale of company assets, or acquisition
-										</li>
-									</ul>
-								</section>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>5. Cookies &amp; Tracking</h2>
+								<p style={pStyle}>
+									We use first-party cookies for authentication sessions and
+									user preferences. We use PostHog for product analytics (page
+									views, feature usage). You can opt out of non-essential cookies
+									by clicking "Decline" in the cookie consent banner. Declining
+									will not affect core service functionality.
+								</p>
+							</div>
 
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										5. Data Security
-									</h2>
-									<p className="text-zinc-700 leading-relaxed">
-										We use administrative, technical, and physical security
-										measures to help protect your personal information. However,
-										no method of transmission over the Internet or electronic
-										storage is 100% secure, and we cannot guarantee absolute
-										security.
-									</p>
-								</section>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>6. Data Security</h2>
+								<p style={pStyle}>
+									We use HTTPS encryption for all data in transit, and
+									industry-standard measures for data at rest. Authentication is
+									handled by Firebase Authentication. No method of transmission
+									over the internet is 100% secure — we cannot guarantee
+									absolute security but we take reasonable precautions.
+								</p>
+							</div>
 
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										6. Your Privacy Rights
-									</h2>
-									<p className="text-zinc-700 leading-relaxed mb-4">
-										Depending on your location, you may have the following
-										rights regarding your personal information:
-									</p>
-									<ul className="list-disc list-inside text-zinc-700 space-y-2 ml-4">
-										<li>The right to access your personal information</li>
-										<li>
-											The right to rectify inaccurate personal information
-										</li>
-										<li>
-											The right to request deletion of your personal information
-										</li>
-										<li>
-											The right to object to processing of your personal
-											information
-										</li>
-										<li>The right to data portability</li>
-									</ul>
-								</section>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>7. Your Rights</h2>
+								<p style={pStyle}>
+									Depending on your jurisdiction (GDPR, CCPA, etc.) you may
+									have rights to:
+								</p>
+								<ul style={ulStyle}>
+									<li style={liStyle}>Access the personal data we hold about you.</li>
+									<li style={liStyle}>Correct inaccurate data.</li>
+									<li style={liStyle}>
+										Request deletion of your account and associated data.
+									</li>
+									<li style={liStyle}>
+										Object to or restrict certain processing activities.
+									</li>
+									<li style={liStyle}>Data portability.</li>
+								</ul>
+								<p style={pStyle}>
+									To exercise any of these rights, email us at{" "}
+									<a
+										href={`mailto:${CONTACT_EMAIL}`}
+										style={{ color: "#ea580c", fontWeight: 500 }}
+									>
+										{CONTACT_EMAIL}
+									</a>
+									.
+								</p>
+							</div>
 
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										7. Cookies and Tracking Technologies
-									</h2>
-									<p className="text-zinc-700 leading-relaxed">
-										We use cookies and similar tracking technologies to track
-										activity on our service and hold certain information. You
-										can instruct your browser to refuse all cookies or to
-										indicate when a cookie is being sent.
-									</p>
-								</section>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>8. Children's Privacy</h2>
+								<p style={pStyle}>
+									aantraa is not directed to children under 13. We do not
+									knowingly collect personal information from anyone under 13.
+									If you believe a child has provided us with personal data,
+									contact us and we will delete it promptly.
+								</p>
+							</div>
 
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										8. Children's Privacy
-									</h2>
-									<p className="text-zinc-700 leading-relaxed">
-										Our service is not intended for children under the age of
-										13. We do not knowingly collect personal information from
-										children under 13. If you are a parent or guardian and
-										believe your child has provided us with personal
-										information, please contact us.
-									</p>
-								</section>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>9. Changes to This Policy</h2>
+								<p style={pStyle}>
+									We may update this Privacy Policy from time to time. We will
+									notify you of material changes by posting the updated policy
+									on this page with a new "Last updated" date. Continued use of
+									the service after changes constitutes acceptance.
+								</p>
+							</div>
 
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										9. Changes to This Privacy Policy
-									</h2>
-									<p className="text-zinc-700 leading-relaxed">
-										We may update our Privacy Policy from time to time. We will
-										notify you of any changes by posting the new Privacy Policy
-										on this page and updating the "Last updated" date.
-									</p>
-								</section>
-
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										10. Contact Us
-									</h2>
-									<p className="text-zinc-700 leading-relaxed">
-										If you have any questions about this Privacy Policy, please
-										contact us at:
-									</p>
-									<p className="text-zinc-700 leading-relaxed mt-2">
-										Email: privacy@yourapp.com
-										<br />
-										Address: [Your Company Address]
-									</p>
-								</section>
+							<div>
+								<h2 style={h2Style}>10. Contact</h2>
+								<p style={pStyle}>
+									Questions about this policy? Email us at{" "}
+									<a
+										href={`mailto:${CONTACT_EMAIL}`}
+										style={{ color: "#ea580c", fontWeight: 500 }}
+									>
+										{CONTACT_EMAIL}
+									</a>
+									.
+								</p>
 							</div>
 						</div>
-					</div>
-				</section>
 
-				<Footer />
+						{/* Back link */}
+						<div style={{ marginTop: 32, textAlign: "center" }}>
+							<Link
+								href="/"
+								style={{
+									fontSize: 13.5,
+									color: "#71717a",
+									textDecoration: "none",
+									display: "inline-flex",
+									alignItems: "center",
+									gap: 6,
+								}}
+							>
+								← Back to home
+							</Link>
+						</div>
+					</div>
+				</main>
+
+				<LandingMarketingFooter />
 			</div>
 		</>
 	);
-};
-
-export default PrivacyPage;
+}

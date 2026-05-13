@@ -10,6 +10,7 @@ import SEO from "../lib/modules/SEO";
 import AnalyticsTracker from "../lib/ui/AnalyticsTracker";
 import PostHogProvider from "../lib/ui/PostHogProvider";
 import { Toaster } from "sonner";
+import CookieConsent from "../app/components/CookieConsent";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -57,8 +58,9 @@ const MyApp = ({ Component, pageProps }) => {
 					pauseOnHover
 					theme="light"
 				/>
-				{/* Vercel Analytics - Web Performance & Visitor Metrics */}
-				<Analytics />
+			{/* Vercel Analytics - Web Performance & Visitor Metrics */}
+			<Analytics />
+			<CookieConsent />
 		</QueryClientProvider>
 	);
 };

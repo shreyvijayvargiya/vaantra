@@ -1,256 +1,335 @@
-import React from "react";
 import Head from "next/head";
-import Navbar from "../app/components/Navbar";
-import Footer from "../app/components/Footer";
+import Link from "next/link";
+import LandingMarketingNav from "../app/components/LandingMarketingNav";
+import LandingMarketingFooter from "../app/components/LandingMarketingFooter";
 
-const TermsAndConditionsPage = () => {
+const LAST_UPDATED = "May 13, 2026";
+const CONTACT_EMAIL = "shreyvijayvargiya26@gmail.com";
+
+const sectionStyle = {
+	marginBottom: 32,
+};
+
+const h2Style = {
+	fontSize: "clamp(1.05rem, 2vw, 1.25rem)",
+	fontWeight: 700,
+	color: "#18181b",
+	marginBottom: 10,
+	marginTop: 36,
+	letterSpacing: "-0.01em",
+};
+
+const pStyle = {
+	fontSize: 14.5,
+	color: "#52525b",
+	lineHeight: 1.75,
+	marginBottom: 10,
+};
+
+const ulStyle = {
+	paddingLeft: 20,
+	marginBottom: 10,
+};
+
+const liStyle = {
+	fontSize: 14.5,
+	color: "#52525b",
+	lineHeight: 1.75,
+	marginBottom: 4,
+};
+
+export default function TermsPage() {
 	return (
 		<>
 			<Head>
-				<title>Terms and Conditions - YourApp</title>
+				<title>Terms of Service · aantraa</title>
 				<meta
 					name="description"
-					content="Read our terms and conditions to understand the rules and regulations for using our service."
+					content="Terms of Service for aantraa — the AI-powered video and audio translation platform."
 				/>
 			</Head>
-			<div className="min-h-screen flex flex-col">
-				<Navbar />
 
-				<section className="flex-1 py-12 px-4 sm:px-6 lg:px-8 bg-zinc-50">
-					<div className="max-w-4xl mx-auto">
-						<div className="bg-white rounded-2xl shadow-sm border border-zinc-200 p-8 md:p-12">
-							<h1 className="text-4xl font-bold text-zinc-900 mb-4">
-								Terms and Conditions
+			<div
+				style={{
+					fontFamily: "'DM Sans', system-ui, sans-serif",
+					background: "#f5f4f0",
+					minHeight: "100vh",
+					display: "flex",
+					flexDirection: "column",
+				}}
+			>
+				<LandingMarketingNav />
+
+				<main
+					style={{
+						flex: 1,
+						padding: "56px clamp(20px, 5vw, 64px) 80px",
+					}}
+				>
+					<div style={{ maxWidth: 720, margin: "0 auto" }}>
+						{/* Header */}
+						<div style={{ marginBottom: 40 }}>
+							<span
+								style={{
+									display: "inline-block",
+									fontSize: 11.5,
+									fontWeight: 600,
+									letterSpacing: "0.08em",
+									textTransform: "uppercase",
+									color: "#ea580c",
+									background: "rgba(234,88,12,0.08)",
+									border: "1px solid rgba(234,88,12,0.18)",
+									borderRadius: 6,
+									padding: "3px 10px",
+									marginBottom: 16,
+								}}
+							>
+								Legal
+							</span>
+							<h1
+								className="aantraa-font"
+								style={{
+									fontSize: "clamp(2rem, 5vw, 3rem)",
+									fontWeight: 700,
+									color: "#18181b",
+									marginBottom: 10,
+									letterSpacing: "-0.02em",
+									lineHeight: 1.15,
+								}}
+							>
+								Terms of Service
 							</h1>
-							<p className="text-sm text-zinc-600 mb-8">
-								Last updated:{" "}
-								{new Date().toLocaleDateString("en-US", {
-									year: "numeric",
-									month: "long",
-									day: "numeric",
-								})}
+							<p style={{ fontSize: 14, color: "#a1a1aa" }}>
+								Last updated: {LAST_UPDATED}
+							</p>
+						</div>
+
+						{/* Card */}
+						<div
+							style={{
+								background: "#fff",
+								borderRadius: 20,
+								border: "1px solid rgba(0,0,0,0.07)",
+								boxShadow: "0 2px 16px rgba(0,0,0,0.05)",
+								padding: "clamp(24px, 5vw, 48px)",
+							}}
+						>
+							<p style={pStyle}>
+								These Terms of Service ("Terms") govern your access to and use
+								of <strong>aantraa</strong> ("Service"), operated by aantraa
+								("we", "us"). By using the Service you agree to be bound by
+								these Terms. If you do not agree, do not use the Service.
 							</p>
 
-							<div className="prose prose-zinc max-w-none space-y-6">
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										1. Agreement to Terms
-									</h2>
-									<p className="text-zinc-700 leading-relaxed">
-										By accessing or using our service, you agree to be bound by
-										these Terms and Conditions. If you disagree with any part of
-										these terms, then you may not access the service.
-									</p>
-								</section>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>1. The Service</h2>
+								<p style={pStyle}>
+									aantraa provides AI-powered video and audio translation,
+									dubbing, and voice cloning via a web application and API.
+									Features include YouTube URL translation, file upload
+									translation, multi-language parallel jobs, and audio
+									translation with voice cloning.
+								</p>
+							</div>
 
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										2. Use License
-									</h2>
-									<p className="text-zinc-700 leading-relaxed mb-4">
-										Permission is granted to temporarily use our service for
-										personal, non-commercial transitory viewing only. This is
-										the grant of a license, not a transfer of title, and under
-										this license you may not:
-									</p>
-									<ul className="list-disc list-inside text-zinc-700 space-y-2 ml-4">
-										<li>Modify or copy the materials</li>
-										<li>
-											Use the materials for any commercial purpose or for any
-											public display
-										</li>
-										<li>
-											Attempt to reverse engineer any software contained in the
-											service
-										</li>
-										<li>
-											Remove any copyright or other proprietary notations from
-											the materials
-										</li>
-										<li>
-											Transfer the materials to another person or "mirror" the
-											materials on any other server
-										</li>
-									</ul>
-								</section>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>2. Accounts</h2>
+								<p style={pStyle}>
+									You must create an account to use the Service. You are
+									responsible for maintaining the security of your credentials
+									and for all activity under your account. Notify us immediately
+									of any suspected unauthorised use.
+								</p>
+								<p style={pStyle}>
+									You must be at least 13 years old to create an account.
+								</p>
+							</div>
 
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										3. User Accounts
-									</h2>
-									<p className="text-zinc-700 leading-relaxed mb-4">
-										When you create an account with us, you must provide
-										information that is accurate, complete, and current at all
-										times. You are responsible for safeguarding the password and
-										for all activities that occur under your account.
-									</p>
-									<p className="text-zinc-700 leading-relaxed">
-										You agree not to disclose your password to any third party.
-										You must notify us immediately upon becoming aware of any
-										breach of security or unauthorized use of your account.
-									</p>
-								</section>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>3. Usage-Based Billing</h2>
+								<p style={pStyle}>
+									The Service is billed based on minutes of video or audio
+									processed. New accounts receive a one-time free starter credit.
+									Beyond that:
+								</p>
+								<ul style={ulStyle}>
+									<li style={liStyle}>
+										You purchase credit packs in advance via Polar checkout.
+									</li>
+									<li style={liStyle}>
+										Minutes are deducted per completed job (rounded up to the
+										nearest billable minute).
+									</li>
+									<li style={liStyle}>
+										Credits do not expire but are non-refundable once consumed.
+									</li>
+									<li style={liStyle}>
+										Failed jobs due to our errors are not charged; failed jobs
+										due to invalid source content are charged at cost.
+									</li>
+								</ul>
+								<p style={pStyle}>
+									We reserve the right to change pricing with 14 days' notice
+									posted on the pricing page.
+								</p>
+							</div>
 
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										4. Subscription and Payment
-									</h2>
-									<h3 className="text-xl font-semibold text-zinc-900 mt-6 mb-3">
-										4.1 Subscription Terms
-									</h3>
-									<p className="text-zinc-700 leading-relaxed mb-4">
-										Some parts of our service are billed on a subscription
-										basis. You will be billed in advance on a recurring and
-										periodic basis.
-									</p>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>4. Acceptable Use</h2>
+								<p style={pStyle}>You agree not to use the Service to:</p>
+								<ul style={ulStyle}>
+									<li style={liStyle}>
+										Translate content you do not have rights to (copyright
+										infringement).
+									</li>
+									<li style={liStyle}>
+										Produce or distribute illegal, defamatory, obscene, or
+										harmful content.
+									</li>
+									<li style={liStyle}>
+										Attempt to reverse-engineer, scrape, or abuse the API
+										beyond your authorised rate limits.
+									</li>
+									<li style={liStyle}>
+										Impersonate any person or entity or misrepresent your
+										affiliation.
+									</li>
+									<li style={liStyle}>
+										Use automated scripts to create accounts or submit jobs in
+										bulk without a commercial API agreement.
+									</li>
+								</ul>
+								<p style={pStyle}>
+									Violation of acceptable use may result in immediate account
+									suspension without refund.
+								</p>
+							</div>
 
-									<h3 className="text-xl font-semibold text-zinc-900 mt-6 mb-3">
-										4.2 Payment Terms
-									</h3>
-									<p className="text-zinc-700 leading-relaxed mb-4">
-										Payment is due on the billing date specified in your
-										subscription. If payment is not received by the due date, we
-										reserve the right to suspend or terminate your access to the
-										service.
-									</p>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>5. Your Content</h2>
+								<p style={pStyle}>
+									You retain ownership of source content you submit. By
+									submitting content you grant us a limited, non-exclusive
+									licence to process it solely to provide the Service. We do
+									not use your content to train AI models without your explicit
+									consent.
+								</p>
+								<p style={pStyle}>
+									Translated outputs are yours to use subject to the licence of
+									the source material — you are responsible for ensuring you
+									have the rights to translate and distribute the output.
+								</p>
+							</div>
 
-									<h3 className="text-xl font-semibold text-zinc-900 mt-6 mb-3">
-										4.3 Refunds
-									</h3>
-									<p className="text-zinc-700 leading-relaxed">
-										Refund policies are subject to our discretion and may vary
-										based on the type of subscription. Please contact us for
-										specific refund information.
-									</p>
-								</section>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>6. Intellectual Property</h2>
+								<p style={pStyle}>
+									The aantraa platform, interface, brand, and underlying
+									technology are our exclusive property and are protected by
+									applicable intellectual property laws. Nothing in these Terms
+									transfers any ownership rights to you.
+								</p>
+							</div>
 
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										5. Prohibited Uses
-									</h2>
-									<p className="text-zinc-700 leading-relaxed mb-4">
-										You may not use our service:
-									</p>
-									<ul className="list-disc list-inside text-zinc-700 space-y-2 ml-4">
-										<li>
-											In any way that violates any applicable national or
-											international law or regulation
-										</li>
-										<li>
-											To transmit, or procure the sending of, any advertising or
-											promotional material
-										</li>
-										<li>
-											To impersonate or attempt to impersonate the company,
-											employees, or other users
-										</li>
-										<li>
-											In any way that infringes upon the rights of others, or in
-											any way is illegal, threatening, fraudulent, or harmful
-										</li>
-										<li>
-											To engage in any other conduct that restricts or inhibits
-											anyone's use or enjoyment of the service
-										</li>
-									</ul>
-								</section>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>7. Service Availability</h2>
+								<p style={pStyle}>
+									We aim for high availability but do not guarantee uninterrupted
+									access. We may perform maintenance, update models, or
+									temporarily suspend access with reasonable notice where
+									possible. Planned downtime will be announced via status
+									updates.
+								</p>
+							</div>
 
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										6. Intellectual Property
-									</h2>
-									<p className="text-zinc-700 leading-relaxed">
-										The service and its original content, features, and
-										functionality are and will remain the exclusive property of
-										YourApp and its licensors. The service is protected by
-										copyright, trademark, and other laws.
-									</p>
-								</section>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>8. Disclaimer of Warranties</h2>
+								<p style={pStyle}>
+									The Service is provided "as is" and "as available" without
+									warranties of any kind, express or implied. We do not warrant
+									that translation outputs will be error-free, accurate, or fit
+									for any particular purpose. AI-generated translations may
+									contain inaccuracies — always review outputs before
+									publication.
+								</p>
+							</div>
 
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										7. Termination
-									</h2>
-									<p className="text-zinc-700 leading-relaxed">
-										We may terminate or suspend your account and bar access to
-										the service immediately, without prior notice or liability,
-										for any reason whatsoever, including without limitation if
-										you breach the Terms.
-									</p>
-								</section>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>9. Limitation of Liability</h2>
+								<p style={pStyle}>
+									To the maximum extent permitted by law, aantraa's total
+									liability for any claim relating to the Service is limited to
+									the amount you paid us in the 30 days preceding the claim. We
+									are not liable for indirect, incidental, special,
+									consequential, or punitive damages.
+								</p>
+							</div>
 
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										8. Disclaimer
-									</h2>
-									<p className="text-zinc-700 leading-relaxed">
-										The information on this service is provided on an "as is"
-										basis. To the fullest extent permitted by law, we exclude
-										all representations, warranties, and conditions relating to
-										our service and the use of this service.
-									</p>
-								</section>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>10. Termination</h2>
+								<p style={pStyle}>
+									You may delete your account at any time from the Account
+									settings page. We may suspend or terminate accounts that
+									violate these Terms, with or without notice. Unused credits at
+									termination for cause are forfeited.
+								</p>
+							</div>
 
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										9. Limitation of Liability
-									</h2>
-									<p className="text-zinc-700 leading-relaxed">
-										In no event shall YourApp, nor its directors, employees,
-										partners, agents, suppliers, or affiliates, be liable for
-										any indirect, incidental, special, consequential, or
-										punitive damages, including without limitation, loss of
-										profits, data, use, goodwill, or other intangible losses,
-										resulting from your use of the service.
-									</p>
-								</section>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>11. Governing Law</h2>
+								<p style={pStyle}>
+									These Terms are governed by the laws of India. Any disputes
+									shall be subject to the exclusive jurisdiction of courts
+									located in India.
+								</p>
+							</div>
 
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										10. Governing Law
-									</h2>
-									<p className="text-zinc-700 leading-relaxed">
-										These Terms shall be interpreted and governed by the laws of
-										[Your Jurisdiction], without regard to its conflict of law
-										provisions.
-									</p>
-								</section>
+							<div style={sectionStyle}>
+								<h2 style={h2Style}>12. Changes to Terms</h2>
+								<p style={pStyle}>
+									We may modify these Terms at any time. Material changes will
+									be notified via email or an in-app banner at least 14 days
+									before they take effect. Continued use of the Service after
+									changes constitutes acceptance of the new Terms.
+								</p>
+							</div>
 
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										11. Changes to Terms
-									</h2>
-									<p className="text-zinc-700 leading-relaxed">
-										We reserve the right, at our sole discretion, to modify or
-										replace these Terms at any time. If a revision is material,
-										we will provide at least 30 days notice prior to any new
-										terms taking effect.
-									</p>
-								</section>
-
-								<section>
-									<h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">
-										12. Contact Information
-									</h2>
-									<p className="text-zinc-700 leading-relaxed">
-										If you have any questions about these Terms and Conditions,
-										please contact us at:
-									</p>
-									<p className="text-zinc-700 leading-relaxed mt-2">
-										Email: legal@yourapp.com
-										<br />
-										Address: [Your Company Address]
-									</p>
-								</section>
+							<div>
+								<h2 style={h2Style}>13. Contact</h2>
+								<p style={pStyle}>
+									Questions about these Terms? Email us at{" "}
+									<a
+										href={`mailto:${CONTACT_EMAIL}`}
+										style={{ color: "#ea580c", fontWeight: 500 }}
+									>
+										{CONTACT_EMAIL}
+									</a>
+									.
+								</p>
 							</div>
 						</div>
-					</div>
-				</section>
 
-				<Footer />
+						{/* Back link */}
+						<div style={{ marginTop: 32, textAlign: "center" }}>
+							<Link
+								href="/"
+								style={{
+									fontSize: 13.5,
+									color: "#71717a",
+									textDecoration: "none",
+									display: "inline-flex",
+									alignItems: "center",
+									gap: 6,
+								}}
+							>
+								← Back to home
+							</Link>
+						</div>
+					</div>
+				</main>
+
+				<LandingMarketingFooter />
 			</div>
 		</>
 	);
-};
-
-export default TermsAndConditionsPage;
+}

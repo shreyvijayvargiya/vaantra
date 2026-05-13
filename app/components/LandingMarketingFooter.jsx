@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Mail } from "lucide-react";
 
 /** Keep in sync with landing `pages/index.js` marketing constants. */
@@ -56,10 +57,21 @@ export default function LandingMarketingFooter() {
 						fontWeight: 500,
 					}}
 				>
-					<Mail size={14} style={{ color: "#ea580c" }} />
-					{CONTACT_EMAIL}
-				</a>
-			</div>
-		</footer>
+				<Mail size={14} style={{ color: "#ea580c" }} />
+				{CONTACT_EMAIL}
+			</a>
+			<span style={{ color: "#d4d4d8" }}>·</span>
+			<Link href="/privacy" style={{ color: "#71717a", fontWeight: 400 }}>
+				Privacy
+			</Link>
+			<span style={{ color: "#d4d4d8" }}>·</span>
+			<Link
+				href="/terms-and-conditions"
+				style={{ color: "#71717a", fontWeight: 400 }}
+			>
+				Terms
+			</Link>
+		</div>
+	</footer>
 	);
 }
