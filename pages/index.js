@@ -611,7 +611,7 @@ function LangMultiSelect({
 		<div
 			ref={ref}
 			style={{ position: "relative"}}
-			className="min-w-48 max-w-56"
+			className="w-full"
 		>
 			<button
 				type="button"
@@ -2593,7 +2593,7 @@ function NarratorVoiceSelect({ value, onChange, fullWidth = false }) {
 									margin: 0,
 								}}
 							>
-								Narrator voice · Gemini TTS
+								Narrator voice
 							</p>
 						</div>
 						<div style={{ maxHeight: 280, overflowY: "auto", padding: "4px 6px 6px" }}>
@@ -3073,20 +3073,21 @@ function VoiceTranslateForm({
 					hasAudio && audioDurationSec > 0
 						? secondsToBillableMinutes(audioDurationSec)
 						: null;
-				const jobs = batch.map((r, idx) => ({
-					id: `voice_${gid}_${idx}`,
-					lang: r.lang,
-					status: "done",
-					createdAt: new Date().toISOString(),
-					resultUrl: r.audioUrl ?? null,
-					translatedTranscript: r.transcript ?? null,
-					caption: r.transcript ?? null,
-					outputLanguage: r.lang,
-					transcriptOriginal: hasText ? text.trim() : null,
-					sourceVideoUrl: null,
-					videoTranslateId: `voice_${gid}_${idx}`,
-					durationMinutes: voiceDurMin,
-				}));
+			const jobs = batch.map((r, idx) => ({
+				id: `voice_${gid}_${idx}`,
+				lang: r.lang,
+				status: "done",
+				createdAt: new Date().toISOString(),
+				resultUrl: r.audioUrl ?? null,
+				translatedTranscript: r.transcript ?? null,
+				caption: r.transcript ?? null,
+				outputLanguage: r.lang,
+				transcriptOriginal: hasText ? text.trim() : null,
+				sourceVideoUrl: null,
+				videoTranslateId: `voice_${gid}_${idx}`,
+				durationMinutes: voiceDurMin,
+				brandVoiceId: selectedVoiceId,
+			}));
 				onVoiceJobCreated({
 					id: gid,
 					type: "audio",
@@ -3396,23 +3397,24 @@ function VoiceTranslateForm({
 					) : null}
 				</div>
 			)}
-		<LangMultiSelect
-			selected={selectedLangs}
-			onChange={setSelectedLangs}
-			fullWidth
-		/>
+			<div className="my-2">
+			<p className="text-xs text-zinc-400 mb-2">Languages</p>	
+				<LangMultiSelect
+					selected={selectedLangs}
+					onChange={setSelectedLangs}
+					fullWidth
+				/>
+			</div>
+			{/* Narrator voice */}
+			<div>
+				<p className="text-xs text-zinc-400 mb-2">Narrator voice</p>
+				<NarratorVoiceSelect
+					value={selectedVoiceId}
+					onChange={setSelectedVoiceId}
+					fullWidth
+				/>
+			</div>
 
-		{/* Narrator voice */}
-		<div style={{ marginTop: 8 }}>
-			<p style={{ fontSize: 11, color: "#71717a", marginBottom: 4, fontWeight: 500 }}>
-				Narrator voice
-			</p>
-			<NarratorVoiceSelect
-				value={selectedVoiceId}
-				onChange={setSelectedVoiceId}
-				fullWidth
-			/>
-		</div>
 
 		{freeDurationBlocked && (
 			<p
@@ -3632,6 +3634,101 @@ function NewTranslationPanel({
 					<p className="text-sm text-zinc-600 my-4">
 						Upload a video or paste a URL to get started
 					</p>
+					<details
+						className="upload-limits-details"
+						style={{
+							marginBottom: 14,
+							marginTop: 14,
+							borderRadius: 10,
+							background: "rgba(0,0,0,0.03)",
+							border: "1px solid rgba(0,0,0,0.08)",
+							fontSize: 11.5,
+							color: "#52525b",
+							lineHeight: 1.55,
+						}}
+					>
+				<summary
+					style={{
+						padding: "12px 14px",
+						fontWeight: 600,
+						fontSize: 12,
+						color: "#18181b",
+						cursor: "pointer",
+						listStyle: "none",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "space-between",
+						gap: 8,
+						userSelect: "none",
+					}}
+				>
+					<span>Upload limits &amp; estimated time</span>
+					<ChevronDown
+						className="accordion-chevron"
+						size={16}
+						style={{ color: "#a1a1aa", flexShrink: 0 }}
+						aria-hidden
+					/>
+				</summary>
+				<div
+					style={{
+						padding: "0 14px 12px",
+						borderTop: "1px solid rgba(0,0,0,0.06)",
+					}}
+				>
+					<p style={{ marginBottom: 10, marginTop: 10 }}>
+						<strong>Maximum file size:</strong> {VIDEO_UPLOAD_MAX_MB} MB per
+						upload.
+					</p>
+					<div
+						style={{
+							display: "grid",
+							gridTemplateColumns: "1fr auto",
+							gap: "6px 20px",
+							alignItems: "baseline",
+							maxWidth: 400,
+							fontSize: 11.5,
+						}}
+					>
+						<span style={{ color: "#71717a", fontWeight: 600 }}>
+							Approx. length
+						</span>
+						<span
+							style={{
+								color: "#71717a",
+								fontWeight: 600,
+								textAlign: "right",
+							}}
+						>
+							Typical processing
+						</span>
+						<span>~1–5 min</span>
+						<span style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+							Often 1–5 min
+						</span>
+						<span>~3–10 min</span>
+						<span style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+							Often 3–10 min
+						</span>
+						<span>~5–15+ min</span>
+						<span style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+							Often 5–15+ min
+						</span>
+					</div>
+					<p
+						style={{
+							marginTop: 10,
+							fontSize: 10.5,
+							color: "#a1a1aa",
+							lineHeight: 1.45,
+						}}
+					>
+						Uploads in this app are limited to {VIDEO_UPLOAD_MAX_MB} MB. The
+						table is a rough guide by video length (minutes); actual time
+						depends on quality, languages, and queue load.
+					</p>
+				</div>
+									</details>
 					<TranslateForm
 						onJobCreated={addVideo}
 						compact
@@ -4002,18 +4099,19 @@ function TranslateForm({
 				}
 				const initial = normalizeStatus(extractStatusField(data));
 				const postFields = extractJobFieldsFromGetResponse(data);
-				jobs.push({
-					id: videoId,
-					lang,
-					status: initial,
-					createdAt: new Date().toISOString(),
-					...postFields,
-					resultUrl: postFields.resultUrl ?? extractResultUrl(data) ?? null,
-					sourceVideoUrl: postFields.sourceVideoUrl ?? null,
-					videoTranslateId: postFields.videoTranslateId ?? videoId,
-					durationMinutes:
-						postFields.durationMinutes ?? clientDurationMinutesHint ?? null,
-				});
+			jobs.push({
+				id: videoId,
+				lang,
+				status: initial,
+				createdAt: new Date().toISOString(),
+				...postFields,
+				resultUrl: postFields.resultUrl ?? extractResultUrl(data) ?? null,
+				sourceVideoUrl: postFields.sourceVideoUrl ?? null,
+				videoTranslateId: postFields.videoTranslateId ?? videoId,
+				durationMinutes:
+					postFields.durationMinutes ?? clientDurationMinutesHint ?? null,
+				brandVoiceId: selectedVoiceId,
+			});
 			}
 
 		const anyOk = jobs.some((j) => !String(j.id).startsWith("failed_"));
@@ -4535,8 +4633,9 @@ function TranslateForm({
 					)}
 
 				{/* Language + Submit row */}
-				<div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-					<div style={{ flex: 1, minWidth: 160 }}>
+				<div className="my-2">
+					<p className="text-xs text-zinc-400 my-2">Languages</p>
+					<div className="w-full">
 						<LangMultiSelect
 							selected={selectedLangs}
 							onChange={setSelectedLangs}
@@ -4544,12 +4643,9 @@ function TranslateForm({
 						/>
 					</div>
 				</div>
-
 				{/* Narrator voice */}
-				<div style={{ marginTop: 8 }}>
-					<p style={{ fontSize: 11, color: "#71717a", marginBottom: 4, fontWeight: 500 }}>
-						Narrator voice
-					</p>
+				<div className="my-2">
+					<p className="text-xs text-zinc-400 my-2">Narrator voice</p>
 					<NarratorVoiceSelect
 						value={selectedVoiceId}
 						onChange={setSelectedVoiceId}
@@ -4751,101 +4847,6 @@ function TranslateForm({
 				</>
 			)}
 			
-			<details
-				className="upload-limits-details"
-				style={{
-					marginBottom: 14,
-					marginTop: 14,
-					borderRadius: 10,
-					background: "rgba(0,0,0,0.03)",
-					border: "1px solid rgba(0,0,0,0.08)",
-					fontSize: 11.5,
-					color: "#52525b",
-					lineHeight: 1.55,
-				}}
-			>
-				<summary
-					style={{
-						padding: "12px 14px",
-						fontWeight: 600,
-						fontSize: 12,
-						color: "#18181b",
-						cursor: "pointer",
-						listStyle: "none",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "space-between",
-						gap: 8,
-						userSelect: "none",
-					}}
-				>
-					<span>Upload limits &amp; estimated time</span>
-					<ChevronDown
-						className="accordion-chevron"
-						size={16}
-						style={{ color: "#a1a1aa", flexShrink: 0 }}
-						aria-hidden
-					/>
-				</summary>
-				<div
-					style={{
-						padding: "0 14px 12px",
-						borderTop: "1px solid rgba(0,0,0,0.06)",
-					}}
-				>
-					<p style={{ marginBottom: 10, marginTop: 10 }}>
-						<strong>Maximum file size:</strong> {VIDEO_UPLOAD_MAX_MB} MB per
-						upload.
-					</p>
-					<div
-						style={{
-							display: "grid",
-							gridTemplateColumns: "1fr auto",
-							gap: "6px 20px",
-							alignItems: "baseline",
-							maxWidth: 400,
-							fontSize: 11.5,
-						}}
-					>
-						<span style={{ color: "#71717a", fontWeight: 600 }}>
-							Approx. length
-						</span>
-						<span
-							style={{
-								color: "#71717a",
-								fontWeight: 600,
-								textAlign: "right",
-							}}
-						>
-							Typical processing
-						</span>
-						<span>~1–5 min</span>
-						<span style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-							Often 1–5 min
-						</span>
-						<span>~3–10 min</span>
-						<span style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-							Often 3–10 min
-						</span>
-						<span>~5–15+ min</span>
-						<span style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-							Often 5–15+ min
-						</span>
-					</div>
-					<p
-						style={{
-							marginTop: 10,
-							fontSize: 10.5,
-							color: "#a1a1aa",
-							lineHeight: 1.45,
-						}}
-					>
-						Uploads in this app are limited to {VIDEO_UPLOAD_MAX_MB} MB. The
-						table is a rough guide by video length (minutes); actual time
-						depends on quality, languages, and queue load.
-					</p>
-				</div>
-			</details>
 			<InsufficientCreditsModal
 				open={showCreditsModal}
 				onClose={() => {
@@ -6803,25 +6804,26 @@ export function Dashboard({ user, onLogout }) {
 				}
 				const initial = normalizeStatus(extractStatusField(data));
 				const postFields = extractJobFieldsFromGetResponse(data);
-				const newJob = {
-					id: videoId,
-					lang,
-					status: initial,
-					createdAt: new Date().toISOString(),
-					...postFields,
-					resultUrl: postFields.resultUrl ?? extractResultUrl(data) ?? null,
-					sourceVideoUrl: postFields.sourceVideoUrl ?? appendSourceVideoUrl,
-					videoTranslateId: postFields.videoTranslateId ?? videoId,
-				};
-				patchVideos((prev) => {
-					const next = prev.map((g) => {
-						if (g.id !== groupId) return g;
-						const jobs = [...(g.jobs || []), newJob];
-						const out = {
-							...g,
-							jobs,
-							sourceVideoUrl: g.sourceVideoUrl || appendSourceVideoUrl,
-						};
+			const newJob = {
+				id: videoId,
+				lang,
+				status: initial,
+				createdAt: new Date().toISOString(),
+				...postFields,
+				resultUrl: postFields.resultUrl ?? extractResultUrl(data) ?? null,
+				sourceVideoUrl: postFields.sourceVideoUrl ?? appendSourceVideoUrl,
+				videoTranslateId: postFields.videoTranslateId ?? videoId,
+				brandVoiceId: appendVoiceId,
+			};
+			patchVideos((prev) => {
+				const next = prev.map((g) => {
+					if (g.id !== groupId) return g;
+					const jobs = [...(g.jobs || []), newJob];
+					const out = {
+						...g,
+						jobs,
+						sourceVideoUrl: g.sourceVideoUrl || appendSourceVideoUrl,
+					};
 						out.type = inferTranslationGroupType(out);
 						return out;
 					});
@@ -6917,19 +6919,20 @@ export function Dashboard({ user, onLogout }) {
 				}
 				const outLang = r.lang || lang;
 				const newJobId = `voice_${groupId}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-				const newJob = {
-					id: newJobId,
-					lang: outLang,
-					status: "done",
-					createdAt: new Date().toISOString(),
-					resultUrl: r.audioUrl ?? null,
-					translatedTranscript: r.transcript ?? null,
-					caption: r.transcript ?? null,
-					outputLanguage: outLang,
-					transcriptOriginal: appendVoiceSourceText,
-					sourceVideoUrl: null,
-					videoTranslateId: newJobId,
-				};
+			const newJob = {
+				id: newJobId,
+				lang: outLang,
+				status: "done",
+				createdAt: new Date().toISOString(),
+				resultUrl: r.audioUrl ?? null,
+				translatedTranscript: r.transcript ?? null,
+				caption: r.transcript ?? null,
+				outputLanguage: outLang,
+				transcriptOriginal: appendVoiceSourceText,
+				sourceVideoUrl: null,
+				videoTranslateId: newJobId,
+				brandVoiceId: appendVoiceId,
+			};
 				patchVideos((prev) => {
 					const next = prev.map((g) => {
 						if (g.id !== groupId) return g;
@@ -7054,21 +7057,22 @@ export function Dashboard({ user, onLogout }) {
 			}
 			const initial = normalizeStatus(extractStatusField(data));
 			const postFields = extractJobFieldsFromGetResponse(data);
-			const newJob = {
-				id: videoId,
-				lang,
-				status: initial,
-				createdAt: new Date().toISOString(),
-				...postFields,
-				resultUrl: postFields.resultUrl ?? extractResultUrl(data) ?? null,
-				sourceVideoUrl: postFields.sourceVideoUrl ?? appendSourceVideoUrl,
-				videoTranslateId: postFields.videoTranslateId ?? videoId,
-			};
-				patchVideos((prev) => {
-					const next = prev.map((g) => {
-						if (g.id !== groupId) return g;
-						const jobs = [...(g.jobs || [])];
-						let idx = jobs.findIndex((j) => j.id === oldJobId);
+		const newJob = {
+			id: videoId,
+			lang,
+			status: initial,
+			createdAt: new Date().toISOString(),
+			...postFields,
+			resultUrl: postFields.resultUrl ?? extractResultUrl(data) ?? null,
+			sourceVideoUrl: postFields.sourceVideoUrl ?? appendSourceVideoUrl,
+			videoTranslateId: postFields.videoTranslateId ?? videoId,
+			brandVoiceId: appendVoiceId,
+		};
+			patchVideos((prev) => {
+				const next = prev.map((g) => {
+					if (g.id !== groupId) return g;
+					const jobs = [...(g.jobs || [])];
+					let idx = jobs.findIndex((j) => j.id === oldJobId);
 						if (idx < 0)
 							idx = jobs.findIndex(
 								(j) => j.lang === lang && j.status === "error",
@@ -7940,6 +7944,7 @@ export function Dashboard({ user, onLogout }) {
 										border: "1px solid rgba(0,0,0,0.08)",
 									}}
 								>
+									<div className="flex items-start justify-start flex-col">
 									<h2
 										className="aantraa-font"
 										style={{
@@ -7951,6 +7956,7 @@ export function Dashboard({ user, onLogout }) {
 									>
 										New Translation
 									</h2>
+									</div>
 									{pageReady ? (
 										<NewTranslationPanel
 											addVideo={addVideo}
@@ -8508,6 +8514,7 @@ export function Dashboard({ user, onLogout }) {
 																	flexWrap: "wrap",
 																}}
 															>
+															<div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
 																<span
 																	style={{
 																		fontSize: 12,
@@ -8517,10 +8524,33 @@ export function Dashboard({ user, onLogout }) {
 																>
 																	Translated audio
 																</span>
-																{selectedDetail.j.resultUrl ? (
-																	<a
-																		href={selectedDetail.j.resultUrl}
-																		download
+																{selectedDetail.j.brandVoiceId && (() => {
+																	const v = GEMINI_VOICES.find(x => x.id === selectedDetail.j.brandVoiceId);
+																	return v ? (
+																		<span
+																			style={{
+																				display: "inline-flex",
+																				alignItems: "center",
+																				gap: 4,
+																				fontSize: 11,
+																				fontWeight: 500,
+																				color: "#c2410c",
+																				background: "rgba(234,88,12,0.08)",
+																				border: "1px solid rgba(234,88,12,0.15)",
+																				borderRadius: 20,
+																				padding: "2px 8px",
+																				whiteSpace: "nowrap",
+																			}}
+																		>
+																			🎙 {v.tts_voice} · {v.style}
+																		</span>
+																	) : null;
+																})()}
+															</div>
+															{selectedDetail.j.resultUrl ? (
+																<a
+																	href={selectedDetail.j.resultUrl}
+																	download
 																		target="_blank"
 																		rel="noopener noreferrer"
 																		style={{
@@ -8725,6 +8755,7 @@ export function Dashboard({ user, onLogout }) {
 																	flexWrap: "wrap",
 																}}
 															>
+															<div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
 																<span
 																	style={{
 																		fontSize: 12,
@@ -8734,8 +8765,31 @@ export function Dashboard({ user, onLogout }) {
 																>
 																	Dubbed video
 																</span>
-																
-																{selectedDetail.j.resultUrl ? (
+																{selectedDetail.j.brandVoiceId && (() => {
+																	const v = GEMINI_VOICES.find(x => x.id === selectedDetail.j.brandVoiceId);
+																	return v ? (
+																		<span
+																			style={{
+																				display: "inline-flex",
+																				alignItems: "center",
+																				gap: 4,
+																				fontSize: 11,
+																				fontWeight: 500,
+																				color: "#c2410c",
+																				background: "rgba(234,88,12,0.08)",
+																				border: "1px solid rgba(234,88,12,0.15)",
+																				borderRadius: 20,
+																				padding: "2px 8px",
+																				whiteSpace: "nowrap",
+																			}}
+																		>
+																			🎙 {v.tts_voice} · {v.style}
+																		</span>
+																	) : null;
+																})()}
+															</div>
+
+															{selectedDetail.j.resultUrl ? (
 																	<div className="flex gap-2">
 																		<button
 																			type="button"
@@ -9055,6 +9109,7 @@ export function Dashboard({ user, onLogout }) {
 										</>
 									)}
 								</div>
+								
 
 								<div
 									style={{
@@ -9124,7 +9179,9 @@ export function Dashboard({ user, onLogout }) {
 						)}
 					</AnimatePresence>
 				</div>
+				
 			</div>
+			
 			<UpgradePriceModal
 				open={showUpgrade}
 				onClose={() => setShowUpgrade(false)}
