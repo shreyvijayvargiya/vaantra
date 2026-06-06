@@ -212,6 +212,141 @@ const LANGS = [
 	"Welsh (United Kingdom)",
 ];
 
+// ─── Language → Continent mapping ────────────────────────────────────────────
+const LANG_CONTINENT_MAP = {
+	// Asia
+	Chinese: "Asia", Japanese: "Asia", Korean: "Asia", Filipino: "Asia",
+	Indonesian: "Asia", Malay: "Asia", Tamil: "Asia", Vietnamese: "Asia",
+	Mandarin: "Asia", Hindi: "Asia",
+	"Bangla (Bangladesh)": "Asia",
+	"Bengali (India)": "Asia",
+	"Chinese (Mandarin, Simplified)": "Asia",
+	"Chinese (Cantonese, Traditional)": "Asia",
+	"Chinese (Taiwanese Mandarin, Traditional)": "Asia",
+	"Filipino (Philippines)": "Asia",
+	"Gujarati (India)": "Asia",
+	"Hindi (India)": "Asia",
+	"Indonesian (Indonesia)": "Asia",
+	"Japanese (Japan)": "Asia",
+	"Kannada (India)": "Asia",
+	"Korean (Korea)": "Asia",
+	"Malay (Malaysia)": "Asia",
+	"Malayalam (India)": "Asia",
+	"Marathi (India)": "Asia",
+	"Persian (Iran)": "Asia",
+	"Tamil (India)": "Asia",
+	"Telugu (India)": "Asia",
+	"Thai (Thailand)": "Asia",
+	"Urdu (India)": "Asia",
+	"Vietnamese (Vietnam)": "Asia",
+	"Armenian (Armenia)": "Asia",
+	// Europe
+	English: "Europe", Spanish: "Europe", French: "Europe", Italian: "Europe",
+	German: "Europe", Polish: "Europe", Portuguese: "Europe", Dutch: "Europe",
+	Danish: "Europe", Romanian: "Europe", Swedish: "Europe", Ukrainian: "Europe",
+	Greek: "Europe", Czech: "Europe", Bulgarian: "Europe", Slovak: "Europe",
+	Croatian: "Europe", Finnish: "Europe", Russian: "Europe", Turkish: "Europe",
+	Catalan: "Europe",
+	"Albanian (Albania)": "Europe",
+	"Catalan": "Europe",
+	"Croatian (Croatia)": "Europe",
+	"Czech (Czechia)": "Europe",
+	"Danish (Denmark)": "Europe",
+	"Dutch (Belgium)": "Europe",
+	"Dutch (Netherlands)": "Europe",
+	"English (UK)": "Europe",
+	"Finnish (Finland)": "Europe",
+	"French (France)": "Europe",
+	"German (Austria)": "Europe",
+	"German (Germany)": "Europe",
+	"Greek (Greece)": "Europe",
+	"Hungarian (Hungary)": "Europe",
+	"Italian (Italy)": "Europe",
+	"Norwegian Bokmål (Norway)": "Europe",
+	"Polish (Poland)": "Europe",
+	"Portuguese (Portugal)": "Europe",
+	"Romanian (Romania)": "Europe",
+	"Russian (Russia)": "Europe",
+	"Spanish (Spain)": "Europe",
+	"Swedish (Sweden)": "Europe",
+	"Turkish (Türkiye)": "Europe",
+	"Ukrainian (Ukraine)": "Europe",
+	"Welsh (United Kingdom)": "Europe",
+	// Americas
+	"English (United States)": "Americas",
+	"French (Canada)": "Americas",
+	"Portuguese (Brazil)": "Americas",
+	"Spanish (Mexico)": "Americas",
+	"Spanish (United States)": "Americas",
+	// Africa
+	"Afrikaans (South Africa)": "Africa",
+	"Amharic (Ethiopia)": "Africa",
+	// Middle East
+	Arabic: "Middle East",
+	"Arabic (Egypt)": "Middle East",
+	"Arabic (Saudi Arabia)": "Middle East",
+	"Arabic (United Arab Emirates)": "Middle East",
+	"Hebrew (Israel)": "Middle East",
+};
+
+const CONTINENT_ORDER = ["Asia", "Europe", "Americas", "Africa", "Middle East"];
+
+/** Pre-sorted groups used by the language picker when no search query is active. */
+const LANG_GROUPS = (() => {
+	const buckets = {};
+	for (const c of CONTINENT_ORDER) buckets[c] = [];
+	const other = [];
+	for (const lang of LANGS) {
+		const c = LANG_CONTINENT_MAP[lang];
+		if (c && buckets[c]) buckets[c].push(lang);
+		else other.push(lang);
+	}
+	for (const c of CONTINENT_ORDER) buckets[c].sort((a, b) => a.localeCompare(b));
+	other.sort((a, b) => a.localeCompare(b));
+	return [
+		...CONTINENT_ORDER
+			.filter((c) => buckets[c].length > 0)
+			.map((c) => ({ continent: c, langs: buckets[c] })),
+		...(other.length ? [{ continent: "Other", langs: other }] : []),
+	];
+})();
+
+// ─── Gemini TTS voice catalog (hardcoded) ────────────────────────────────────
+const GEMINI_VOICES = [
+	{ id: "gemini-zephyr", tts_voice: "Zephyr", label: "Zephyr — Bright", gender: "female", style: "Bright", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRY2ThCL7yGv8aYwER3mjJuFHt4rhsTgi0foZBC" },
+	{ id: "gemini-puck", tts_voice: "Puck", label: "Puck — Upbeat", gender: "male", style: "Upbeat", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRY0yLh6IYHJXDfMBqh1rKpP6s9Z8AvNIlgE4xY" },
+	{ id: "gemini-charon", tts_voice: "Charon", label: "Charon — Informative", gender: "male", style: "Informative", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYVYWbAxivTAZwfqQj6H0oWylU289IKdsLFgzJ" },
+	{ id: "gemini-kore", tts_voice: "Kore", label: "Kore — Firm", gender: "female", style: "Firm", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYRWzs1YGOyknJ521FHVUurQvoE4zTaLctRISe" },
+	{ id: "gemini-fenrir", tts_voice: "Fenrir", label: "Fenrir — Excitable", gender: "male", style: "Excitable", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRY8wBmc7tvEgwNYVcQmlGtqB02iUuxpCSdbOjn" },
+	{ id: "gemini-leda", tts_voice: "Leda", label: "Leda — Youthful", gender: "female", style: "Youthful", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYjeI605S6Fu1bQOM0p4lVUeY7JgB8RswZoWSE" },
+	{ id: "gemini-orus", tts_voice: "Orus", label: "Orus — Firm", gender: "male", style: "Firm", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYL1DhH4XvTQ9SV28ZbINjYCotR7Ed3JziOWhF" },
+	{ id: "gemini-aoede", tts_voice: "Aoede", label: "Aoede — Breezy", gender: "female", style: "Breezy", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYyo7128nwDYs1AMchQFyb07I84jWivdH9mO2R" },
+	{ id: "gemini-callirrhoe", tts_voice: "Callirrhoe", label: "Callirrhoe — Easy-going", gender: "female", style: "Easy-going", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYsG7S4uEWbPeCnWz7wNuo4HVLUxSBGqrtDyAh" },
+	{ id: "gemini-autonoe", tts_voice: "Autonoe", label: "Autonoe — Bright", gender: "female", style: "Bright", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRY0jxsHuYHJXDfMBqh1rKpP6s9Z8AvNIlgE4xY" },
+	{ id: "gemini-enceladus", tts_voice: "Enceladus", label: "Enceladus — Breathy", gender: "male", style: "Breathy", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYy84WoTnwDYs1AMchQFyb07I84jWivdH9mO2R" },
+	{ id: "gemini-iapetus", tts_voice: "Iapetus", label: "Iapetus — Clear", gender: "male", style: "Clear", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYHUvSq58bhJv0eKBzRkf62Go4SDg8sQuOMrp9" },
+	{ id: "gemini-umbriel", tts_voice: "Umbriel", label: "Umbriel — Easy-going", gender: "male", style: "Easy-going", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYRGtTm5OyknJ521FHVUurQvoE4zTaLctRISeY" },
+	{ id: "gemini-algieba", tts_voice: "Algieba", label: "Algieba — Smooth", gender: "male", style: "Smooth", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYPrgl0eVfsZTC1GIbAa9pwgzENvjVoJ4eS0OW" },
+	{ id: "gemini-despina", tts_voice: "Despina", label: "Despina — Smooth", gender: "female", style: "Smooth", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYXPUdvptmbVd2Mtl4Hmexp9KNSOJIvg1WqDs0" },
+	{ id: "gemini-erinome", tts_voice: "Erinome", label: "Erinome — Clear", gender: "female", style: "Clear", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYdNDMWotB0mAHE68ivjy7GN4WZpIoQk2YdcgF" },
+	{ id: "gemini-algenib", tts_voice: "Algenib", label: "Algenib — Gravelly", gender: "male", style: "Gravelly", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYA9DCCJEHGZL8fNSDOxQyIaCqpw719ilKV4ej" },
+	{ id: "gemini-rasalgethi", tts_voice: "Rasalgethi", label: "Rasalgethi — Informative", gender: "male", style: "Informative", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRY8IDtiMvEgwNYVcQmlGtqB02iUuxpCSdbOjny" },
+	{ id: "gemini-laomedeia", tts_voice: "Laomedeia", label: "Laomedeia — Upbeat", gender: "female", style: "Upbeat", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRY2aYpOFzyGv8aYwER3mjJuFHt4rhsTgi0foZB" },
+	{ id: "gemini-achernar", tts_voice: "Achernar", label: "Achernar — Soft", gender: "female", style: "Soft", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYa0qh8fYjL8f2TNZdntqcJF3CAivOQGlMS0pr" },
+	{ id: "gemini-alnilam", tts_voice: "Alnilam", label: "Alnilam — Firm", gender: "male", style: "Firm", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRY35zBRwqCWeogKhF19bTi7I6zQ0q8EafskJrG" },
+	{ id: "gemini-schedar", tts_voice: "Schedar", label: "Schedar — Even", gender: "male", style: "Even", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRY0rm6nYHJXDfMBqh1rKpP6s9Z8AvNIlgE4xYa" },
+	{ id: "gemini-gacrux", tts_voice: "Gacrux", label: "Gacrux — Mature", gender: "female", style: "Mature", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYQInlrFR1Xc2ZbTm83KoAvS6kGPrDjlf5ROgY" },
+	{ id: "gemini-pulcherrima", tts_voice: "Pulcherrima", label: "Pulcherrima — Forward", gender: "female", style: "Forward", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYwusYypcvoJNVKSmrBdMGYtLXHp4qkafZuOz1" },
+	{ id: "gemini-achird", tts_voice: "Achird", label: "Achird — Friendly", gender: "male", style: "Friendly", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYi3wm1AFlKavenfPpi3Zb1mAg4d50CY2RWLOs" },
+	{ id: "gemini-zubenelgenubi", tts_voice: "Zubenelgenubi", label: "Zubenelgenubi — Casual", gender: "male", style: "Casual", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYaukSGrjL8f2TNZdntqcJF3CAivOQGlMS0prw" },
+	{ id: "gemini-vindemiatrix", tts_voice: "Vindemiatrix", label: "Vindemiatrix — Gentle", gender: "female", style: "Gentle", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYAVctuaEHGZL8fNSDOxQyIaCqpw719ilKV4ej" },
+	{ id: "gemini-sadachbia", tts_voice: "Sadachbia", label: "Sadachbia — Lively", gender: "male", style: "Lively", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYt6BxuHIimOKe2MwDjzg4bqv9lnLGdNyJVHWX" },
+	{ id: "gemini-sadaltager", tts_voice: "Sadaltager", label: "Sadaltager — Knowledgeable", gender: "male", style: "Knowledgeable", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYBq6MiPJt8W16NkSEspMAH9mbVJjylwPKQur5" },
+	{ id: "gemini-sulafat", tts_voice: "Sulafat", label: "Sulafat — Warm", gender: "female", style: "Warm", audio_url: "https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYTQup64H176gEYQeNBjdHDc0La8obWsmZnJPI" },
+];
+const GEMINI_DEFAULT_VOICE_ID = "gemini-puck";
+const TTS_VOICE_STORAGE_KEY = "aantra_tts_voice_id";
+
 /** Quick-pick target languages (English → …) */
 const SPOTLIGHT_TARGET_LANGS = [
 	"Spanish",
@@ -537,7 +672,7 @@ function LangMultiSelect({
 							background: "#fff",
 							border: "1px solid rgba(0,0,0,0.1)",
 							borderRadius: 14,
-							overflow: "hidden",
+							overflow: "clip",
 							boxShadow: "0 24px 48px rgba(0,0,0,0.12)",
 						}}
 					>
@@ -576,76 +711,118 @@ function LangMultiSelect({
 								padding: "4px 6px 6px",
 							}}
 						>
-							{filtered.map((lang) => {
-								const locked = lockedLangs.includes(lang);
-								const on = selected.includes(lang);
-								return (
-									<button
-										key={lang}
-										type="button"
-										onClick={(e) => {
-											e.preventDefault();
-											toggle(lang);
-										}}
-										disabled={locked}
-										style={{
-											width: "100%",
-											display: "flex",
-											alignItems: "center",
-											textAlign: "left",
-											padding: "8px 10px",
-											borderRadius: 8,
-											fontSize: 13,
-											color: on ? "#c2410c" : "#52525b",
-											background: on ? "rgba(234,88,12,0.08)" : "transparent",
-											transition: "background 0.1s",
-											gap: 10,
-											cursor: locked ? "not-allowed" : "pointer",
-											opacity: locked ? 0.85 : 1,
-										}}
-										onMouseEnter={(e) => {
-											if (locked) return;
-											if (!on)
-												e.currentTarget.style.background = "rgba(0,0,0,0.04)";
-										}}
-										onMouseLeave={(e) => {
-											if (!on) e.currentTarget.style.background = "transparent";
-										}}
-									>
-										<span
-											style={{
-												width: 18,
-												height: 18,
-												borderRadius: 4,
-												border: `2px solid ${on ? "#ea580c" : "rgba(0,0,0,0.2)"}`,
-												background: on ? "#ea580c" : "transparent",
-												display: "inline-flex",
-												alignItems: "center",
-												justifyContent: "center",
-												flexShrink: 0,
+							{(() => {
+								const renderLangButton = (lang) => {
+									const locked = lockedLangs.includes(lang);
+									const on = selected.includes(lang);
+									return (
+										<button
+											key={lang}
+											type="button"
+											onClick={(e) => {
+												e.preventDefault();
+												toggle(lang);
 											}}
-											aria-hidden
+											disabled={locked}
+											style={{
+												width: "100%",
+												display: "flex",
+												alignItems: "center",
+												textAlign: "left",
+												padding: "8px 10px",
+												borderRadius: 8,
+												fontSize: 13,
+												color: on ? "#c2410c" : "#52525b",
+												background: on ? "rgba(234,88,12,0.08)" : "transparent",
+												transition: "background 0.1s",
+												gap: 10,
+												cursor: locked ? "not-allowed" : "pointer",
+												opacity: locked ? 0.85 : 1,
+											}}
+											onMouseEnter={(e) => {
+												if (locked) return;
+												if (!on)
+													e.currentTarget.style.background = "rgba(0,0,0,0.04)";
+											}}
+											onMouseLeave={(e) => {
+												if (!on) e.currentTarget.style.background = "transparent";
+											}}
 										>
-											{on && <Check size={11} strokeWidth={3} color="#fff" />}
-										</span>
-										<span style={{ marginRight: 4, fontSize: 15 }} aria-hidden>
-											{flagForLanguageName(lang)}
-										</span>
-										<span style={{ flex: 1 }}>{lang}</span>
-									</button>
-								);
-							})}
-							{!filtered.length && (
-								<p
-									style={{
-										color: "#a1a1aa",
-										fontSize: 13,
-										padding: "10px 12px",
-									}}
-								>
-									No results
-								</p>
-							)}
+											<span
+												style={{
+													width: 18,
+													height: 18,
+													borderRadius: 4,
+													border: `2px solid ${on ? "#ea580c" : "rgba(0,0,0,0.2)"}`,
+													background: on ? "#ea580c" : "transparent",
+													display: "inline-flex",
+													alignItems: "center",
+													justifyContent: "center",
+													flexShrink: 0,
+												}}
+												aria-hidden
+											>
+												{on && <Check size={11} strokeWidth={3} color="#fff" />}
+											</span>
+											<span style={{ marginRight: 4, fontSize: 15 }} aria-hidden>
+												{flagForLanguageName(lang)}
+											</span>
+											<span style={{ flex: 1 }}>{lang}</span>
+										</button>
+									);
+								};
+
+								if (q) {
+									// flat search results
+									if (!filtered.length) {
+										return (
+											<p style={{ color: "#a1a1aa", fontSize: 13, padding: "10px 12px" }}>
+												No results
+											</p>
+										);
+									}
+									return filtered.map(renderLangButton);
+								}
+
+								// grouped by continent
+								return LANG_GROUPS.map(({ continent, langs }) => (
+									<div key={continent}>
+										<div
+											style={{
+												display: "flex",
+												alignItems: "center",
+												gap: 6,
+												padding: "6px 10px 4px",
+												position: "sticky",
+												top: 0,
+												background: "#fff",
+												zIndex: 2,
+											}}
+										>
+											<span
+												style={{
+													fontSize: 10,
+													fontWeight: 700,
+													letterSpacing: "0.08em",
+													textTransform: "uppercase",
+													color: "#a1a1aa",
+													whiteSpace: "nowrap",
+												}}
+											>
+												{continent}
+											</span>
+											<span
+												style={{
+													flex: 1,
+													height: 1,
+													background: "rgba(0,0,0,0.07)",
+												}}
+											/>
+										</div>
+										{langs.map(renderLangButton)}
+									</div>
+								));
+							})()}
 						</div>
 					</motion.div>
 				)}
@@ -979,18 +1156,8 @@ function StatusProgress({ status, jobId, createdAt, detectedDurationSec }) {
 						>
 							This can take a few minutes—hang tight.
 						</p>
-						{jobId && (
-							<p
-								style={{
-									color: "#71717a",
-									fontSize: 11,
-									marginTop: 6,
-									fontFamily: "DM Mono",
-								}}
-							>
-								{jobId}
-							</p>
-						)}
+						<p
+						 className="aantraa-font text-[10px] mt-2 text-zinc-400">You can close the window and came back later once finished</p>
 					</>
 				)}
 			</motion.div>
@@ -2177,6 +2344,312 @@ function mergeTranscriptIntoPrompt(prev, incoming) {
 	return `${p}\n\n${t}`;
 }
 
+// Module-level reference so any playing audio is stopped when a new one starts.
+let _narratorAudio = null;
+
+function NarratorVoiceSelect({ value, onChange, fullWidth = false }) {
+	const [open, setOpen] = useState(false);
+	const [playingId, setPlayingId] = useState(null);
+	const ref = useRef(null);
+
+	useEffect(() => {
+		const h = (e) => {
+			if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+		};
+		document.addEventListener("mousedown", h);
+		return () => document.removeEventListener("mousedown", h);
+	}, []);
+
+	// stop audio on unmount
+	useEffect(() => {
+		return () => {
+			if (_narratorAudio) {
+				_narratorAudio.pause();
+				_narratorAudio = null;
+			}
+		};
+	}, []);
+
+	const selected =
+		GEMINI_VOICES.find((v) => v.id === value) ||
+		GEMINI_VOICES.find((v) => v.id === GEMINI_DEFAULT_VOICE_ID);
+
+	const playPreview = (e, voice) => {
+		e.stopPropagation();
+		if (_narratorAudio) {
+			_narratorAudio.pause();
+			_narratorAudio = null;
+		}
+		if (playingId === voice.id) {
+			setPlayingId(null);
+			return;
+		}
+		const audio = new Audio(voice.audio_url);
+		_narratorAudio = audio;
+		setPlayingId(voice.id);
+		audio.onended = () => {
+			setPlayingId(null);
+			_narratorAudio = null;
+		};
+		audio.onerror = () => {
+			setPlayingId(null);
+			_narratorAudio = null;
+		};
+		audio.play().catch(() => setPlayingId(null));
+	};
+
+	const femaleVoices = GEMINI_VOICES.filter((v) => v.gender === "female").sort(
+		(a, b) => a.tts_voice.localeCompare(b.tts_voice),
+	);
+	const maleVoices = GEMINI_VOICES.filter((v) => v.gender === "male").sort(
+		(a, b) => a.tts_voice.localeCompare(b.tts_voice),
+	);
+
+	const renderRow = (voice) => {
+		const isSelected = voice.id === value;
+		const isPlaying = playingId === voice.id;
+		return (
+			<div
+				key={voice.id}
+				onClick={() => {
+					onChange(voice.id);
+					try {
+						localStorage.setItem(TTS_VOICE_STORAGE_KEY, voice.id);
+					} catch {}
+					setOpen(false);
+				}}
+				style={{
+					display: "flex",
+					alignItems: "center",
+					gap: 8,
+					padding: "7px 10px",
+					borderRadius: 8,
+					cursor: "pointer",
+					background: isSelected ? "rgba(234,88,12,0.08)" : "transparent",
+					transition: "background 0.1s",
+				}}
+				onMouseEnter={(e) => {
+					if (!isSelected)
+						e.currentTarget.style.background = "rgba(0,0,0,0.04)";
+				}}
+				onMouseLeave={(e) => {
+					if (!isSelected) e.currentTarget.style.background = "transparent";
+				}}
+			>
+				{/* play button */}
+				<button
+					type="button"
+					aria-label={`Preview ${voice.tts_voice} voice`}
+					onClick={(e) => playPreview(e, voice)}
+					style={{
+						width: 26,
+						height: 26,
+						borderRadius: "50%",
+						border: "1px solid rgba(0,0,0,0.12)",
+						background: isPlaying
+							? "rgba(234,88,12,0.15)"
+							: "rgba(0,0,0,0.04)",
+						display: "inline-flex",
+						alignItems: "center",
+						justifyContent: "center",
+						flexShrink: 0,
+						cursor: "pointer",
+						color: isPlaying ? "#ea580c" : "#71717a",
+						transition: "background 0.15s, color 0.15s",
+					}}
+				>
+					{isPlaying ? (
+						<Pause size={11} strokeWidth={2.5} />
+					) : (
+						<Play size={11} strokeWidth={2.5} />
+					)}
+				</button>
+
+				{/* name */}
+				<span
+					style={{
+						flex: 1,
+						fontSize: 13,
+						color: isSelected ? "#c2410c" : "#18181b",
+						fontWeight: isSelected ? 600 : 400,
+						overflow: "hidden",
+						textOverflow: "ellipsis",
+						whiteSpace: "nowrap",
+					}}
+				>
+					{voice.tts_voice}
+				</span>
+
+				{/* style tag */}
+				<span
+					style={{
+						fontSize: 10,
+						padding: "2px 6px",
+						borderRadius: 6,
+						background: "rgba(0,0,0,0.05)",
+						color: "#71717a",
+						whiteSpace: "nowrap",
+						flexShrink: 0,
+					}}
+				>
+					{voice.style}
+				</span>
+
+				{/* selected tick */}
+				{isSelected && (
+					<Check size={12} strokeWidth={3} color="#ea580c" style={{ flexShrink: 0 }} />
+				)}
+			</div>
+		);
+	};
+
+	return (
+		<div ref={ref} style={{ position: "relative", width: fullWidth ? "100%" : "auto" }}>
+			{/* trigger */}
+			<button
+				type="button"
+				onClick={() => setOpen((o) => !o)}
+				style={{
+					display: "flex",
+					alignItems: "center",
+					gap: 8,
+					width: fullWidth ? "100%" : 220,
+					padding: "10px 12px",
+					borderRadius: 12,
+					background: "#fff",
+					border: "1px solid rgba(0,0,0,0.1)",
+					cursor: "pointer",
+					fontSize: 13,
+					color: "#18181b",
+				}}
+			>
+				<span style={{ fontSize: 15, lineHeight: 1, flexShrink: 0 }} aria-hidden>
+					🎙
+				</span>
+				<span style={{ flex: 1, textAlign: "left" }}>
+					{selected ? selected.tts_voice : "Select voice"}
+				</span>
+				{selected && (
+					<span
+						style={{
+							fontSize: 10,
+							padding: "2px 6px",
+							borderRadius: 6,
+							background: "rgba(234,88,12,0.1)",
+							color: "#c2410c",
+							whiteSpace: "nowrap",
+							flexShrink: 0,
+						}}
+					>
+						{selected.style}
+					</span>
+				)}
+				<ChevronDown
+					size={13}
+					style={{
+						color: "#71717a",
+						flexShrink: 0,
+						transform: open ? "rotate(180deg)" : "none",
+						transition: "transform 0.2s",
+					}}
+				/>
+			</button>
+
+			{/* dropdown */}
+			<AnimatePresence>
+				{open && (
+					<motion.div
+						initial={{ opacity: 0, y: -6, scale: 0.97 }}
+						animate={{ opacity: 1, y: 0, scale: 1 }}
+						exit={{ opacity: 0, y: -6, scale: 0.97 }}
+						transition={{ duration: 0.14 }}
+						style={{
+							position: "absolute",
+							top: "calc(100% + 6px)",
+							left: 0,
+							width: fullWidth ? "100%" : 260,
+							zIndex: 300,
+							background: "#fff",
+							border: "1px solid rgba(0,0,0,0.1)",
+							borderRadius: 14,
+							overflow: "clip",
+							boxShadow: "0 24px 48px rgba(0,0,0,0.12)",
+						}}
+					>
+						{/* header label */}
+						<div
+							style={{
+								padding: "8px 12px 6px",
+								borderBottom: "1px solid rgba(0,0,0,0.06)",
+							}}
+						>
+							<p
+								style={{
+									fontSize: 10,
+									fontWeight: 600,
+									letterSpacing: "0.06em",
+									textTransform: "uppercase",
+									color: "#a1a1aa",
+									margin: 0,
+								}}
+							>
+								Narrator voice · Gemini TTS
+							</p>
+						</div>
+						<div style={{ maxHeight: 280, overflowY: "auto", padding: "4px 6px 6px" }}>
+							{/* Female group */}
+							<div
+								style={{
+									padding: "6px 10px 2px",
+									fontSize: 10,
+									fontWeight: 700,
+									letterSpacing: "0.07em",
+									textTransform: "uppercase",
+									color: "#c2410c",
+									display: "flex",
+									alignItems: "center",
+									gap: 6,
+									position: "sticky",
+									top: 0,
+									background: "#fff",
+									zIndex: 2,
+								}}
+							>
+								♀ Female
+								<span style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.07)" }} />
+							</div>
+							{femaleVoices.map(renderRow)}
+
+							{/* Male group */}
+							<div
+								style={{
+									padding: "8px 10px 2px",
+									fontSize: 10,
+									fontWeight: 700,
+									letterSpacing: "0.07em",
+									textTransform: "uppercase",
+									color: "#2563eb",
+									display: "flex",
+									alignItems: "center",
+									gap: 6,
+									position: "sticky",
+									top: 0,
+									background: "#fff",
+									zIndex: 2,
+								}}
+							>
+								♂ Male
+								<span style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.07)" }} />
+							</div>
+							{maleVoices.map(renderRow)}
+						</div>
+					</motion.div>
+				)}
+			</AnimatePresence>
+		</div>
+	);
+}
+
 function EstimateCurrencyTabs({ value, onChange }) {
 	return (
 		<div
@@ -2280,6 +2753,13 @@ function VoiceTranslateForm({
 	const [showCreditsModal, setShowCreditsModal] = useState(false);
 	const [creditsModalDetail, setCreditsModalDetail] = useState(null);
 	const submitAbortRef = useRef(null);
+	const [selectedVoiceId, setSelectedVoiceId] = useState(() => {
+		try {
+			return localStorage.getItem(TTS_VOICE_STORAGE_KEY) || GEMINI_DEFAULT_VOICE_ID;
+		} catch {
+			return GEMINI_DEFAULT_VOICE_ID;
+		}
+	});
 
 	useEffect(() => {
 		return () => {
@@ -2522,39 +3002,43 @@ function VoiceTranslateForm({
 		submitAbortRef.current = ac;
 		try {
 			let res;
-			if (hasAudio) {
-				const fd = new FormData();
-				const file =
-					uploadedFile ||
-					new File([recordedBlob], "recording.webm", {
-						type: recordedBlob.type || "audio/webm",
-					});
-				fd.append("audio", file);
-				fd.append("languages", JSON.stringify(langs));
-				fd.append("include_audio", "true");
-				if (hasText) fd.append("text", text.trim());
-				const auth = await getTranslateAuthHeaders();
-				res = await fetch(url, {
-					method: "POST",
-					headers: auth,
-					body: fd,
-					signal: ac.signal,
+		if (hasAudio) {
+			const fd = new FormData();
+			const file =
+				uploadedFile ||
+				new File([recordedBlob], "recording.webm", {
+					type: recordedBlob.type || "audio/webm",
 				});
-			} else {
-				res = await fetch(url, {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						...(await getTranslateAuthHeaders()),
-					},
-					body: JSON.stringify({
-						text: text.trim(),
-						languages: langs,
-						include_audio: true,
-					}),
-					signal: ac.signal,
-				});
-			}
+			fd.append("audio", file);
+			fd.append("languages", JSON.stringify(langs));
+			fd.append("include_audio", "true");
+			fd.append("tts_engine", "openrouter");
+			fd.append("brand_voice_id", selectedVoiceId);
+			if (hasText) fd.append("text", text.trim());
+			const auth = await getTranslateAuthHeaders();
+			res = await fetch(url, {
+				method: "POST",
+				headers: auth,
+				body: fd,
+				signal: ac.signal,
+			});
+		} else {
+			res = await fetch(url, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					...(await getTranslateAuthHeaders()),
+				},
+				body: JSON.stringify({
+					text: text.trim(),
+					languages: langs,
+					include_audio: true,
+					tts_engine: "openrouter",
+					brand_voice_id: selectedVoiceId,
+				}),
+				signal: ac.signal,
+			});
+		}
 			const data = await res.json().catch(() => ({}));
 			const apiErr = getApiErrorMessage(data);
 			if (apiErr || !res.ok) {
@@ -2912,31 +3396,43 @@ function VoiceTranslateForm({
 					) : null}
 				</div>
 			)}
-			<LangMultiSelect
-				selected={selectedLangs}
-				onChange={setSelectedLangs}
+		<LangMultiSelect
+			selected={selectedLangs}
+			onChange={setSelectedLangs}
+			fullWidth
+		/>
+
+		{/* Narrator voice */}
+		<div style={{ marginTop: 8 }}>
+			<p style={{ fontSize: 11, color: "#71717a", marginBottom: 4, fontWeight: 500 }}>
+				Narrator voice
+			</p>
+			<NarratorVoiceSelect
+				value={selectedVoiceId}
+				onChange={setSelectedVoiceId}
 				fullWidth
 			/>
+		</div>
 
-			{freeDurationBlocked && (
-				<p
-					style={{
-						fontSize: 12,
-						color: "#b91c1c",
-						background: "rgba(239,68,68,0.08)",
-						border: "1px solid rgba(239,68,68,0.2)",
-						borderRadius: 10,
-						padding: "8px 10px",
-						marginBottom: 10,
-					}}
-				>
-					Free plan supports audio up to 30 seconds. Upgrade to translate longer clips.
-				</p>
-			)}
-			<button
-				type="button"
-				onClick={submit}
-				disabled={!canSubmit}
+		{freeDurationBlocked && (
+			<p
+				style={{
+					fontSize: 12,
+					color: "#b91c1c",
+					background: "rgba(239,68,68,0.08)",
+					border: "1px solid rgba(239,68,68,0.2)",
+					borderRadius: 10,
+					padding: "8px 10px",
+					marginBottom: 10,
+				}}
+			>
+				Free plan supports audio up to 30 seconds. Upgrade to translate longer clips.
+			</p>
+		)}
+		<button
+			type="button"
+			onClick={submit}
+			disabled={!canSubmit}
 				style={{
 					width: "100%",
 					padding: "12px 16px",
@@ -3192,6 +3688,13 @@ function TranslateForm({
 	localTrackRef.current = localTrack;
 	const [showCreditsModal, setShowCreditsModal] = useState(false);
 	const [creditsModalDetail, setCreditsModalDetail] = useState(null);
+	const [selectedVoiceId, setSelectedVoiceId] = useState(() => {
+		try {
+			return localStorage.getItem(TTS_VOICE_STORAGE_KEY) || GEMINI_DEFAULT_VOICE_ID;
+		} catch {
+			return GEMINI_DEFAULT_VOICE_ID;
+		}
+	});
 
 	useEffect(() => {
 		if (!prefillVideoUrl) return;
@@ -3439,31 +3942,35 @@ function TranslateForm({
 			const results = await Promise.all(
 				langs.map(async (lang) => {
 					let res;
-					if (mode === "url") {
-						const body = {
-							video_url: url.trim(),
-							output_language: lang,
-						};
-						res = await fetch(postUrl, {
-							method: "POST",
-							headers: {
-								"Content-Type": "application/json",
-								...(await getTranslateAuthHeaders()),
-							},
-							body: JSON.stringify(body),
-							signal: ac.signal,
-						});
-					} else {
-						const fd = new FormData();
-						fd.append("video", file);
-						fd.append("output_language", lang);
-						res = await fetch(postUrl, {
-							method: "POST",
-							headers: await getTranslateAuthHeaders(),
-							body: fd,
-							signal: ac.signal,
-						});
-					}
+				if (mode === "url") {
+					const body = {
+						video_url: url.trim(),
+						output_language: lang,
+						tts_engine: "openrouter",
+						brand_voice_id: selectedVoiceId,
+					};
+					res = await fetch(postUrl, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							...(await getTranslateAuthHeaders()),
+						},
+						body: JSON.stringify(body),
+						signal: ac.signal,
+					});
+				} else {
+					const fd = new FormData();
+					fd.append("video", file);
+					fd.append("output_language", lang);
+					fd.append("tts_engine", "openrouter");
+					fd.append("brand_voice_id", selectedVoiceId);
+					res = await fetch(postUrl, {
+						method: "POST",
+						headers: await getTranslateAuthHeaders(),
+						body: fd,
+						signal: ac.signal,
+					});
+				}
 					const data = await res.json().catch(() => ({}));
 					return { lang, res, data };
 				}),
@@ -4027,18 +4534,30 @@ function TranslateForm({
 						</p>
 					)}
 
-					{/* Language + Submit row */}
-					<div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-						<div style={{ flex: 1, minWidth: 160 }}>
-							<LangMultiSelect
-								selected={selectedLangs}
-								onChange={setSelectedLangs}
-								fullWidth
-							/>
-						</div>
+				{/* Language + Submit row */}
+				<div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+					<div style={{ flex: 1, minWidth: 160 }}>
+						<LangMultiSelect
+							selected={selectedLangs}
+							onChange={setSelectedLangs}
+							fullWidth
+						/>
 					</div>
-					
-					{freeDurationBlocked && (
+				</div>
+
+				{/* Narrator voice */}
+				<div style={{ marginTop: 8 }}>
+					<p style={{ fontSize: 11, color: "#71717a", marginBottom: 4, fontWeight: 500 }}>
+						Narrator voice
+					</p>
+					<NarratorVoiceSelect
+						value={selectedVoiceId}
+						onChange={setSelectedVoiceId}
+						fullWidth
+					/>
+				</div>
+
+				{freeDurationBlocked && (
 						<p
 							style={{
 								fontSize: 12,
@@ -4381,6 +4900,7 @@ function InsufficientCreditsModal({ open, onClose, detail }) {
 							border: "1px solid rgba(0,0,0,0.08)",
 							boxShadow: "0 24px 64px rgba(0,0,0,0.15)",
 						}}
+						className="hidescrollbar"
 					>
 						<h3
 							className="aantraa-font"
@@ -5860,6 +6380,13 @@ export function Dashboard({ user, onLogout }) {
 	const [detailTab, setDetailTab] = useState(0);
 	const [stagedLangs, setStagedLangs] = useState([]);
 	const [appendBusy, setAppendBusy] = useState(null);
+	const [appendVoiceId, setAppendVoiceId] = useState(() => {
+		try {
+			return localStorage.getItem(TTS_VOICE_STORAGE_KEY) || GEMINI_DEFAULT_VOICE_ID;
+		} catch {
+			return GEMINI_DEFAULT_VOICE_ID;
+		}
+	});
 	const [editingSidebarId, setEditingSidebarId] = useState(null);
 	const [editingName, setEditingName] = useState("");
 	const [viewNew, setViewNew] = useState(true);
@@ -6252,6 +6779,8 @@ export function Dashboard({ user, onLogout }) {
 				const body = {
 					video_url: appendSourceVideoUrl,
 					output_language: lang,
+					tts_engine: "openrouter",
+					brand_voice_id: appendVoiceId,
 				};
 				const res = await fetch(postUrl, {
 					method: "POST",
@@ -6323,6 +6852,7 @@ export function Dashboard({ user, onLogout }) {
 			selected?.id,
 			selected?.jobs?.length,
 			appendSourceVideoUrl,
+			appendVoiceId,
 			patchVideos,
 			scheduleUpsertGroup,
 		],
@@ -6340,11 +6870,13 @@ export function Dashboard({ user, onLogout }) {
 			const url = getVoiceTranslatePostUrl();
 			const groupId = selected.id;
 			try {
-				const body = {
-					text: appendVoiceSourceText,
-					languages: [lang],
-					include_audio: true,
-				};
+			const body = {
+				text: appendVoiceSourceText,
+				languages: [lang],
+				include_audio: true,
+				tts_engine: "openrouter",
+				brand_voice_id: appendVoiceId,
+			};
 				const res = await fetch(url, {
 					method: "POST",
 					headers: {
@@ -6440,6 +6972,7 @@ export function Dashboard({ user, onLogout }) {
 			selected?.id,
 			selected?.jobs?.length,
 			appendVoiceSourceText,
+			appendVoiceId,
 			patchVideos,
 			scheduleUpsertGroup,
 			billUsageForJobId,
@@ -6494,41 +7027,43 @@ export function Dashboard({ user, onLogout }) {
 			const postUrl = getTranslatePostUrl();
 			const groupId = selected.id;
 			try {
-				const body = {
-					video_url: appendSourceVideoUrl,
-					output_language: lang,
-				};
-				const res = await fetch(postUrl, {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						...(await getTranslateAuthHeaders()),
-					},
-					body: JSON.stringify(body),
-				});
-				const data = await res.json().catch(() => ({}));
-				const apiErr = getApiErrorMessage(data);
-				if (apiErr || !res.ok) {
-					toast.error(apiErr || "Translation request failed.");
-					return;
-				}
-				const videoId = parseVideoIdFromPostResponse(data);
-				if (!videoId) {
-					toast.error("Could not start translation.");
-					return;
-				}
-				const initial = normalizeStatus(extractStatusField(data));
-				const postFields = extractJobFieldsFromGetResponse(data);
-				const newJob = {
-					id: videoId,
-					lang,
-					status: initial,
-					createdAt: new Date().toISOString(),
-					...postFields,
-					resultUrl: postFields.resultUrl ?? extractResultUrl(data) ?? null,
-					sourceVideoUrl: postFields.sourceVideoUrl ?? appendSourceVideoUrl,
-					videoTranslateId: postFields.videoTranslateId ?? videoId,
-				};
+			const body = {
+				video_url: appendSourceVideoUrl,
+				output_language: lang,
+				tts_engine: "openrouter",
+				brand_voice_id: appendVoiceId,
+			};
+			const res = await fetch(postUrl, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					...(await getTranslateAuthHeaders()),
+				},
+				body: JSON.stringify(body),
+			});
+			const data = await res.json().catch(() => ({}));
+			const apiErr = getApiErrorMessage(data);
+			if (apiErr || !res.ok) {
+				toast.error(apiErr || "Translation request failed.");
+				return;
+			}
+			const videoId = parseVideoIdFromPostResponse(data);
+			if (!videoId) {
+				toast.error("Could not start translation.");
+				return;
+			}
+			const initial = normalizeStatus(extractStatusField(data));
+			const postFields = extractJobFieldsFromGetResponse(data);
+			const newJob = {
+				id: videoId,
+				lang,
+				status: initial,
+				createdAt: new Date().toISOString(),
+				...postFields,
+				resultUrl: postFields.resultUrl ?? extractResultUrl(data) ?? null,
+				sourceVideoUrl: postFields.sourceVideoUrl ?? appendSourceVideoUrl,
+				videoTranslateId: postFields.videoTranslateId ?? videoId,
+			};
 				patchVideos((prev) => {
 					const next = prev.map((g) => {
 						if (g.id !== groupId) return g;
@@ -7529,10 +8064,11 @@ export function Dashboard({ user, onLogout }) {
 															Stats
 														</button>
 													) : null}
-													{((!isVoiceTranslationGroup && appendSourceVideoUrl) ||
-														(isVoiceTranslationGroup &&
-															appendVoiceSourceText)) && (
-														<div style={{ flex: "1 1 220px", minWidth: 200 }}>
+												{((!isVoiceTranslationGroup && appendSourceVideoUrl) ||
+													(isVoiceTranslationGroup &&
+														appendVoiceSourceText)) && (
+													<>
+														<div style={{ flex: "1 1 200px", minWidth: 180 }}>
 															<LangMultiSelect
 																selected={langPickerSelected}
 																onChange={setLangPickerSelected}
@@ -7540,7 +8076,23 @@ export function Dashboard({ user, onLogout }) {
 																fullWidth
 															/>
 														</div>
-													)}
+														<div style={{ flex: "1 1 180px", minWidth: 160 }}>
+															<NarratorVoiceSelect
+																value={appendVoiceId}
+																onChange={(id) => {
+																	setAppendVoiceId(id);
+																	try {
+																		localStorage.setItem(
+																			TTS_VOICE_STORAGE_KEY,
+																			id,
+																		);
+																	} catch {}
+																}}
+																fullWidth
+															/>
+														</div>
+													</>
+												)}
 												</div>
 											</div>
 

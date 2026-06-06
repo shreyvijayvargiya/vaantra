@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Translation minutes added · aantraa</title>
+  </head>
+  <body style="margin:0;padding:0;background-color:#f5f4f0;font-family:'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f4f0;padding:40px 0;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+            <!-- Orange top bar -->
+            <tr>
+              <td style="height:5px;background:linear-gradient(90deg,#f97316,#ea580c);font-size:0;line-height:0;">&nbsp;</td>
+            </tr>
+
+            <!-- Header -->
+            <tr>
+              <td align="center" style="padding:40px 48px 28px;">
+                <!-- Logo -->
+                <div style="margin-bottom:28px;">
+                  <span style="font-size:24px;font-weight:800;color:#18181b;letter-spacing:-0.03em;font-family:Georgia,serif;">aantraa<span style="color:#ea580c;">.</span></span>
+                </div>
+
+                <!-- Icon badge -->
+                <div style="width:64px;height:64px;background:linear-gradient(135deg,#fff7ed,#fed7aa);border-radius:50%;margin:0 auto 20px;display:table-cell;text-align:center;vertical-align:middle;font-size:30px;">
+                  🎙️
+                </div>
+
+                <h1 style="margin:0 0 8px;font-size:26px;font-weight:700;color:#18181b;letter-spacing:-0.02em;line-height:1.2;">
+                  {{minutes}} minutes added!
+                </h1>
+                <p style="margin:0;font-size:15px;color:#71717a;line-height:1.5;">
+                  Your translation credits are ready to use.
+                </p>
+              </td>
+            </tr>
+
+            <!-- Greeting -->
+            <tr>
+              <td style="padding:0 48px 24px;">
+                <p style="margin:0 0 12px;font-size:15px;color:#52525b;line-height:1.65;">
+                  Hi <strong style="color:#18181b;">{{customerName}}</strong>,
+                </p>
+                <p style="margin:0;font-size:15px;color:#52525b;line-height:1.65;">
+                  Your payment was successful and we've topped up your aantraa account with
+                  <strong style="color:#ea580c;">{{minutes}} translation minutes</strong>.
+                  You can start dubbing videos or translating audio right away.
+                </p>
+              </td>
+            </tr>
+
+            <!-- Minutes highlight pill -->
+            <tr>
+              <td align="center" style="padding:0 48px 28px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(234,88,12,0.2);border-radius:12px;overflow:hidden;">
+                  <tr>
+                    <td style="padding:20px 32px;text-align:center;">
+                      <div style="font-size:42px;font-weight:800;color:#ea580c;letter-spacing:-0.04em;line-height:1;">
+                        {{minutes}}
+                      </div>
+                      <div style="font-size:13px;font-weight:600;color:#c2410c;letter-spacing:0.08em;text-transform:uppercase;margin-top:4px;">
+                        Translation Minutes
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Order details card -->
+            <tr>
+              <td style="padding:0 48px 28px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9f8f7;border-radius:12px;border:1px solid rgba(0,0,0,0.07);overflow:hidden;">
+                  <tr>
+                    <td style="padding:20px 24px;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+
+                        <!-- Amount -->
+                        <tr>
+                          <td style="padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.06);">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                              <tr>
+                                <td style="font-size:13px;color:#71717a;">Amount paid</td>
+                                <td align="right" style="font-size:13px;font-weight:600;color:#18181b;">
+                                  {{currency}} {{amount}}
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+
+                        <!-- Minutes -->
+                        <tr>
+                          <td style="padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.06);">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                              <tr>
+                                <td style="font-size:13px;color:#71717a;">Credits added</td>
+                                <td align="right" style="font-size:13px;font-weight:600;color:#ea580c;">
+                                  {{minutes}} minutes
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+
+                        <!-- Order ID -->
+                        <tr>
+                          <td style="padding:8px 0;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                              <tr>
+                                <td style="font-size:13px;color:#71717a;">Order ID</td>
+                                <td align="right" style="font-size:12px;font-weight:500;color:#a1a1aa;font-family:'Courier New',monospace;">
+                                  {{orderId}}
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- What you can do -->
+            <tr>
+              <td style="padding:0 48px 28px;">
+                <p style="margin:0 0 14px;font-size:13px;font-weight:600;color:#18181b;letter-spacing:0.04em;text-transform:uppercase;">
+                  What you can do now
+                </p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding:6px 0;">
+                      <table role="presentation" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td style="width:28px;vertical-align:top;font-size:15px;padding-top:1px;">🎬</td>
+                          <td style="font-size:14px;color:#52525b;line-height:1.5;">Paste a YouTube URL or upload a video to dub in 90+ languages</td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px 0;">
+                      <table role="presentation" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td style="width:28px;vertical-align:top;font-size:15px;padding-top:1px;">🎙️</td>
+                          <td style="font-size:14px;color:#52525b;line-height:1.5;">Translate audio files with AI voice cloning in the original speaker's voice</td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px 0;">
+                      <table role="presentation" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td style="width:28px;vertical-align:top;font-size:15px;padding-top:1px;">⚡</td>
+                          <td style="font-size:14px;color:#52525b;line-height:1.5;">Run multiple languages in parallel — queue several jobs at once</td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- CTA Button -->
+            <tr>
+              <td align="center" style="padding:0 48px 40px;">
+                <a href="https://aantraa.site/app"
+                   style="display:inline-block;padding:13px 32px;background:linear-gradient(135deg,#f97316,#ea580c);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;border-radius:10px;letter-spacing:-0.01em;box-shadow:0 4px 16px rgba(234,88,12,0.35);">
+                  Open aantraa app →
+                </a>
+              </td>
+            </tr>
+
+            <!-- Divider -->
+            <tr>
+              <td style="padding:0 48px;">
+                <div style="height:1px;background:rgba(0,0,0,0.07);font-size:0;line-height:0;">&nbsp;</div>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td style="padding:28px 48px 36px;text-align:center;">
+                <p style="margin:0 0 8px;font-size:14px;font-weight:700;color:#18181b;font-family:Georgia,serif;">
+                  aantraa<span style="color:#ea580c;">.</span>
+                </p>
+                <p style="margin:0 0 6px;font-size:12px;color:#a1a1aa;line-height:1.5;">
+                  AI-powered video &amp; audio translation
+                </p>
+                <p style="margin:0;font-size:11px;color:#d4d4d8;">
+                  © 2026 aantraa · <a href="https://aantraa.site/privacy" style="color:#d4d4d8;text-decoration:underline;">Privacy</a> · <a href="https://aantraa.site/terms-and-conditions" style="color:#d4d4d8;text-decoration:underline;">Terms</a>
+                </p>
+              </td>
+            </tr>
+
+          </table>
+        </td>
+      </tr>
+    </table>
+
+  </body>
+</html>
