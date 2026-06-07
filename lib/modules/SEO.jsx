@@ -32,23 +32,37 @@ const SEO = ({ customSEO = null }) => {
 				<meta name="robots" content="index, follow" />
 			)}
 
-			{/* Open Graph / Facebook */}
-			<meta property="og:type" content={seoConfig.ogType || "website"} />
-			<meta property="og:url" content={canonicalUrl} />
-			<meta property="og:title" content={seoConfig.title} />
-			<meta property="og:description" content={seoConfig.description} />
-			{seoConfig.ogImage && (
-				<meta property="og:image" content={seoConfig.ogImage} />
-			)}
+		{/* Open Graph — Facebook, LinkedIn, WhatsApp, Discord */}
+		<meta property="og:site_name" content="aantraa" />
+		<meta property="og:type" content={seoConfig.ogType || "website"} />
+		<meta property="og:url" content={canonicalUrl} />
+		<meta property="og:title" content={seoConfig.title} />
+		<meta property="og:description" content={seoConfig.description} />
+		{seoConfig.ogImage && (
+			<meta property="og:image" content={seoConfig.ogImage} />
+		)}
+		{seoConfig.ogImageWidth && (
+			<meta property="og:image:width" content={String(seoConfig.ogImageWidth)} />
+		)}
+		{seoConfig.ogImageHeight && (
+			<meta property="og:image:height" content={String(seoConfig.ogImageHeight)} />
+		)}
+		{seoConfig.ogImageAlt && (
+			<meta property="og:image:alt" content={seoConfig.ogImageAlt} />
+		)}
 
-			{/* Twitter */}
-			<meta name="twitter:card" content="summary_large_image" />
-			<meta name="twitter:url" content={canonicalUrl} />
-			<meta name="twitter:title" content={seoConfig.title} />
-			<meta name="twitter:description" content={seoConfig.description} />
-			{seoConfig.ogImage && (
-				<meta name="twitter:image" content={seoConfig.ogImage} />
-			)}
+		{/* Twitter / X */}
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:site" content="@aantraa_ai" />
+		<meta name="twitter:url" content={canonicalUrl} />
+		<meta name="twitter:title" content={seoConfig.title} />
+		<meta name="twitter:description" content={seoConfig.description} />
+		{seoConfig.ogImage && (
+			<meta name="twitter:image" content={seoConfig.ogImage} />
+		)}
+		{seoConfig.ogImageAlt && (
+			<meta name="twitter:image:alt" content={seoConfig.ogImageAlt} />
+		)}
 
 			{/* Additional Meta Tags */}
 			{seoConfig.author && <meta name="author" content={seoConfig.author} />}

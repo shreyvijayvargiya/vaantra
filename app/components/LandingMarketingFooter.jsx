@@ -3,7 +3,7 @@ import { Mail } from "lucide-react";
 
 /** Keep in sync with landing `pages/index.js` marketing constants. */
 const CONTACT_EMAIL = "shreyvijayvargiya26@gmail.com";
-const X_PROFILE_URL = "https://x.com/shreyvijayvargiya26";
+const X_PROFILE_URL = "https://x.com/treyvijay";
 
 export default function LandingMarketingFooter() {
 	return (

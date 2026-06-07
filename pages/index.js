@@ -5481,6 +5481,34 @@ function Landing() {
 			q: "What happens to my videos after translation?",
 			a: "Translated videos are stored for 30 days (Free) or 1 year (Pro/Studio). You can download or delete them anytime.",
 		},
+		{
+			q: "Can I choose the narrator voice for my translation?",
+			a: "Yes. Every translation job lets you pick from 30 Gemini TTS voices — each with a distinct style like Upbeat, Firm, Breezy, Warm, or Knowledgeable. Hit the play button next to any voice in the dropdown to hear a live preview before you commit.",
+		},
+		{
+			q: "How is aantraa different from ElevenLabs or other TTS tools?",
+			a: "ElevenLabs and similar services charge per character or per minute of audio generated — costs add up fast for long videos or multiple languages. aantraa bundles translation + voice synthesis into one flat per-minute rate, so you pay for the source video duration, not the output. A 5-minute video translated into 3 languages costs the same per-minute rate as translating it into 1.",
+		},
+		{
+			q: "What voices are available and who powers them?",
+			a: "aantraa uses Google Gemini TTS (via OpenRouter) to deliver 30 studio-quality voices across a range of styles and genders — Puck, Kore, Zephyr, Sulafat, and more. These are the same neural voices used in Google's latest AI products, now available at a fraction of the standalone API cost.",
+		},
+		{
+			q: "Can I preview a voice before translating?",
+			a: "Yes — every voice in the narrator dropdown has a ▶ play button. Clicking it streams a short audio sample so you can compare tone and style before submitting your job. Only one preview plays at a time; starting a new one stops the previous automatically.",
+		},
+		{
+			q: "Is my selected voice saved for future jobs?",
+			a: "Yes. Your last chosen voice is stored locally in your browser. Every new translation or language you add defaults to that voice so you don't have to reselect it each time.",
+		},
+		{
+			q: "How does aantraa compare in price to ElevenLabs, HeyGen, or Murf?",
+			a: "Most competitors bill separately for translation, dubbing, and TTS — often $0.10–$0.30 per minute per service. aantraa bundles all three into one pipeline starting from a few cents per minute of source video. There are no per-character limits, no separate voice-cloning fees, and no surprise overage charges.",
+		},
+		{
+			q: "Does the translated audio sync with the original video timing?",
+			a: "Yes. The dubbing pipeline aligns translated speech to the original speaker's pacing and adjusts speed to fit within the same time windows, so the dubbed audio stays in sync with on-screen action.",
+		},
 	];
 
 	return (
