@@ -32,6 +32,7 @@ import {
 	Database,
 	Table2,
 	Lock,
+	Activity,
 } from "lucide-react";
 import { getAllCollections } from "../../../lib/api/tables";
 import {
@@ -78,6 +79,7 @@ const ICON_MAP = {
 	Database,
 	Table2,
 	Lock,
+	Activity,
 };
 
 const DEFAULT_NAV_STRUCTURE = [
@@ -147,6 +149,13 @@ const DEFAULT_NAV_STRUCTURE = [
 		id: "Database",
 		title: "Database",
 		items: [{ id: "tables", label: "Tables", icon: "Table2" }],
+	},
+	{
+		id: "api-logs",
+		title: "API Logs",
+		items: [
+			{ id: "translation-logs", label: "Translation Logs", icon: "Activity" },
+		],
 	},
 	{
 		id: "settings",

@@ -39,6 +39,7 @@ import {
 import { useAppQueryClient } from "../../lib/hooks/useQueryClient";
 import WorkflowAutomationsTab from "./components/WorkflowTab";
 import TablesTab from "./components/TablesTab";
+import TranslationLogsTab from "./components/TranslationLogsTab";
 import { useRouter } from "next/router";
 
 const Admin = () => {
@@ -268,8 +269,9 @@ const Admin = () => {
 							{activeTab === "reportIssues" && (
 								<ReportIssuesTab queryClient={queryClient} />
 							)}
-							{activeTab === "teams" && <TeamsTab queryClient={queryClient} />}
-						</div>
+						{activeTab === "teams" && <TeamsTab queryClient={queryClient} />}
+						{activeTab === "translation-logs" && <TranslationLogsTab />}
+					</div>
 					</div>
 				</main>
 			</div>

@@ -2655,7 +2655,7 @@ function EstimateCurrencyTabs({ value, onChange }) {
 		<div
 			style={{
 				display: "flex",
-				justifyContent: "flex-end",
+				justifyContent: "flex-start",
 				marginBottom: 10,
 			}}
 		>
@@ -4226,9 +4226,38 @@ function TranslateForm({
 		mode === "url" &&
 		Boolean(url.trim()) &&
 		!isHttpOrHttpsUrl(url.trim());
+
+	// Domains whose videos cannot be fetched by the API
+	const BLOCKED_DOMAINS = {
+		"youtube.com":    "YouTube videos can't be fetched by our API. Please download the video and upload it instead.",
+		"youtu.be":       "YouTube videos can't be fetched by our API. Please download the video and upload it instead.",
+		"tiktok.com":     "TikTok videos are protected. Please download and upload the file directly.",
+		"instagram.com":  "Instagram requires authentication. Please download and upload the file directly.",
+		"facebook.com":   "Facebook videos are protected. Please download and upload the file directly.",
+		"fb.watch":       "Facebook videos are protected. Please download and upload the file directly.",
+		"fb.com":         "Facebook videos are protected. Please download and upload the file directly.",
+		"twitter.com":    "Twitter/X videos can't be fetched. Please download and upload the file directly.",
+		"x.com":          "Twitter/X videos can't be fetched. Please download and upload the file directly.",
+		"twitch.tv":      "Twitch streams/clips can't be fetched. Please download and upload the file directly.",
+		"netflix.com":    "Netflix videos are DRM-protected and cannot be downloaded.",
+		"hulu.com":       "Hulu videos are DRM-protected and cannot be downloaded.",
+		"disneyplus.com": "Disney+ videos are DRM-protected and cannot be downloaded.",
+		"primevideo.com": "Amazon Prime Video is DRM-protected and cannot be downloaded.",
+		"reddit.com":     "Reddit-hosted videos can't be fetched. Please download and upload the file directly.",
+	};
+	const blockedDomainWarning = (() => {
+		if (mode !== "url" || !url.trim()) return null;
+		try {
+			const hostname = new URL(url.trim()).hostname.replace(/^www\./, "");
+			return BLOCKED_DOMAINS[hostname] ?? null;
+		} catch {
+			return null;
+		}
+	})();
+
 	const canSubmit =
 		selectedLangs.length > 0 &&
-		(mode === "url" ? url.trim() && !isUrlInvalid : file) &&
+		(mode === "url" ? url.trim() && !isUrlInvalid && !blockedDomainWarning : file) &&
 		!busy;
 	const detectedDurationSec =
 		mode === "file"
@@ -4313,6 +4342,8 @@ function TranslateForm({
 						))}
 					</div>
 
+				{/* blocked-domain warning — shown inline after URL input */}
+
 					{/* Input area */}
 					{mode === "url" ? (
 						<>
@@ -4368,32 +4399,75 @@ function TranslateForm({
 								</span>
 							</div>
 						)}
-						{showUrlVideoPreview && (
-								<div
+					{/* Blocked-domain warning */}
+					{blockedDomainWarning && (
+						<div
+							style={{
+								display: "flex",
+								alignItems: "flex-start",
+								gap: 8,
+								marginBottom: 12,
+								padding: "10px 12px",
+								borderRadius: 10,
+								background: "rgba(239,68,68,0.07)",
+								border: "1px solid rgba(239,68,68,0.22)",
+							}}
+						>
+							<AlertCircle
+								size={15}
+								style={{ color: "#ef4444", flexShrink: 0, marginTop: 1 }}
+							/>
+							<div>
+								<p
 									style={{
-										marginBottom: 12,
-										padding: "10px 12px 12px",
-										borderRadius: 14,
-										border: "1px solid rgba(0,0,0,0.06)",
+										fontSize: 12.5,
+										fontWeight: 600,
+										color: "#b91c1c",
+										marginBottom: 2,
 									}}
 								>
-									<p
-										style={{
-											fontSize: 12,
-											color: "#71717a",
-											marginBottom: 8,
-										}}
-									>
-										Video preview
-									</p>
-									<OriginalSourceMediaPreview
-										url={trimmedUrlForPreview}
-										footerLabel="Preview"
-										showLinkBar={false}
-										youtubeDurationHintSec={youtubeDurationSec}
-									/>
-								</div>
-							)}
+									This URL can't be translated
+								</p>
+								<p
+									style={{
+										fontSize: 12,
+										color: "#b91c1c",
+										lineHeight: 1.5,
+										margin: 0,
+									}}
+								>
+									{blockedDomainWarning}
+								</p>
+							</div>
+						</div>
+					)}
+
+					{showUrlVideoPreview && !blockedDomainWarning && (
+							<div
+								style={{
+									marginBottom: 12,
+									padding: "10px 12px 12px",
+									borderRadius: 14,
+									border: "1px solid rgba(0,0,0,0.06)",
+								}}
+							>
+								<p
+									style={{
+										fontSize: 12,
+										color: "#71717a",
+										marginBottom: 8,
+									}}
+								>
+									Video preview
+								</p>
+								<OriginalSourceMediaPreview
+									url={trimmedUrlForPreview}
+									footerLabel="Preview"
+									showLinkBar={false}
+									youtubeDurationHintSec={youtubeDurationSec}
+								/>
+							</div>
+						)}
 						</>
 					) : (
 						<>
