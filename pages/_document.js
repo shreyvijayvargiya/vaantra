@@ -12,9 +12,11 @@ export default function Document() {
 	return (
 		<Html lang="en">
 			<Head>
-				<meta charSet="utf-8" />
-				<meta name="viewport" content="width=device-width, initial-scale=1" />
-				<link rel="icon" href="/favicon.ico" />
+			<meta charSet="utf-8" />
+			<meta name="viewport" content="width=device-width, initial-scale=1" />
+			<link rel="icon" href="/aantra-logo.png" type="image/png" />
+			<link rel="shortcut icon" href="/aantra-logo.png" type="image/png" />
+			<link rel="apple-touch-icon" href="/aantra-logo.png" />
 
 				{/* Base meta tags - route-specific tags are handled in lib/modules/SEO */}
 				<meta name="theme-color" content="#18181b" />
