@@ -2753,6 +2753,7 @@ function VoiceTranslateForm({
 	const [showCreditsModal, setShowCreditsModal] = useState(false);
 	const [creditsModalDetail, setCreditsModalDetail] = useState(null);
 	const submitAbortRef = useRef(null);
+	const submitInFlightRef = useRef(false); // synchronous double-submit guard
 	const [selectedVoiceId, setSelectedVoiceId] = useState(() => {
 		try {
 			return localStorage.getItem(TTS_VOICE_STORAGE_KEY) || GEMINI_DEFAULT_VOICE_ID;
@@ -2950,6 +2951,7 @@ function VoiceTranslateForm({
 	}, [uploadedFile, recordedBlob]);
 
 	const submit = async () => {
+		if (submitInFlightRef.current) return; // prevent double-submit before re-render
 		const langs = [...selectedLangs].sort();
 		if (langs.length === 0) {
 			setErr("Select at least one target language.");
@@ -2994,6 +2996,7 @@ function VoiceTranslateForm({
 			}
 		}
 
+		submitInFlightRef.current = true;
 		setBusy(true);
 		setErr(null);
 		setResults(null);
@@ -3107,6 +3110,7 @@ function VoiceTranslateForm({
 			setErr(e?.message || "Something went wrong");
 		} finally {
 			submitAbortRef.current = null;
+			submitInFlightRef.current = false;
 			setBusy(false);
 		}
 	};
@@ -3782,6 +3786,7 @@ function TranslateForm({
 	const fileRef = useRef();
 	const localTrackRef = useRef(null);
 	const submitAbortRef = useRef(null);
+	const submitInFlightRef = useRef(false); // synchronous double-submit guard
 	localTrackRef.current = localTrack;
 	const [showCreditsModal, setShowCreditsModal] = useState(false);
 	const [creditsModalDetail, setCreditsModalDetail] = useState(null);
@@ -3976,6 +3981,7 @@ function TranslateForm({
 	}, [localTrack?.groupId, onJobCreated]);
 
 	const submit = async () => {
+		if (submitInFlightRef.current) return; // prevent double-submit before re-render
 		if (
 			selectedLangs.length === 0 ||
 			(mode === "url" && !url.trim()) ||
@@ -3986,6 +3992,7 @@ function TranslateForm({
 			onRequireAuth();
 			return;
 		}
+		submitInFlightRef.current = true;
 
 		const durationSecForCredits =
 			mode === "file"
@@ -4146,6 +4153,7 @@ function TranslateForm({
 			console.error(e);
 		} finally {
 			submitAbortRef.current = null;
+			submitInFlightRef.current = false;
 			setBusy(false);
 		}
 	};
@@ -6483,6 +6491,7 @@ export function Dashboard({ user, onLogout }) {
 	const [detailTab, setDetailTab] = useState(0);
 	const [stagedLangs, setStagedLangs] = useState([]);
 	const [appendBusy, setAppendBusy] = useState(null);
+	const appendBusyRef = useRef(null); // synchronous guard — mirrors appendBusy state
 	const [appendVoiceId, setAppendVoiceId] = useState(() => {
 		try {
 			return localStorage.getItem(TTS_VOICE_STORAGE_KEY) || GEMINI_DEFAULT_VOICE_ID;
@@ -6871,10 +6880,25 @@ export function Dashboard({ user, onLogout }) {
 
 	const submitAppendTranslation = useCallback(
 		async (lang) => {
+			// synchronous guard — prevents double-click before React re-render
+			if (appendBusyRef.current) return;
 			if (!selected?.id || !appendSourceVideoUrl) {
 				toast.error("Source video URL is missing.");
 				return;
 			}
+			// dedup: skip if an active (non-failed, non-cancelled) job already exists for this lang
+			const alreadyActive = (selected?.jobs || []).some(
+				(j) =>
+					j.lang === lang &&
+					j.status !== "error" &&
+					j.status !== "cancelled" &&
+					!String(j.id).startsWith("failed_"),
+			);
+			if (alreadyActive) {
+				toast.error(`A translation for ${lang} is already running or done.`);
+				return;
+			}
+			appendBusyRef.current = lang;
 			setAppendBusy(lang);
 			const postUrl = getTranslatePostUrl();
 			const groupId = selected.id;
@@ -6944,33 +6968,48 @@ export function Dashboard({ user, onLogout }) {
 					out.type = inferTranslationGroupType(out);
 					return out;
 				});
-				setStagedLangs((prev) => prev.filter((l) => l !== lang));
-				setDetailTab(selected.jobs?.length || 0);
-			} catch (e) {
-				toast.error(e?.message || "Something went wrong.");
-			} finally {
-				setAppendBusy(null);
-			}
-		},
-		[
-			selected?.id,
-			selected?.jobs?.length,
-			appendSourceVideoUrl,
-			appendVoiceId,
-			patchVideos,
-			scheduleUpsertGroup,
-		],
-	);
+			setStagedLangs((prev) => prev.filter((l) => l !== lang));
+			setDetailTab(selected.jobs?.length || 0);
+		} catch (e) {
+			toast.error(e?.message || "Something went wrong.");
+		} finally {
+			appendBusyRef.current = null;
+			setAppendBusy(null);
+		}
+	},
+	[
+		selected?.id,
+		selected?.jobs?.length,
+		appendSourceVideoUrl,
+		appendVoiceId,
+		patchVideos,
+		scheduleUpsertGroup,
+	],
+);
 
-	const submitAppendVoiceTranslation = useCallback(
-		async (lang) => {
-			if (!selected?.id || !appendVoiceSourceText) {
-				toast.error(
-					"Original text is not available. Include text with your voice submission to add more languages.",
-				);
-				return;
-			}
-			setAppendBusy(lang);
+const submitAppendVoiceTranslation = useCallback(
+	async (lang) => {
+		if (appendBusyRef.current) return; // synchronous double-submit guard
+		if (!selected?.id || !appendVoiceSourceText) {
+			toast.error(
+				"Original text is not available. Include text with your voice submission to add more languages.",
+			);
+			return;
+		}
+		// dedup: skip if an active job already exists for this lang
+		const alreadyActive = (selected?.jobs || []).some(
+			(j) =>
+				j.lang === lang &&
+				j.status !== "error" &&
+				j.status !== "cancelled" &&
+				!String(j.id).startsWith("failed_"),
+		);
+		if (alreadyActive) {
+			toast.error(`A translation for ${lang} is already running or done.`);
+			return;
+		}
+		appendBusyRef.current = lang;
+		setAppendBusy(lang);
 			const url = getVoiceTranslatePostUrl();
 			const groupId = selected.id;
 			try {
@@ -7067,21 +7106,22 @@ export function Dashboard({ user, onLogout }) {
 				queueMicrotask(() => {
 					void billUsageForJobId(newJobId, groupId);
 				});
-			} catch (e) {
-				toast.error(e?.message || "Something went wrong.");
-			} finally {
-				setAppendBusy(null);
-			}
-		},
-		[
-			selected?.id,
-			selected?.jobs?.length,
-			appendVoiceSourceText,
-			appendVoiceId,
-			patchVideos,
-			scheduleUpsertGroup,
-			billUsageForJobId,
-		],
+		} catch (e) {
+			toast.error(e?.message || "Something went wrong.");
+		} finally {
+			appendBusyRef.current = null;
+			setAppendBusy(null);
+		}
+	},
+	[
+		selected?.id,
+		selected?.jobs?.length,
+		appendVoiceSourceText,
+		appendVoiceId,
+		patchVideos,
+		scheduleUpsertGroup,
+		billUsageForJobId,
+	],
 	);
 
 	const cancelJob = useCallback(
@@ -7110,6 +7150,7 @@ export function Dashboard({ user, onLogout }) {
 
 	const retryFailedTranslation = useCallback(
 		async (failedJob) => {
+			if (appendBusyRef.current) return; // synchronous double-click guard
 			if (
 				!selected?.id ||
 				!failedJob?.lang ||
@@ -7128,6 +7169,7 @@ export function Dashboard({ user, onLogout }) {
 			}
 			const lang = failedJob.lang;
 			const oldJobId = failedJob.id;
+			appendBusyRef.current = lang;
 			setAppendBusy(lang);
 			const postUrl = getTranslatePostUrl();
 			const groupId = selected.id;
@@ -7211,20 +7253,21 @@ export function Dashboard({ user, onLogout }) {
 					out.type = inferTranslationGroupType(out);
 					return out;
 				});
-			} catch (e) {
-				toast.error(e?.message || "Something went wrong.");
-			} finally {
-				setAppendBusy(null);
-			}
-		},
-		[
-			selected?.id,
-			appendSourceVideoUrl,
-			isVoiceTranslationGroup,
-			patchVideos,
-			scheduleUpsertGroup,
-		],
-	);
+		} catch (e) {
+			toast.error(e?.message || "Something went wrong.");
+		} finally {
+			appendBusyRef.current = null;
+			setAppendBusy(null);
+		}
+	},
+	[
+		selected?.id,
+		appendSourceVideoUrl,
+		isVoiceTranslationGroup,
+		patchVideos,
+		scheduleUpsertGroup,
+	],
+);
 
 	const updateJob = useCallback(
 		(patch) => {
