@@ -6045,6 +6045,56 @@ function Landing() {
 							translatedLang="Hindi"
 						/>
 
+						{/* Example 5: Hindi YouTube Short → Gujarati */}
+						<TranslationExampleRow
+							originalEmbed={<StudioYouTubePreview videoId="KuvcTqrCH1M" />}
+							originalFlag="🇮🇳"
+							originalLang="Hindi"
+							translatedSrc="https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYqgfJYGTcNFXaAfpdvowzZ8rPbR4sULIEukT1"
+							translatedFlag="🇮🇳"
+							translatedLang="Gujarati"
+						/>
+
+						{/* Example 6: Hindi YouTube Short → Bengali */}
+						<TranslationExampleRow
+							originalEmbed={<StudioYouTubePreview videoId="KuvcTqrCH1M" />}
+							originalFlag="🇮🇳"
+							originalLang="Hindi"
+							translatedSrc="https://b4fcijccdw.ufs.sh/f/mVUSE925dTRY92WDdCzjmW83AwLxrBOKas0hEe26Ygzp1Tiu"
+							translatedFlag="🇧🇩"
+							translatedLang="Bengali"
+						/>
+
+						{/* Example 7: Hindi YouTube Short → Chinese */}
+						<TranslationExampleRow
+							originalEmbed={<StudioYouTubePreview videoId="KuvcTqrCH1M" />}
+							originalFlag="🇮🇳"
+							originalLang="Hindi"
+							translatedSrc="https://b4fcijccdw.ufs.sh/f/mVUSE925dTRY75On1N2RDzBi58KpSPwFyd3nEsAbXGrZc7TY"
+							translatedFlag="🇨🇳"
+							translatedLang="Chinese"
+						/>
+
+						{/* Example 8: Hindi YouTube Short → Filipino */}
+						<TranslationExampleRow
+							originalEmbed={<StudioYouTubePreview videoId="KuvcTqrCH1M" />}
+							originalFlag="🇮🇳"
+							originalLang="Hindi"
+							translatedSrc="https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYPlTg6nLVfsZTC1GIbAa9pwgzENvjVoJ4eS0O"
+							translatedFlag="🇵🇭"
+							translatedLang="Filipino"
+						/>
+
+						{/* Example 9: Hindi YouTube Short → Japanese */}
+						<TranslationExampleRow
+							originalEmbed={<StudioYouTubePreview videoId="KuvcTqrCH1M" />}
+							originalFlag="🇮🇳"
+							originalLang="Hindi"
+							translatedSrc="https://b4fcijccdw.ufs.sh/f/mVUSE925dTRYTKKyamAH176gEYQeNBjdHDc0La8obWsmZnJP"
+							translatedFlag="🇯🇵"
+							translatedLang="Japanese"
+						/>
+
 					</div>
 				</div>
 			</section>
