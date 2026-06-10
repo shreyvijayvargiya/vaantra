@@ -4,6 +4,7 @@ import { onAuthStateChange } from "../../lib/api/auth";
 
 const NAV_LINKS = [
 	{ label: "Features", hash: "features" },
+	{ label: "Examples", href: "/examples" },
 	{ label: "Benefits", hash: "benefits" },
 	{ label: "Pricing", hash: "pricing" },
 	{ label: "FAQ", hash: "faq" },
@@ -79,10 +80,10 @@ export default function LandingMarketingNav({ onSignIn }) {
 					justifyContent: "flex-end",
 				}}
 			>
-				{NAV_LINKS.map(({ label, hash }) => (
+				{NAV_LINKS.map(({ label, hash, href }) => (
 					<Link
-						key={hash}
-						href={`/#${hash}`}
+						key={hash || href}
+						href={href || `/#${hash}`}
 						className="md-show"
 						style={{
 							fontSize: 14,
