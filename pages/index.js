@@ -5138,17 +5138,19 @@ function Landing() {
 								maxWidth: 620,
 							}}
 						>
-							<span style={{ display: "block" }}>
-								Boost your content <GrowthBadgePillLight /> with
+							<span style={{ display: "flex", justifyContent: "flex-start", alignItems:"center" }}>
+								Upload audio or video, or <GrowthBadgePillLight />
 							</span>
-							<span style={{ display: "block" }}>
-								seamless <HeroSparkleIcon /> audio/video
+							<span style={{ display: "flex", justifyContent: "flex-start", alignItems:"center" }}>
+								record directly, <HeroSparkleIcon /> and
 							</span>
-							<span style={{ display: "block" }}>
-								translation to uplift your  <HeroSocialCluster />
+							<span style={{ display: "flex", justifyContent: "flex-start", alignItems:"center" }}>
+								get translated <span className="ml-2 p-1 rounded-full bg-emerald-100">
+									<Languages />
+								</span>
 							</span>
-							<span style={{ display: "block" }}>
-								social game
+							<span style={{ display: "flex", justifyContent: "flex-start", alignItems:"center" }}>
+								audio MP3 + text output in minutes
 							</span>
 						</motion.h2>
 
@@ -5162,7 +5164,7 @@ function Landing() {
 							}}
 						>
 							<p style={{ margin: "0 0 16px" }}>
-								aantraa translates audio, text, and video into 90+ languages with
+								Aantraa translates audio, text, and video into 90+ languages with
 								voice-cloned output.
 							</p>
 						</div>

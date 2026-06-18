@@ -31,12 +31,6 @@ export function GrowthBadgePillLight() {
 			>
 				<TrendingUp size={12} color="#fff" strokeWidth={2.5} aria-hidden />
 			</span>
-			<span
-				className="sans"
-				style={{ fontWeight: 700, fontSize: "0.82em", color: "#18181b" }}
-			>
-				24X
-			</span>
 		</span>
 	);
 }
