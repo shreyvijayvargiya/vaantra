@@ -6,6 +6,10 @@ const nextConfig = {
 	reactStrictMode: true,
 	poweredByHeader: false,
 	compress: true,
+	env: {
+		NEXT_PUBLIC_OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+		NEXT_PUBLIC_UPLOADTHING_TOKEN: process.env.UPLOADTHING_SECRET,
+	},
 	images: {
 		domains: [
 			"lh3.googleusercontent.com",
