@@ -55,6 +55,8 @@ import {
 	Search,
 	ExternalLink,
 	Paperclip,
+	Receipt,
+	ChevronUp,
 } from "lucide-react";
 
 const INITIAL_PROJECTS = [
@@ -338,16 +340,21 @@ const REQ_STATUS_CONFIG = {
 };
 
 const NAV_ITEMS = [
+	{ id: "editor", label: "Proposal editor", icon: FileText },
+	{ id: "invoice", label: "Invoice", icon: Receipt },
+	{ id: "more", label: "Pro tools", icon: Layers },
+];
+
+const ADVANCED_NAV_ITEMS = [
 	{ id: "overview", label: "Overview", icon: LayoutDashboard },
-	{ id: "ai", label: "AI Generate", icon: Wand2 },
-	{ id: "brief", label: "Project brief", icon: Target },
+	{ id: "ai", label: "AI chat", icon: Wand2 },
+	{ id: "brief", label: "Brief", icon: Target },
 	{ id: "requirements", label: "Requirements", icon: ClipboardList },
 	{ id: "deliverables", label: "Deliverables", icon: Layers },
 	{ id: "milestones", label: "Milestones", icon: Flag },
 	{ id: "media", label: "Media", icon: Mic },
 	{ id: "conversations", label: "Conversations", icon: MessageSquare },
 	{ id: "payments", label: "Payments", icon: Wallet },
-	{ id: "proposal", label: "Proposals", icon: FileText },
 ];
 
 const MEDIA_TYPE_CONFIG = {
@@ -839,8 +846,14 @@ const callOpenRouter = async (chatMessages, systemPrompt) => {
 };
 
 const DEFAULT_PAYMENT_DETAILS = {
+	senderType: "individual",
+	senderName: "",
 	businessName: "Your Studio",
 	businessEmail: "hello@yourstudio.com",
+	phone: "",
+	address: "",
+	website: "",
+	taxId: "",
 	bankName: "",
 	accountName: "",
 	accountNumber: "",
@@ -855,6 +868,17 @@ const DEFAULT_PAYMENT_DETAILS = {
 	paddleLink: "",
 	otherPayments: [],
 };
+
+const DEFAULT_INVOICE_META = {
+	invoiceNumber: "INV-001",
+	issueDate: "",
+	dueDate: "",
+	notes: "Thank you for your business. Payment is due within 14 days of invoice date.",
+	taxRate: 0,
+};
+
+const inputClass =
+	"w-full px-3 py-2 text-sm border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-100";
 
 const PAYMENT_LINK_FIELDS = [
 	{ key: "stripeLink", label: "Stripe", placeholder: "https://buy.stripe.com/..." },
@@ -918,8 +942,14 @@ const generateProposalPDF = ({
 	if (categoryConfig?.label) addLines(`Category: ${categoryConfig.label}`, 10);
 	addLines(`Prepared for: ${project.client}`, 11);
 	addLines(`Contact: ${project.contact}${project.email ? ` · ${project.email}` : ""}`, 10);
-	if (paymentDetails.businessName) addLines(`From: ${paymentDetails.businessName}`, 10);
+	const fromLabel =
+		paymentDetails.senderType === "individual"
+			? paymentDetails.senderName || paymentDetails.businessName
+			: paymentDetails.businessName;
+	if (fromLabel) addLines(`From: ${fromLabel}`, 10);
 	if (paymentDetails.businessEmail) addLines(`Email: ${paymentDetails.businessEmail}`, 10);
+	if (paymentDetails.phone) addLines(`Phone: ${paymentDetails.phone}`, 10);
+	if (paymentDetails.address) addLines(`Address: ${paymentDetails.address}`, 10);
 
 	y += 2;
 	addLines(`Investment: ${formatCurrency(totalCost, currency)}   |   Timeline: ${proposal?.weeks ?? project.weeks} weeks   |   ${totalHours} hours`, 10, "bold");
@@ -1017,6 +1047,136 @@ const generateProposalPDF = ({
 
 	doc.save(`proposal-${proposal?.shareId || project.shareId}.pdf`);
 };
+
+const generateInvoicePDF = ({
+	project,
+	proposal,
+	lineItems,
+	paymentDetails,
+	currency = "USD",
+	invoiceMeta,
+	subtotal,
+	taxAmount,
+	total,
+}) => {
+	const doc = new jsPDF();
+	const margin = 20;
+	const pageWidth = doc.internal.pageSize.getWidth();
+	const contentWidth = pageWidth - margin * 2;
+	let y = margin;
+
+	const addLines = (text, size = 10, style = "normal") => {
+		doc.setFontSize(size);
+		doc.setFont("helvetica", style);
+		doc.setTextColor(24, 24, 27);
+		const lines = doc.splitTextToSize(String(text), contentWidth);
+		doc.text(lines, margin, y);
+		y += lines.length * size * 0.42 + 4;
+	};
+
+	doc.setFontSize(22);
+	doc.setFont("helvetica", "bold");
+	doc.text("INVOICE", margin, y);
+	doc.setFontSize(9);
+	doc.setFont("helvetica", "normal");
+	doc.text(`#${invoiceMeta.invoiceNumber}`, pageWidth - margin, y - 2, { align: "right" });
+	doc.text(invoiceMeta.issueDate || todayLabel(), pageWidth - margin, y + 4, { align: "right" });
+	y += 16;
+
+	const fromLabel =
+		paymentDetails.senderType === "individual"
+			? paymentDetails.senderName || paymentDetails.businessName
+			: paymentDetails.businessName;
+
+	addLines("BILL FROM", 9, "bold");
+	if (fromLabel) addLines(fromLabel, 11, "bold");
+	if (paymentDetails.businessEmail) addLines(paymentDetails.businessEmail, 10);
+	if (paymentDetails.phone) addLines(paymentDetails.phone, 10);
+	if (paymentDetails.address) addLines(paymentDetails.address, 10);
+	if (paymentDetails.taxId) addLines(`Tax ID: ${paymentDetails.taxId}`, 9);
+
+	y += 4;
+	addLines("BILL TO", 9, "bold");
+	addLines(project.client, 11, "bold");
+	addLines(project.contact, 10);
+	if (project.email) addLines(project.email, 10);
+
+	y += 6;
+	if (invoiceMeta.dueDate) addLines(`Due date: ${invoiceMeta.dueDate}`, 10, "bold");
+	if (proposal?.title) addLines(`Re: ${proposal.title}`, 10);
+
+	y += 4;
+	doc.setFillColor(244, 244, 245);
+	doc.rect(margin, y, contentWidth, 8, "F");
+	doc.setFontSize(9);
+	doc.setFont("helvetica", "bold");
+	doc.text("Description", margin + 2, y + 5.5);
+	doc.text("Qty", margin + contentWidth * 0.55, y + 5.5);
+	doc.text("Rate", margin + contentWidth * 0.7, y + 5.5);
+	doc.text("Amount", pageWidth - margin - 2, y + 5.5, { align: "right" });
+	y += 12;
+
+	doc.setFont("helvetica", "normal");
+	lineItems.forEach((line) => {
+		const amount = line.hours * line.rate;
+		const desc = line.description ? `${line.label} — ${line.description}` : line.label;
+		const descLines = doc.splitTextToSize(desc, contentWidth * 0.5);
+		doc.text(descLines, margin + 2, y);
+		doc.text(String(line.hours), margin + contentWidth * 0.55, y);
+		doc.text(formatCurrency(line.rate, currency), margin + contentWidth * 0.7, y);
+		doc.text(formatCurrency(amount, currency), pageWidth - margin - 2, y, { align: "right" });
+		y += Math.max(descLines.length * 4.5, 8);
+	});
+
+	y += 6;
+	doc.text(`Subtotal: ${formatCurrency(subtotal, currency)}`, pageWidth - margin, y, { align: "right" });
+	y += 6;
+	if (invoiceMeta.taxRate > 0) {
+		doc.text(`Tax (${invoiceMeta.taxRate}%): ${formatCurrency(taxAmount, currency)}`, pageWidth - margin, y, {
+			align: "right",
+		});
+		y += 6;
+	}
+	doc.setFont("helvetica", "bold");
+	doc.text(`Total due: ${formatCurrency(total, currency)}`, pageWidth - margin, y, { align: "right" });
+	y += 12;
+
+	doc.setFont("helvetica", "normal");
+	doc.setFontSize(9);
+	if (invoiceMeta.notes) addLines(invoiceMeta.notes, 9);
+
+	if (paymentDetails.bankName || paymentDetails.stripeLink || paymentDetails.upiId) {
+		y += 4;
+		addLines("PAYMENT DETAILS", 10, "bold");
+		if (paymentDetails.bankName) addLines(`Bank: ${paymentDetails.bankName}`, 9);
+		if (paymentDetails.accountNumber) addLines(`Account: ${paymentDetails.accountNumber}`, 9);
+		if (paymentDetails.upiId) addLines(`UPI: ${paymentDetails.upiId}`, 9);
+		if (paymentDetails.stripeLink) addLines(`Pay online: ${paymentDetails.stripeLink}`, 9);
+	}
+
+	doc.save(`invoice-${invoiceMeta.invoiceNumber}.pdf`);
+};
+
+function EditorSection({ title, children, defaultOpen = true, badge }) {
+	const [open, setOpen] = useState(defaultOpen);
+
+	return (
+		<div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
+			<button
+				type="button"
+				onClick={() => setOpen((v) => !v)}
+				className="w-full flex items-center justify-between gap-3 px-5 py-3.5 bg-zinc-50/80 border-b border-zinc-100 hover:bg-zinc-50 transition-colors text-left"
+			>
+				<div className="flex items-center gap-2">
+					<h2 className="text-sm font-semibold text-zinc-900">{title}</h2>
+					{badge}
+				</div>
+				{open ? <ChevronUp className="w-4 h-4 text-zinc-400" /> : <ChevronDown className="w-4 h-4 text-zinc-400" />}
+			</button>
+			{open && <div className="p-5">{children}</div>}
+		</div>
+	);
+}
 
 function SignaturePad({ onSignatureChange }) {
 	const canvasRef = useRef(null);
@@ -1234,7 +1394,9 @@ const PreviewPage = () => {
 	const [projects, setProjects] = useState(INITIAL_PROJECTS);
 	const [activeProjectId, setActiveProjectId] = useState("p1");
 	const [activeProposalId, setActiveProposalId] = useState("prop-p1-1");
-	const [activeTab, setActiveTab] = useState("overview");
+	const [activeTab, setActiveTab] = useState("editor");
+	const [advancedSubTab, setAdvancedSubTab] = useState("overview");
+	const [showAiPanel, setShowAiPanel] = useState(true);
 	const [requirements, setRequirements] = useState(INITIAL_REQUIREMENTS);
 	const [techStack, setTechStack] = useState(INITIAL_TECH_STACK);
 	const [conversations, setConversations] = useState(INITIAL_CONVERSATIONS);
@@ -1262,6 +1424,10 @@ const PreviewPage = () => {
 	const [newLineForm, setNewLineForm] = useState({ label: "", description: "", hours: 8, rate: 95 });
 	const [newMilestoneForm, setNewMilestoneForm] = useState({ title: "", due: "" });
 	const [paymentDetails, setPaymentDetails] = useState(DEFAULT_PAYMENT_DETAILS);
+	const [invoiceMeta, setInvoiceMeta] = useState(() => ({
+		...DEFAULT_INVOICE_META,
+		issueDate: todayLabel(),
+	}));
 	const [clientSignatures, setClientSignatures] = useState({});
 	const [pendingSignature, setPendingSignature] = useState(null);
 	const [signerName, setSignerName] = useState("");
@@ -1309,7 +1475,7 @@ const PreviewPage = () => {
 
 	const selectProject = (projectId) => {
 		setActiveProjectId(projectId);
-		setActiveTab("overview");
+		setActiveTab("editor");
 		setMediaSearch("");
 		const list = proposals[projectId] || [];
 		if (list.length) setActiveProposalId(list[list.length - 1].id);
@@ -1390,7 +1556,7 @@ const PreviewPage = () => {
 		setActiveProposalId(newProposal.id);
 		setNewProposalTitle("");
 		setShowNewProposalModal(false);
-		setActiveTab("proposal");
+		setActiveTab("editor");
 	};
 
 	const handleDeleteProposal = (proposalId) => {
@@ -1471,7 +1637,7 @@ const PreviewPage = () => {
 
 		setActiveProjectId(id);
 		setActiveProposalId(firstProposal.id);
-		setActiveTab("overview");
+		setActiveTab("editor");
 		setShowNewProjectModal(false);
 		setNewProjectForm(EMPTY_PROJECT_FORM);
 	};
@@ -1614,6 +1780,66 @@ const PreviewPage = () => {
 				customFields: { ...(prev[activeProjectId]?.customFields || {}), [key]: value },
 			},
 		}));
+	};
+
+	const updateProjectField = (field, value) => {
+		setProjects((prev) => prev.map((p) => (p.id === activeProjectId ? { ...p, [field]: value } : p)));
+	};
+
+	const handleUpdateRequirement = (reqId, field, value) => {
+		setRequirements((prev) => ({
+			...prev,
+			[activeProjectId]: (prev[activeProjectId] || []).map((r) =>
+				r.id === reqId ? { ...r, [field]: value } : r,
+			),
+		}));
+	};
+
+	const handleDeleteRequirement = (reqId) => {
+		setRequirements((prev) => ({
+			...prev,
+			[activeProjectId]: (prev[activeProjectId] || []).filter((r) => r.id !== reqId),
+		}));
+	};
+
+	const handleUpdateDeliverable = (techId, field, value) => {
+		setTechStack((prev) => ({
+			...prev,
+			[activeProjectId]: (prev[activeProjectId] || []).map((t) =>
+				t.id === techId ? { ...t, [field]: value } : t,
+			),
+		}));
+	};
+
+	const handleDeleteDeliverable = (techId) => {
+		setTechStack((prev) => ({
+			...prev,
+			[activeProjectId]: (prev[activeProjectId] || []).filter((t) => t.id !== techId),
+		}));
+	};
+
+	const invoiceSubtotal = projectLines.reduce((sum, l) => sum + l.hours * l.rate, 0);
+	const invoiceTaxAmount = invoiceSubtotal * ((Number(invoiceMeta.taxRate) || 0) / 100);
+	const invoiceTotal = invoiceSubtotal + invoiceTaxAmount;
+
+	const handleDownloadInvoice = () => {
+		if (!project) return;
+		generateInvoicePDF({
+			project,
+			proposal: activeProposal,
+			lineItems: projectLines,
+			paymentDetails,
+			currency: projectCurrency,
+			invoiceMeta,
+			subtotal: invoiceSubtotal,
+			taxAmount: invoiceTaxAmount,
+			total: invoiceTotal,
+		});
+	};
+
+	const openMoreTab = (subTab) => {
+		setActiveTab("more");
+		setAdvancedSubTab(subTab);
 	};
 
 	const updateProjectCategory = (categoryId) => {
@@ -1924,10 +2150,11 @@ const PreviewPage = () => {
 					role: "assistant",
 					content:
 						data.assistantMessage ||
-						"Done! I filled your brief, requirements, deliverables, milestones, and proposal. Review the Proposals tab.",
+						"Done! Your proposal is filled in below — review and edit anything before sending.",
 				},
 			]);
-			setActiveTab("proposal");
+			setActiveTab("editor");
+			setShowAiPanel(false);
 		} catch (err) {
 			setAiError(err.message || "AI generation failed.");
 		} finally {
@@ -2019,8 +2246,8 @@ const PreviewPage = () => {
 	return (
 		<>
 			<Head>
-				<title>Proposely — Client Project Tracker</title>
-				<meta name="description" content="Track client requirements, tech decisions, and share approval drafts." />
+				<title>Proposely — AI Proposal Generator</title>
+				<meta name="description" content="Create client proposals in minutes with AI. Edit, share, and invoice on one page." />
 			</Head>
 
 			<div className="min-h-screen bg-zinc-50 text-zinc-900">
@@ -2038,19 +2265,11 @@ const PreviewPage = () => {
 						<div className="flex items-center gap-2">
 							<button
 								type="button"
-								onClick={() => setActiveTab("ai")}
-								className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-700 bg-zinc-50 hover:bg-zinc-100 rounded-xl transition-colors"
-							>
-								<Wand2 className="w-4 h-4" />
-								<span className="hidden sm:inline">AI Generate</span>
-							</button>
-							<button
-								type="button"
 								onClick={openClientPreview}
 								className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-xl transition-colors"
 							>
 								<Eye className="w-4 h-4" />
-								<span className="hidden sm:inline">Client view</span>
+								<span className="hidden sm:inline">Preview</span>
 							</button>
 							<button
 								type="button"
@@ -2063,10 +2282,10 @@ const PreviewPage = () => {
 							<button
 								type="button"
 								onClick={() => setShowShareModal(true)}
-								className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-zinc-200 hover:bg-zinc-800 rounded-xl transition-colors"
+								className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-zinc-900 hover:bg-zinc-800 rounded-xl transition-colors"
 							>
 								<Share2 className="w-4 h-4" />
-								<span className="hidden sm:inline">Share draft</span>
+								<span className="hidden sm:inline">Share</span>
 							</button>
 						</div>
 					</div>
@@ -2076,7 +2295,7 @@ const PreviewPage = () => {
 					{/* Project sidebar */}
 					<aside className="hidden lg:flex flex-col w-56 shrink-0 border-r border-zinc-200 bg-white min-h-[calc(100vh-3.5rem)]">
 						<div className="p-4 border-b border-zinc-100">
-							<p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-3">Projects</p>
+							<p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-3">Your proposals</p>
 							<div className="space-y-1">
 								{projects.map((p) => (
 									<button
@@ -2100,12 +2319,12 @@ const PreviewPage = () => {
 								className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-zinc-500 border border-dashed border-zinc-200 rounded-xl hover:border-zinc-300 hover:text-zinc-700 transition-colors"
 							>
 								<Plus className="w-3.5 h-3.5" />
-								New project
+								New proposal
 							</button>
 						</div>
 
 						<nav className="p-4 flex-1">
-							<p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-3">Workspace</p>
+							<p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-3">Create</p>
 							<div className="space-y-0.5">
 								{NAV_ITEMS.map((item) => {
 									const Icon = item.icon;
@@ -2116,12 +2335,17 @@ const PreviewPage = () => {
 											onClick={() => setActiveTab(item.id)}
 											className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-colors ${
 												activeTab === item.id
-													? "bg-zinc-200 text-zinc-800 font-medium"
+													? "bg-zinc-900 text-white font-medium"
 													: "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
 											}`}
 										>
 											<Icon className="w-4 h-4" />
 											{item.label}
+											{item.id === "more" && (
+												<span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-500 font-medium">
+													Pro
+												</span>
+											)}
 										</button>
 									);
 								})}
@@ -2130,7 +2354,7 @@ const PreviewPage = () => {
 					</aside>
 
 					{/* Mobile tab bar */}
-					<div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-zinc-200 px-1 py-1.5 flex overflow-x-auto gap-0.5">
+					<div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-zinc-200 px-2 py-1.5 flex justify-around gap-1">
 						{NAV_ITEMS.map((item) => {
 							const Icon = item.icon;
 							return (
@@ -2138,8 +2362,8 @@ const PreviewPage = () => {
 									key={item.id}
 									type="button"
 									onClick={() => setActiveTab(item.id)}
-									className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl text-[10px] transition-colors shrink-0 ${
-										activeTab === item.id ? "text-zinc-900 font-medium" : "text-zinc-400"
+									className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-[10px] transition-colors flex-1 ${
+										activeTab === item.id ? "text-zinc-900 font-medium bg-zinc-100" : "text-zinc-400"
 									}`}
 								>
 									<Icon className="w-4 h-4" />
@@ -2171,14 +2395,748 @@ const PreviewPage = () => {
 								type="button"
 								onClick={() => setShowNewProjectModal(true)}
 								className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full border border-dashed border-zinc-300 text-zinc-500 hover:border-zinc-400 hover:text-zinc-700 transition-colors"
-								aria-label="New project"
+								aria-label="New proposal"
 							>
 								<Plus className="w-4 h-4" />
 							</button>
 						</div>
 
+						{/* ── ONE-PAGE PROPOSAL EDITOR (MVP) ── */}
+						{activeTab === "editor" && (
+							<div className="space-y-5">
+								<div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+									<div>
+										<h1 className="text-2xl font-bold text-zinc-900">Create proposal</h1>
+										<p className="text-sm text-zinc-500 mt-1">
+											Describe with AI, edit everything on one page, then share or invoice.
+										</p>
+									</div>
+									<div className="flex flex-wrap items-center gap-2 shrink-0">
+										<StatusBadge status={activeProposal?.status || "draft"} />
+										<button
+											type="button"
+											onClick={() => setShowNewProposalModal(true)}
+											className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-700 border border-zinc-200 rounded-xl hover:bg-zinc-50"
+										>
+											<Plus className="w-4 h-4" />
+											New version
+										</button>
+									</div>
+								</div>
+
+								{/* AI strip */}
+								<div className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-xl overflow-hidden text-white">
+									<button
+										type="button"
+										onClick={() => setShowAiPanel((v) => !v)}
+										className="w-full flex items-center justify-between px-5 py-3.5 text-left"
+									>
+										<div className="flex items-center gap-2">
+											<Wand2 className="w-5 h-5 text-zinc-300" />
+											<span className="text-sm font-semibold">AI proposal generator</span>
+											<span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-zinc-300">Gemini Flash</span>
+										</div>
+										{showAiPanel ? <ChevronUp className="w-4 h-4 text-zinc-400" /> : <ChevronDown className="w-4 h-4 text-zinc-400" />}
+									</button>
+									{showAiPanel && (
+										<div className="px-5 pb-5 space-y-3 border-t border-white/10">
+											{aiChat.length > 0 && (
+												<div className="max-h-32 overflow-y-auto space-y-2 pt-3 text-sm">
+													{aiChat.slice(-2).map((msg, i) => (
+														<p key={i} className={msg.role === "user" ? "text-zinc-300" : "text-white/90"}>
+															<span className="text-zinc-500 text-xs uppercase">{msg.role}: </span>
+															{msg.content.slice(0, 200)}{msg.content.length > 200 ? "…" : ""}
+														</p>
+													))}
+												</div>
+											)}
+											{aiError && (
+												<p className="text-xs text-red-300 flex items-center gap-1.5">
+													<AlertCircle className="w-3.5 h-3.5" />
+													{aiError}
+												</p>
+											)}
+											<form onSubmit={handleAiGenerate} className="space-y-2">
+												<textarea
+													rows={2}
+													placeholder="Paste call notes or describe the project — client, scope, budget, timeline…"
+													value={aiInput}
+													onChange={(e) => setAiInput(e.target.value)}
+													disabled={aiLoading}
+													className="w-full px-3 py-2 text-sm text-zinc-900 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-300 resize-none disabled:opacity-50"
+												/>
+												<div className="flex items-center justify-between gap-2">
+													<label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-300 border border-white/20 rounded-xl hover:bg-white/10 cursor-pointer">
+														<ImagePlus className="w-3.5 h-3.5" />
+														Images
+														<input type="file" accept="image/*" multiple className="hidden" onChange={handleAiImageUpload} disabled={aiLoading} />
+													</label>
+													<button
+														type="submit"
+														disabled={aiLoading || (!aiInput.trim() && aiPendingImages.length === 0)}
+														className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-zinc-900 bg-white rounded-xl hover:bg-zinc-100 disabled:opacity-50"
+													>
+														{aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+														{aiChat.length === 0 ? "Generate" : "Refine"}
+													</button>
+												</div>
+											</form>
+										</div>
+									)}
+								</div>
+
+								{/* Proposal version picker */}
+								{projectProposals.length > 1 && (
+									<div className="flex gap-2 overflow-x-auto pb-1">
+										{projectProposals.map((prop) => (
+											<button
+												key={prop.id}
+												type="button"
+												onClick={() => setActiveProposalId(prop.id)}
+												className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+													activeProposal?.id === prop.id
+														? "bg-zinc-900 text-white border-zinc-900"
+														: "bg-white text-zinc-600 border-zinc-200"
+												}`}
+											>
+												{prop.title}
+											</button>
+										))}
+									</div>
+								)}
+
+								{/* From / To */}
+								<div className="grid md:grid-cols-2 gap-4">
+									<EditorSection title="From — your details" defaultOpen>
+										<div className="space-y-3">
+											<div className="flex gap-2">
+												{["individual", "company"].map((type) => (
+													<button
+														key={type}
+														type="button"
+														onClick={() => handlePaymentField("senderType", type)}
+														className={`flex-1 px-3 py-2 text-xs font-medium rounded-xl border transition-colors capitalize ${
+															paymentDetails.senderType === type
+																? "bg-zinc-900 text-white border-zinc-900"
+																: "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300"
+														}`}
+													>
+														{type}
+													</button>
+												))}
+											</div>
+											{paymentDetails.senderType === "individual" ? (
+												<input
+													type="text"
+													placeholder="Your full name"
+													value={paymentDetails.senderName}
+													onChange={(e) => handlePaymentField("senderName", e.target.value)}
+													className={inputClass}
+												/>
+											) : (
+												<input
+													type="text"
+													placeholder="Company / studio name"
+													value={paymentDetails.businessName}
+													onChange={(e) => handlePaymentField("businessName", e.target.value)}
+													className={inputClass}
+												/>
+											)}
+											<div className="grid sm:grid-cols-2 gap-3">
+												<input
+													type="email"
+													placeholder="Email"
+													value={paymentDetails.businessEmail}
+													onChange={(e) => handlePaymentField("businessEmail", e.target.value)}
+													className={inputClass}
+												/>
+												<input
+													type="text"
+													placeholder="Phone"
+													value={paymentDetails.phone}
+													onChange={(e) => handlePaymentField("phone", e.target.value)}
+													className={inputClass}
+												/>
+											</div>
+											<input
+												type="text"
+												placeholder="Address (optional)"
+												value={paymentDetails.address}
+												onChange={(e) => handlePaymentField("address", e.target.value)}
+												className={inputClass}
+											/>
+											<div className="grid sm:grid-cols-2 gap-3">
+												<input
+													type="text"
+													placeholder="Website"
+													value={paymentDetails.website}
+													onChange={(e) => handlePaymentField("website", e.target.value)}
+													className={inputClass}
+												/>
+												<input
+													type="text"
+													placeholder="Tax ID / GST (optional)"
+													value={paymentDetails.taxId}
+													onChange={(e) => handlePaymentField("taxId", e.target.value)}
+													className={inputClass}
+												/>
+											</div>
+										</div>
+									</EditorSection>
+
+									<EditorSection title="To — client details" defaultOpen>
+										<div className="space-y-3">
+											<input
+												type="text"
+												placeholder="Proposal title"
+												value={activeProposal?.title || ""}
+												onChange={(e) => updateActiveProposal((p) => ({ ...p, title: e.target.value }))}
+												className={inputClass}
+											/>
+											<input
+												type="text"
+												placeholder="Project name"
+												value={project?.name || ""}
+												onChange={(e) => updateProjectField("name", e.target.value)}
+												className={inputClass}
+											/>
+											<input
+												type="text"
+												placeholder="Client company or name"
+												value={project?.client || ""}
+												onChange={(e) => updateProjectField("client", e.target.value)}
+												className={inputClass}
+											/>
+											<div className="grid sm:grid-cols-2 gap-3">
+												<input
+													type="text"
+													placeholder="Contact person"
+													value={project?.contact || ""}
+													onChange={(e) => updateProjectField("contact", e.target.value)}
+													className={inputClass}
+												/>
+												<input
+													type="email"
+													placeholder="Client email"
+													value={project?.email || ""}
+													onChange={(e) => updateProjectField("email", e.target.value)}
+													className={inputClass}
+												/>
+											</div>
+											<div className="flex flex-wrap gap-2">
+												<select
+													value={project?.category || "other"}
+													onChange={(e) => updateProjectCategory(e.target.value)}
+													className={`${inputClass} w-auto`}
+												>
+													{PROJECT_CATEGORIES.map((cat) => (
+														<option key={cat.id} value={cat.id}>{cat.label}</option>
+													))}
+												</select>
+												<select
+													value={project?.pricingModel || "hourly"}
+													onChange={(e) => updateProjectPricingModel(e.target.value)}
+													className={`${inputClass} w-auto`}
+												>
+													{PRICING_MODELS.map((m) => (
+														<option key={m.id} value={m.id}>{m.label}</option>
+													))}
+												</select>
+												<CurrencyDropdown value={projectCurrency} onChange={handleProjectCurrencyChange} />
+											</div>
+										</div>
+									</EditorSection>
+								</div>
+
+								{/* Brief */}
+								<EditorSection title="Project brief" defaultOpen>
+									<div className="space-y-3">
+										<textarea
+											rows={2}
+											placeholder="Goals — what should this project achieve?"
+											value={projectBrief.goals || ""}
+											onChange={(e) => updateBriefField("goals", e.target.value)}
+											className={`${inputClass} resize-none`}
+										/>
+										<textarea
+											rows={2}
+											placeholder="Target audience"
+											value={projectBrief.targetAudience || ""}
+											onChange={(e) => updateBriefField("targetAudience", e.target.value)}
+											className={`${inputClass} resize-none`}
+										/>
+										<textarea
+											rows={2}
+											placeholder="Deliverables summary"
+											value={projectBrief.deliverablesSummary || ""}
+											onChange={(e) => updateBriefField("deliverablesSummary", e.target.value)}
+											className={`${inputClass} resize-none`}
+										/>
+										<div className="flex items-center gap-3">
+											<label className="text-xs text-zinc-500 shrink-0">Revision rounds</label>
+											<input
+												type="number"
+												min="0"
+												value={projectBrief.revisionRounds ?? 2}
+												onChange={(e) => updateBriefField("revisionRounds", Number(e.target.value))}
+												className="w-20 px-3 py-2 text-sm border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-100"
+											/>
+											<label className="text-xs text-zinc-500 shrink-0 ml-4">Timeline (weeks)</label>
+											<input
+												type="number"
+												min="1"
+												value={activeProposal?.weeks ?? project?.weeks ?? 4}
+												onChange={(e) =>
+													updateActiveProposal((p) => ({ ...p, weeks: Number(e.target.value) || 1 }))
+												}
+												className="w-20 px-3 py-2 text-sm border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-100"
+											/>
+										</div>
+									</div>
+								</EditorSection>
+
+								{/* Scope */}
+								<EditorSection
+									title="Scope of work"
+									badge={
+										<span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-500">
+											{projectReqs.length} items
+										</span>
+									}
+								>
+									<div className="space-y-2">
+										{projectReqs.map((r) => (
+											<div key={r.id} className="flex items-center gap-2 group">
+												<button
+													type="button"
+													onClick={() => handleToggleReqStatus(r.id)}
+													className={`shrink-0 w-5 h-5 rounded-full border flex items-center justify-center ${
+														r.status === "confirmed"
+															? "bg-emerald-500 border-emerald-500 text-white"
+															: "border-zinc-300 text-transparent hover:border-emerald-400"
+													}`}
+												>
+													<Check className="w-3 h-3" />
+												</button>
+												<input
+													type="text"
+													value={r.title}
+													onChange={(e) => handleUpdateRequirement(r.id, "title", e.target.value)}
+													className="flex-1 px-2 py-1.5 text-sm border border-transparent hover:border-zinc-200 focus:border-zinc-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-100"
+												/>
+												<button
+													type="button"
+													onClick={() => handleDeleteRequirement(r.id)}
+													className="p-1 text-zinc-300 hover:text-red-500 opacity-0 group-hover:opacity-100"
+												>
+													<Trash2 className="w-3.5 h-3.5" />
+												</button>
+											</div>
+										))}
+										<form onSubmit={handleAddRequirement} className="flex gap-2 pt-2">
+											<input
+												type="text"
+												placeholder="Add scope item…"
+												value={newReqTitle}
+												onChange={(e) => setNewReqTitle(e.target.value)}
+												className={`${inputClass} flex-1`}
+											/>
+											<button
+												type="submit"
+												className="px-3 py-2 text-sm font-medium text-zinc-700 border border-zinc-200 rounded-xl hover:bg-zinc-50"
+											>
+												<Plus className="w-4 h-4" />
+											</button>
+										</form>
+									</div>
+								</EditorSection>
+
+								{/* Deliverables */}
+								<EditorSection title="Deliverables">
+									<div className="space-y-2">
+										{projectTech.map((t) => (
+											<div key={t.id} className="flex items-center gap-2 group">
+												<input
+													type="text"
+													value={t.name}
+													onChange={(e) => handleUpdateDeliverable(t.id, "name", e.target.value)}
+													className="flex-1 px-2 py-1.5 text-sm border border-transparent hover:border-zinc-200 focus:border-zinc-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-100"
+												/>
+												<input
+													type="text"
+													value={t.role}
+													onChange={(e) => handleUpdateDeliverable(t.id, "role", e.target.value)}
+													placeholder="Role"
+													className="w-28 px-2 py-1.5 text-sm border border-transparent hover:border-zinc-200 focus:border-zinc-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-100"
+												/>
+												<button
+													type="button"
+													onClick={() => handleDeleteDeliverable(t.id)}
+													className="p-1 text-zinc-300 hover:text-red-500 opacity-0 group-hover:opacity-100"
+												>
+													<Trash2 className="w-3.5 h-3.5" />
+												</button>
+											</div>
+										))}
+										<form onSubmit={handleAddTech} className="flex gap-2 pt-2">
+											<input
+												type="text"
+												placeholder="Add deliverable…"
+												value={newTechForm.name}
+												onChange={(e) => setNewTechForm((f) => ({ ...f, name: e.target.value }))}
+												className={`${inputClass} flex-1`}
+											/>
+											<button type="submit" className="px-3 py-2 text-sm border border-zinc-200 rounded-xl hover:bg-zinc-50">
+												<Plus className="w-4 h-4" />
+											</button>
+										</form>
+									</div>
+								</EditorSection>
+
+								{/* Pricing */}
+								<EditorSection
+									title="Pricing"
+									badge={
+										<span className="text-sm font-bold text-zinc-900">{fmt(totalCost)}</span>
+									}
+								>
+									<div className="overflow-x-auto -mx-5 px-5">
+										<table className="w-full text-sm min-w-[560px]">
+											<thead>
+												<tr className="border-b border-zinc-100 text-left">
+													<th className="pb-2 text-xs font-medium text-zinc-500">Item</th>
+													<th className="pb-2 text-xs font-medium text-zinc-500">Description</th>
+													<th className="pb-2 text-xs font-medium text-zinc-500 w-16">Hrs</th>
+													<th className="pb-2 text-xs font-medium text-zinc-500 w-20">Rate</th>
+													<th className="pb-2 text-xs font-medium text-zinc-500 w-24 text-right">Total</th>
+													<th className="w-8" />
+												</tr>
+											</thead>
+											<tbody className="divide-y divide-zinc-50">
+												{projectLines.map((line) => (
+													<tr key={line.id} className="group">
+														<td className="py-1.5 pr-2">
+															<input
+																type="text"
+																value={line.label}
+																onChange={(e) => handleUpdateLineItem(line.id, "label", e.target.value)}
+																className="w-full px-2 py-1 text-sm border border-transparent hover:border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-100"
+															/>
+														</td>
+														<td className="py-1.5 pr-2">
+															<input
+																type="text"
+																value={line.description || ""}
+																onChange={(e) => handleUpdateLineItem(line.id, "description", e.target.value)}
+																className="w-full px-2 py-1 text-sm text-zinc-500 border border-transparent hover:border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-100"
+															/>
+														</td>
+														<td className="py-1.5">
+															<input
+																type="number"
+																min="0"
+																value={line.hours}
+																onChange={(e) => handleUpdateLineItem(line.id, "hours", e.target.value)}
+																className="w-full px-2 py-1 text-sm border border-transparent hover:border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-100"
+															/>
+														</td>
+														<td className="py-1.5">
+															<input
+																type="number"
+																min="0"
+																value={line.rate}
+																onChange={(e) => handleUpdateLineItem(line.id, "rate", e.target.value)}
+																className="w-full px-2 py-1 text-sm border border-transparent hover:border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-100"
+															/>
+														</td>
+														<td className="py-1.5 text-right font-medium whitespace-nowrap">{fmt(line.hours * line.rate)}</td>
+														<td className="py-1.5">
+															<button
+																type="button"
+																onClick={() => handleDeleteLineItem(line.id)}
+																className="p-1 text-zinc-300 hover:text-red-500 opacity-0 group-hover:opacity-100"
+															>
+																<Trash2 className="w-3.5 h-3.5" />
+															</button>
+														</td>
+													</tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+									<form onSubmit={handleAddLineItem} className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-zinc-100">
+										<input
+											type="text"
+											placeholder="Line item"
+											value={newLineForm.label}
+											onChange={(e) => setNewLineForm((f) => ({ ...f, label: e.target.value }))}
+											className={`${inputClass} flex-1 min-w-[120px]`}
+										/>
+										<input
+											type="number"
+											placeholder="Hrs"
+											value={newLineForm.hours}
+											onChange={(e) => setNewLineForm((f) => ({ ...f, hours: e.target.value }))}
+											className="w-20 px-3 py-2 text-sm border border-zinc-200 rounded-xl"
+										/>
+										<input
+											type="number"
+											placeholder="Rate"
+											value={newLineForm.rate}
+											onChange={(e) => setNewLineForm((f) => ({ ...f, rate: e.target.value }))}
+											className="w-24 px-3 py-2 text-sm border border-zinc-200 rounded-xl"
+										/>
+										<button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-zinc-900 rounded-xl hover:bg-zinc-800">
+											Add
+										</button>
+									</form>
+									<div className="flex justify-between items-center mt-4 pt-3 border-t border-zinc-100">
+										<p className="text-xs text-zinc-400">{totalHours} hours · {activeProposal?.weeks ?? project?.weeks} weeks</p>
+										<p className="text-lg font-bold text-zinc-900">{fmt(totalCost)}</p>
+									</div>
+								</EditorSection>
+
+								{/* Payment essentials */}
+								<EditorSection title="Payment details" defaultOpen={false}>
+									<div className="space-y-3">
+										<div className="grid sm:grid-cols-2 gap-3">
+											<input
+												type="text"
+												placeholder="Bank name"
+												value={paymentDetails.bankName}
+												onChange={(e) => handlePaymentField("bankName", e.target.value)}
+												className={inputClass}
+											/>
+											<input
+												type="text"
+												placeholder="Account number"
+												value={paymentDetails.accountNumber}
+												onChange={(e) => handlePaymentField("accountNumber", e.target.value)}
+												className={inputClass}
+											/>
+										</div>
+										<input
+											type="text"
+											placeholder="Stripe / payment link"
+											value={paymentDetails.stripeLink}
+											onChange={(e) => handlePaymentField("stripeLink", e.target.value)}
+											className={inputClass}
+										/>
+										<input
+											type="text"
+											placeholder="UPI ID (optional)"
+											value={paymentDetails.upiId}
+											onChange={(e) => handlePaymentField("upiId", e.target.value)}
+											className={inputClass}
+										/>
+										<button
+											type="button"
+											onClick={() => openMoreTab("payments")}
+											className="text-xs text-zinc-500 hover:text-zinc-700 underline"
+										>
+											More payment options (Pro) →
+										</button>
+									</div>
+								</EditorSection>
+
+								{/* Send CTA */}
+								<div className="bg-zinc-900 text-white rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+									<div>
+										<p className="text-sm font-semibold">Ready to send?</p>
+										<p className="text-xs text-zinc-400 mt-0.5">Share link, PDF, or create an invoice</p>
+									</div>
+									<div className="flex flex-wrap gap-2">
+										<button
+											type="button"
+											onClick={() => setActiveTab("invoice")}
+											className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-zinc-900 bg-white rounded-xl hover:bg-zinc-100"
+										>
+											<Receipt className="w-4 h-4" />
+											Invoice
+										</button>
+										<button
+											type="button"
+											onClick={() => handleDownloadPDF()}
+											className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white border border-white/20 rounded-xl hover:bg-white/10"
+										>
+											<Download className="w-4 h-4" />
+											PDF
+										</button>
+										<button
+											type="button"
+											onClick={() => setShowShareModal(true)}
+											className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-zinc-900 bg-emerald-400 rounded-xl hover:bg-emerald-300"
+										>
+											<Send className="w-4 h-4" />
+											Share
+										</button>
+									</div>
+								</div>
+							</div>
+						)}
+
+						{/* ── INVOICE ── */}
+						{activeTab === "invoice" && (
+							<div className="space-y-6">
+								<div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+									<div>
+										<h1 className="text-2xl font-bold text-zinc-900">Create invoice</h1>
+										<p className="text-sm text-zinc-500 mt-1">
+											Uses your proposal line items and sender details. Download as PDF.
+										</p>
+									</div>
+									<button
+										type="button"
+										onClick={handleDownloadInvoice}
+										className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-zinc-900 rounded-xl hover:bg-zinc-800"
+									>
+										<Download className="w-4 h-4" />
+										Download invoice PDF
+									</button>
+								</div>
+
+								<div className="grid md:grid-cols-2 gap-4">
+									<div className="bg-white border border-zinc-200 rounded-xl p-5 space-y-3">
+										<p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Bill from</p>
+										<p className="text-sm font-semibold text-zinc-900">
+											{paymentDetails.senderType === "individual"
+												? paymentDetails.senderName || paymentDetails.businessName || "—"
+												: paymentDetails.businessName || "—"}
+										</p>
+										<p className="text-sm text-zinc-500">{paymentDetails.businessEmail}</p>
+										<button type="button" onClick={() => setActiveTab("editor")} className="text-xs text-blue-600 hover:underline">
+											Edit in proposal editor →
+										</button>
+									</div>
+									<div className="bg-white border border-zinc-200 rounded-xl p-5 space-y-3">
+										<p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Bill to</p>
+										<p className="text-sm font-semibold text-zinc-900">{project?.client}</p>
+										<p className="text-sm text-zinc-500">{project?.contact} · {project?.email}</p>
+									</div>
+								</div>
+
+								<div className="bg-white border border-zinc-200 rounded-xl p-5 space-y-4">
+									<div className="grid sm:grid-cols-3 gap-3">
+										<div>
+											<label className="block text-xs font-medium text-zinc-500 mb-1">Invoice #</label>
+											<input
+												type="text"
+												value={invoiceMeta.invoiceNumber}
+												onChange={(e) => setInvoiceMeta((m) => ({ ...m, invoiceNumber: e.target.value }))}
+												className={inputClass}
+											/>
+										</div>
+										<div>
+											<label className="block text-xs font-medium text-zinc-500 mb-1">Issue date</label>
+											<input
+												type="text"
+												value={invoiceMeta.issueDate}
+												onChange={(e) => setInvoiceMeta((m) => ({ ...m, issueDate: e.target.value }))}
+												className={inputClass}
+											/>
+										</div>
+										<div>
+											<label className="block text-xs font-medium text-zinc-500 mb-1">Due date</label>
+											<input
+												type="text"
+												placeholder="Apr 15, 2026"
+												value={invoiceMeta.dueDate}
+												onChange={(e) => setInvoiceMeta((m) => ({ ...m, dueDate: e.target.value }))}
+												className={inputClass}
+											/>
+										</div>
+									</div>
+									<div>
+										<label className="block text-xs font-medium text-zinc-500 mb-1">Tax rate (%)</label>
+										<input
+											type="number"
+											min="0"
+											step="0.1"
+											value={invoiceMeta.taxRate}
+											onChange={(e) => setInvoiceMeta((m) => ({ ...m, taxRate: e.target.value }))}
+											className="w-32 px-3 py-2 text-sm border border-zinc-200 rounded-xl"
+										/>
+									</div>
+									<textarea
+										rows={2}
+										placeholder="Notes / payment terms"
+										value={invoiceMeta.notes}
+										onChange={(e) => setInvoiceMeta((m) => ({ ...m, notes: e.target.value }))}
+										className={`${inputClass} resize-none`}
+									/>
+								</div>
+
+								<div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
+									<div className="px-5 py-3 border-b border-zinc-100 bg-zinc-50">
+										<h2 className="text-sm font-semibold text-zinc-900">Line items from proposal</h2>
+									</div>
+									<div className="divide-y divide-zinc-100">
+										{projectLines.length === 0 ? (
+											<p className="px-5 py-8 text-sm text-zinc-400 text-center">Add line items in the proposal editor first.</p>
+										) : (
+											projectLines.map((line) => (
+												<div key={line.id} className="px-5 py-3 flex items-center justify-between gap-4 text-sm">
+													<div>
+														<p className="font-medium text-zinc-900">{line.label}</p>
+														{line.description && <p className="text-xs text-zinc-400">{line.description}</p>}
+													</div>
+													<div className="text-right shrink-0">
+														<p className="text-zinc-600">{line.hours}h × {fmt(line.rate)}</p>
+														<p className="font-medium text-zinc-900">{fmt(line.hours * line.rate)}</p>
+													</div>
+												</div>
+											))
+										)}
+									</div>
+									<div className="px-5 py-4 border-t border-zinc-200 bg-zinc-50 space-y-1 text-sm text-right">
+										<p className="text-zinc-500">Subtotal: {fmt(invoiceSubtotal)}</p>
+										{Number(invoiceMeta.taxRate) > 0 && (
+											<p className="text-zinc-500">Tax ({invoiceMeta.taxRate}%): {fmt(invoiceTaxAmount)}</p>
+										)}
+										<p className="text-lg font-bold text-zinc-900">Total: {fmt(invoiceTotal)}</p>
+									</div>
+								</div>
+							</div>
+						)}
+
+						{/* ── PRO TOOLS ── */}
+						{activeTab === "more" && (
+							<div className="mb-6">
+								<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+									<div>
+										<h1 className="text-2xl font-bold text-zinc-900">Pro tools</h1>
+										<p className="text-sm text-zinc-500 mt-1">Advanced project management — milestones, media, conversations, and more.</p>
+									</div>
+									<span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-medium border border-amber-100">
+										<Lock className="w-3 h-3" />
+										Paid plans
+									</span>
+								</div>
+								<div className="flex gap-2 overflow-x-auto pb-2">
+									{ADVANCED_NAV_ITEMS.map((item) => {
+										const Icon = item.icon;
+										return (
+											<button
+												key={item.id}
+												type="button"
+												onClick={() => setAdvancedSubTab(item.id)}
+												className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+													advancedSubTab === item.id
+														? "bg-zinc-900 text-white border-zinc-900"
+														: "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300"
+												}`}
+											>
+												<Icon className="w-3.5 h-3.5" />
+												{item.label}
+											</button>
+										);
+									})}
+								</div>
+							</div>
+						)}
+
 						{/* ── AI GENERATE ── */}
-						{activeTab === "ai" && (
+						{activeTab === "more" && advancedSubTab === "ai" && (
 							<div className="space-y-6">
 								<div>
 									<h1 className="text-2xl font-bold text-zinc-900 flex items-center gap-2">
@@ -2339,7 +3297,7 @@ const PreviewPage = () => {
 						)}
 
 						{/* ── OVERVIEW ── */}
-						{activeTab === "overview" && (
+						{activeTab === "more" && advancedSubTab === "overview" && (
 							<div className="space-y-6">
 								<div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
 									<div>
@@ -2486,7 +3444,7 @@ const PreviewPage = () => {
 						)}
 
 						{/* ── PROJECT BRIEF ── */}
-						{activeTab === "brief" && (
+						{activeTab === "more" && advancedSubTab === "brief" && (
 							<div className="space-y-6">
 								<div>
 									<h1 className="text-2xl font-bold text-zinc-900">Project brief</h1>
@@ -2618,7 +3576,7 @@ const PreviewPage = () => {
 							</div>
 						)}
 
-						{activeTab === "requirements" && (
+						{activeTab === "more" && advancedSubTab === "requirements" && (
 							<div className="space-y-6">
 								<div>
 									<h1 className="text-2xl font-bold text-zinc-900">Requirements</h1>
@@ -2712,7 +3670,7 @@ const PreviewPage = () => {
 						)}
 
 						{/* ── DELIVERABLES ── */}
-						{activeTab === "deliverables" && (
+						{activeTab === "more" && advancedSubTab === "deliverables" && (
 							<div className="space-y-6">
 								<div>
 									<h1 className="text-2xl font-bold text-zinc-900">{categoryConfig?.deliverablesLabel || "Deliverables"}</h1>
@@ -2796,7 +3754,7 @@ const PreviewPage = () => {
 						)}
 
 						{/* ── MILESTONES ── */}
-						{activeTab === "milestones" && (
+						{activeTab === "more" && advancedSubTab === "milestones" && (
 							<div className="space-y-6">
 								<div>
 									<h1 className="text-2xl font-bold text-zinc-900">Milestones</h1>
@@ -2875,7 +3833,7 @@ const PreviewPage = () => {
 						)}
 
 						{/* ── MEDIA ── */}
-						{activeTab === "media" && (
+						{activeTab === "more" && advancedSubTab === "media" && (
 							<div className="space-y-6">
 								<div>
 									<h1 className="text-2xl font-bold text-zinc-900">Project media</h1>
@@ -3052,7 +4010,7 @@ const PreviewPage = () => {
 						)}
 
 						{/* ── CONVERSATIONS ── */}
-						{activeTab === "conversations" && (
+						{activeTab === "more" && advancedSubTab === "conversations" && (
 							<div className="space-y-6">
 								<div className="flex items-start justify-between gap-4">
 									<div>
@@ -3112,7 +4070,7 @@ const PreviewPage = () => {
 						)}
 
 						{/* ── PAYMENTS ── */}
-						{activeTab === "payments" && (
+						{activeTab === "more" && advancedSubTab === "payments" && (
 							<div className="space-y-6">
 								<div>
 									<h1 className="text-2xl font-bold text-zinc-900">Payment details</h1>
@@ -3280,294 +4238,6 @@ const PreviewPage = () => {
 							</div>
 						)}
 
-						{/* ── PROPOSAL DRAFT ── */}
-						{activeTab === "proposal" && (
-							<div className="space-y-6">
-								<div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-									<div>
-										<h1 className="text-2xl font-bold text-zinc-900">Proposals</h1>
-										<p className="text-sm text-zinc-500 mt-1">
-											Create multiple proposals per project — initial quote, revisions, optional add-ons.
-										</p>
-									</div>
-									<div className="flex flex-wrap gap-2 shrink-0">
-										<button
-											type="button"
-											onClick={() => handleCreateProposal(null, true)}
-											className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-600 border border-zinc-200 rounded-xl hover:bg-zinc-50 transition-colors"
-										>
-											<Copy className="w-4 h-4" />
-											Duplicate as revision
-										</button>
-										<button
-											type="button"
-											onClick={() => setShowNewProposalModal(true)}
-											className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-zinc-900 hover:bg-zinc-800 rounded-xl transition-colors"
-										>
-											<Plus className="w-4 h-4" />
-											New proposal
-										</button>
-									</div>
-								</div>
-
-								{/* Proposal picker */}
-								<div className="flex gap-2 overflow-x-auto pb-1">
-									{projectProposals.map((prop) => (
-										<button
-											key={prop.id}
-											type="button"
-											onClick={() => setActiveProposalId(prop.id)}
-											className={`shrink-0 text-left px-4 py-3 rounded-xl border transition-colors min-w-[160px] ${
-												activeProposal?.id === prop.id
-													? "bg-zinc-900 text-zinc-200 border-zinc-200"
-													: "bg-white text-zinc-700 border-zinc-200 hover:border-zinc-300"
-											}`}
-										>
-											<p className="text-sm font-medium truncate">{prop.title}</p>
-											
-										</button>
-									))}
-								</div>
-
-								{activeProposal && (
-									<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-zinc-200 rounded-xl px-4 py-3">
-										<div>
-											<p className="text-sm font-semibold text-zinc-900">{activeProposal.title}</p>
-											<p className="text-xs text-zinc-400">Created {activeProposal.createdAt} · {activeProposal.shareId}</p>
-										</div>
-										<div className="flex items-center gap-2">
-											<StatusBadge status={activeProposal.status} />
-											{projectProposals.length > 1 && (
-												<button
-													type="button"
-													onClick={() => handleDeleteProposal(activeProposal.id)}
-													className="p-1.5 text-zinc-400 hover:text-red-500 transition-colors"
-													title="Delete proposal"
-												>
-													<Trash2 className="w-4 h-4" />
-												</button>
-											)}
-										</div>
-									</div>
-								)}
-
-								<div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
-									<div className="px-5 py-3 border-b border-zinc-100 bg-zinc-50 flex flex-wrap items-center justify-between gap-3">
-										<h2 className="text-sm font-semibold text-zinc-900">Line items</h2>
-										<div className="flex items-center gap-3">
-											<CurrencyDropdown value={projectCurrency} onChange={handleProjectCurrencyChange} />
-											<label className="flex items-center gap-2 text-xs text-zinc-500">
-												Weeks
-												<input
-													type="number"
-													min="1"
-													value={activeProposal?.weeks ?? 4}
-													onChange={(e) =>
-														updateActiveProposal((p) => ({
-															...p,
-															weeks: Number(e.target.value) || 1,
-														}))
-													}
-													className="w-14 px-2 py-1 text-sm border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-100"
-												/>
-											</label>
-										</div>
-									</div>
-									<div className="overflow-x-auto">
-										<table className="w-full text-sm min-w-[640px]">
-											<thead>
-												<tr className="border-b border-zinc-100 text-left">
-													<th className="px-4 py-2.5 text-xs font-medium text-zinc-500 w-[22%]">Title</th>
-													<th className="px-4 py-2.5 text-xs font-medium text-zinc-500 w-[34%]">Description</th>
-													<th className="px-4 py-2.5 text-xs font-medium text-zinc-500 w-[12%]">Hours</th>
-													<th className="px-4 py-2.5 text-xs font-medium text-zinc-500 w-[14%]">Rate</th>
-													<th className="px-4 py-2.5 text-xs font-medium text-zinc-500 w-[14%] text-right">Total</th>
-													<th className="w-10" />
-												</tr>
-											</thead>
-											<tbody className="divide-y divide-zinc-100">
-												{projectLines.length === 0 ? (
-													<tr>
-														<td colSpan={6} className="px-4 py-8 text-center text-sm text-zinc-400">
-															No line items yet. Add one below.
-														</td>
-													</tr>
-												) : (
-													projectLines.map((line) => (
-														<tr key={line.id} className="group hover:bg-zinc-50/50">
-															<td className="px-4 py-2 align-top">
-																<input
-																	type="text"
-																	value={line.label}
-																	onChange={(e) => handleUpdateLineItem(line.id, "label", e.target.value)}
-																	placeholder="Line item title"
-																	className="w-full px-2 py-1.5 text-sm border border-transparent hover:border-zinc-200 focus:border-zinc-300 rounded-xl bg-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-100"
-																/>
-															</td>
-															<td className="px-4 py-2 align-top">
-																<input
-																	type="text"
-																	value={line.description || ""}
-																	onChange={(e) => handleUpdateLineItem(line.id, "description", e.target.value)}
-																	placeholder="Short description"
-																	className="w-full px-2 py-1.5 text-sm text-zinc-600 border border-transparent hover:border-zinc-200 focus:border-zinc-300 rounded-xl bg-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-100"
-																/>
-															</td>
-															<td className="px-4 py-2 align-top">
-																<input
-																	type="number"
-																	min="0"
-																	step="0.5"
-																	value={line.hours}
-																	onChange={(e) => handleUpdateLineItem(line.id, "hours", e.target.value)}
-																	className="w-full px-2 py-1.5 text-sm border border-transparent hover:border-zinc-200 focus:border-zinc-300 rounded-xl bg-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-100"
-																/>
-															</td>
-															<td className="px-4 py-2 align-top">
-																<input
-																	type="number"
-																	min="0"
-																	value={line.rate}
-																	onChange={(e) => handleUpdateLineItem(line.id, "rate", e.target.value)}
-																	className="w-full px-2 py-1.5 text-sm border border-transparent hover:border-zinc-200 focus:border-zinc-300 rounded-xl bg-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-100"
-																/>
-															</td>
-															<td className="px-4 py-2 align-top text-right font-medium text-zinc-900 whitespace-nowrap pt-3">
-																{fmt(line.hours * line.rate)}
-															</td>
-															<td className="px-2 py-2 align-top">
-																<button
-																	type="button"
-																	onClick={() => handleDeleteLineItem(line.id)}
-																	className="p-1.5 text-zinc-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all rounded-xl hover:bg-red-50"
-																	title="Remove line"
-																>
-																	<Trash2 className="w-4 h-4" />
-																</button>
-															</td>
-														</tr>
-													))
-												)}
-											</tbody>
-										</table>
-									</div>
-									<div className="px-5 py-4 border-t border-zinc-200 bg-zinc-50 flex items-center justify-between">
-										<div>
-											<p className="text-sm font-semibold text-zinc-900">Total</p>
-											<p className="text-xs text-zinc-400">{totalHours} hours · ~{activeProposal?.weeks ?? project?.weeks} weeks delivery</p>
-										</div>
-										<p className="text-xl font-bold text-zinc-900">{fmt(totalCost)}</p>
-									</div>
-								</div>
-
-								<form onSubmit={handleAddLineItem} className="bg-white border border-zinc-200 rounded-xl p-4 space-y-3">
-									<div className="grid sm:grid-cols-2 gap-3">
-										<input
-											type="text"
-											placeholder="Title (e.g. API integration)"
-											value={newLineForm.label}
-											onChange={(e) => setNewLineForm((f) => ({ ...f, label: e.target.value }))}
-											className="px-3 py-2 text-sm border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-100"
-										/>
-										<input
-											type="text"
-											placeholder="Description (optional)"
-											value={newLineForm.description}
-											onChange={(e) => setNewLineForm((f) => ({ ...f, description: e.target.value }))}
-											className="px-3 py-2 text-sm border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-100"
-										/>
-									</div>
-									<div className="flex flex-col sm:flex-row gap-3">
-										<input
-											type="number"
-											min="0"
-											step="0.5"
-											placeholder="Hours"
-											value={newLineForm.hours}
-											onChange={(e) => setNewLineForm((f) => ({ ...f, hours: e.target.value }))}
-											className="w-full sm:w-24 px-3 py-2 text-sm border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-100"
-										/>
-										<input
-											type="number"
-											min="0"
-											placeholder={`Rate (${getCurrencyMeta(projectCurrency).symbol})`}
-											value={newLineForm.rate}
-											onChange={(e) => setNewLineForm((f) => ({ ...f, rate: e.target.value }))}
-											className="w-full sm:w-28 px-3 py-2 text-sm border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-100"
-										/>
-										<button
-											type="submit"
-											className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-zinc-900 hover:bg-zinc-800 rounded-xl transition-colors sm:ml-auto"
-										>
-											<Plus className="w-4 h-4" />
-											Add line
-										</button>
-									</div>
-								</form>
-
-								{/* Included in scope summary */}
-								<div className="bg-white border border-zinc-200 rounded-xl p-5">
-									<h2 className="text-sm font-semibold text-zinc-900 mb-3">What&apos;s included</h2>
-									<ul className="space-y-2">
-										{projectReqs
-											.filter((r) => r.status === "confirmed" && r.category !== "out")
-											.map((r) => (
-												<li key={r.id} className="flex items-start gap-2 text-sm text-zinc-600">
-													<CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-													{r.title}
-												</li>
-											))}
-									</ul>
-									{projectReqs.some((r) => r.category === "nice" && r.status === "proposed") && (
-										<div className="mt-4 pt-4 border-t border-zinc-100">
-											<p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-2">Optional add-ons</p>
-											<ul className="space-y-2">
-												{projectReqs
-													.filter((r) => r.category === "nice" && r.status === "proposed")
-													.map((r) => (
-														<li key={r.id} className="flex items-start gap-2 text-sm text-zinc-500">
-															<HelpCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-															{r.title}
-															{r.hours > 0 && <span className="text-xs text-zinc-400">(+{r.hours}h)</span>}
-														</li>
-													))}
-											</ul>
-										</div>
-									)}
-								</div>
-
-								{/* Share CTA */}
-								<div className="bg-zinc-200 text-zinc-800 rounded-xl p-5 space-y-4">
-									<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-										<div>
-											<p className="text-sm font-semibold">Ready to send?</p>
-											<p className="text-xs text-zinc-400 mt-0.5">
-												Share link, PDF with signature field, and all payment options in one package.
-											</p>
-										</div>
-										<div className="flex flex-wrap gap-2 shrink-0">
-											<button
-												type="button"
-												onClick={() => handleDownloadPDF()}
-												className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-zinc-900 bg-white rounded-xl hover:bg-zinc-100 transition-colors"
-											>
-												<Download className="w-4 h-4" />
-												Download PDF
-											</button>
-											<button
-												type="button"
-												onClick={() => setShowShareModal(true)}
-												className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white text-zinc-900 rounded-xl hover:bg-zinc-100 transition-colors"
-											>
-												<Share2 className="w-4 h-4" />
-												Share link
-											</button>
-										</div>
-									</div>
-									<PaymentMethodsSummary paymentDetails={paymentDetails} compact />
-								</div>
-							</div>
-						)}
 					</main>
 				</div>
 
@@ -3871,8 +4541,8 @@ const PreviewPage = () => {
 									<Plus className="w-5 h-5 text-zinc-600" />
 								</div>
 								<div>
-									<h3 className="text-lg font-semibold text-zinc-900">New project</h3>
-									<p className="text-xs text-zinc-500">Start tracking a new client conversation</p>
+									<h3 className="text-lg font-semibold text-zinc-900">New proposal</h3>
+									<p className="text-xs text-zinc-500">Start blank — fill with AI or edit on the editor page</p>
 								</div>
 							</div>
 
@@ -3993,7 +4663,7 @@ const PreviewPage = () => {
 										type="submit"
 										className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-zinc-200 rounded-xl hover:bg-zinc-800 transition-colors"
 									>
-										Create project
+										Create proposal
 									</button>
 								</div>
 							</form>
