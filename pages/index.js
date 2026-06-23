@@ -12,6 +12,14 @@ import StudioVideoPlayer from "../app/components/StudioVideoPlayer";
 import StudioYouTubePreview from "../app/components/StudioYouTubePreview";
 import TranslationExamplesSection from "../app/components/TranslationExamplesSection";
 import HomePage from "../app/components/Home";
+import VideoToolsTabBar from "../lib/ui/VideoToolsTabBar";
+import VideoCaptionPanel from "../lib/ui/VideoCaptionPanel";
+import ViralClipCutPanel from "../lib/ui/ViralClipCutPanel";
+import VideoToolsStatusProgress from "../lib/ui/VideoToolsStatusProgress";
+import VideoCaptionJobResult from "../lib/ui/VideoCaptionJobResult";
+import ViralClipsJobResult from "../lib/ui/ViralClipsJobResult";
+import { fetchCaptionJobOnce, fetchClipJobOnce } from "../lib/videoToolsJob";
+import { startCaptionJob } from "../lib/videoToolsApi";
 import { onAuthStateChange } from "../lib/api/auth";
 import {
 	deleteTranslationGroupDoc,
@@ -73,6 +81,7 @@ import {
 	extractVoiceTranslateBatchResponse,
 	transcribeAudioBlob,
 } from "../lib/translateApi";
+import { LANGS, LANG_GROUPS, flagForLanguageName, languageNameToApiCode } from "../lib/utils/languages";
 import {
 	Upload,
 	Globe,
@@ -120,199 +129,6 @@ const CONTACT_EMAIL = "shreyvijayvargiya26@gmail.com";
 /** Dashboard video file upload cap */
 const VIDEO_UPLOAD_MAX_MB = 500;
 const VIDEO_UPLOAD_MAX_BYTES = VIDEO_UPLOAD_MAX_MB * 1024 * 1024;
-
-// ─── Language list ──────────────────────────────────────────────────────────
-const LANGS = [
-	"English",
-	"Spanish",
-	"French",
-	"Hindi",
-	"Italian",
-	"German",
-	"Polish",
-	"Portuguese",
-	"Chinese",
-	"Japanese",
-	"Dutch",
-	"Turkish",
-	"Korean",
-	"Danish",
-	"Arabic",
-	"Romanian",
-	"Mandarin",
-	"Filipino",
-	"Swedish",
-	"Indonesian",
-	"Ukrainian",
-	"Greek",
-	"Czech",
-	"Bulgarian",
-	"Malay",
-	"Slovak",
-	"Croatian",
-	"Tamil",
-	"Finnish",
-	"Russian",
-	"Vietnamese",
-	"Afrikaans (South Africa)",
-	"Albanian (Albania)",
-	"Amharic (Ethiopia)",
-	"Arabic (Egypt)",
-	"Arabic (Saudi Arabia)",
-	"Arabic (United Arab Emirates)",
-	"Armenian (Armenia)",
-	"Bangla (Bangladesh)",
-	"Bengali (India)",
-	"Catalan",
-	"Chinese (Mandarin, Simplified)",
-	"Chinese (Cantonese, Traditional)",
-	"Chinese (Taiwanese Mandarin, Traditional)",
-	"Croatian (Croatia)",
-	"Czech (Czechia)",
-	"Danish (Denmark)",
-	"Dutch (Netherlands)",
-	"Dutch (Belgium)",
-	"English (United States)",
-	"English (UK)",
-	"English (India)",
-	"Filipino (Philippines)",
-	"Finnish (Finland)",
-	"French (France)",
-	"French (Canada)",
-	"German (Germany)",
-	"German (Austria)",
-	"Greek (Greece)",
-	"Gujarati (India)",
-	"Hebrew (Israel)",
-	"Hindi (India)",
-	"Hungarian (Hungary)",
-	"Indonesian (Indonesia)",
-	"Italian (Italy)",
-	"Japanese (Japan)",
-	"Kannada (India)",
-	"Korean (Korea)",
-	"Malay (Malaysia)",
-	"Malayalam (India)",
-	"Marathi (India)",
-	"Norwegian Bokmål (Norway)",
-	"Persian (Iran)",
-	"Polish (Poland)",
-	"Portuguese (Brazil)",
-	"Portuguese (Portugal)",
-	"Romanian (Romania)",
-	"Russian (Russia)",
-	"Spanish (Spain)",
-	"Spanish (Mexico)",
-	"Spanish (United States)",
-	"Swedish (Sweden)",
-	"Tamil (India)",
-	"Telugu (India)",
-	"Thai (Thailand)",
-	"Turkish (Türkiye)",
-	"Ukrainian (Ukraine)",
-	"Urdu (India)",
-	"Vietnamese (Vietnam)",
-	"Welsh (United Kingdom)",
-];
-
-// ─── Language → Continent mapping ────────────────────────────────────────────
-const LANG_CONTINENT_MAP = {
-	// Asia
-	Chinese: "Asia", Japanese: "Asia", Korean: "Asia", Filipino: "Asia",
-	Indonesian: "Asia", Malay: "Asia", Tamil: "Asia", Vietnamese: "Asia",
-	Mandarin: "Asia", Hindi: "Asia",
-	"Bangla (Bangladesh)": "Asia",
-	"Bengali (India)": "Asia",
-	"Chinese (Mandarin, Simplified)": "Asia",
-	"Chinese (Cantonese, Traditional)": "Asia",
-	"Chinese (Taiwanese Mandarin, Traditional)": "Asia",
-	"Filipino (Philippines)": "Asia",
-	"Gujarati (India)": "Asia",
-	"Hindi (India)": "Asia",
-	"Indonesian (Indonesia)": "Asia",
-	"Japanese (Japan)": "Asia",
-	"Kannada (India)": "Asia",
-	"Korean (Korea)": "Asia",
-	"Malay (Malaysia)": "Asia",
-	"Malayalam (India)": "Asia",
-	"Marathi (India)": "Asia",
-	"Persian (Iran)": "Asia",
-	"Tamil (India)": "Asia",
-	"Telugu (India)": "Asia",
-	"Thai (Thailand)": "Asia",
-	"Urdu (India)": "Asia",
-	"Vietnamese (Vietnam)": "Asia",
-	"Armenian (Armenia)": "Asia",
-	// Europe
-	English: "Europe", Spanish: "Europe", French: "Europe", Italian: "Europe",
-	German: "Europe", Polish: "Europe", Portuguese: "Europe", Dutch: "Europe",
-	Danish: "Europe", Romanian: "Europe", Swedish: "Europe", Ukrainian: "Europe",
-	Greek: "Europe", Czech: "Europe", Bulgarian: "Europe", Slovak: "Europe",
-	Croatian: "Europe", Finnish: "Europe", Russian: "Europe", Turkish: "Europe",
-	Catalan: "Europe",
-	"Albanian (Albania)": "Europe",
-	"Catalan": "Europe",
-	"Croatian (Croatia)": "Europe",
-	"Czech (Czechia)": "Europe",
-	"Danish (Denmark)": "Europe",
-	"Dutch (Belgium)": "Europe",
-	"Dutch (Netherlands)": "Europe",
-	"English (UK)": "Europe",
-	"Finnish (Finland)": "Europe",
-	"French (France)": "Europe",
-	"German (Austria)": "Europe",
-	"German (Germany)": "Europe",
-	"Greek (Greece)": "Europe",
-	"Hungarian (Hungary)": "Europe",
-	"Italian (Italy)": "Europe",
-	"Norwegian Bokmål (Norway)": "Europe",
-	"Polish (Poland)": "Europe",
-	"Portuguese (Portugal)": "Europe",
-	"Romanian (Romania)": "Europe",
-	"Russian (Russia)": "Europe",
-	"Spanish (Spain)": "Europe",
-	"Swedish (Sweden)": "Europe",
-	"Turkish (Türkiye)": "Europe",
-	"Ukrainian (Ukraine)": "Europe",
-	"Welsh (United Kingdom)": "Europe",
-	// Americas
-	"English (United States)": "Americas",
-	"French (Canada)": "Americas",
-	"Portuguese (Brazil)": "Americas",
-	"Spanish (Mexico)": "Americas",
-	"Spanish (United States)": "Americas",
-	// Africa
-	"Afrikaans (South Africa)": "Africa",
-	"Amharic (Ethiopia)": "Africa",
-	// Middle East
-	Arabic: "Middle East",
-	"Arabic (Egypt)": "Middle East",
-	"Arabic (Saudi Arabia)": "Middle East",
-	"Arabic (United Arab Emirates)": "Middle East",
-	"Hebrew (Israel)": "Middle East",
-};
-
-const CONTINENT_ORDER = ["Asia", "Europe", "Americas", "Africa", "Middle East"];
-
-/** Pre-sorted groups used by the language picker when no search query is active. */
-const LANG_GROUPS = (() => {
-	const buckets = {};
-	for (const c of CONTINENT_ORDER) buckets[c] = [];
-	const other = [];
-	for (const lang of LANGS) {
-		const c = LANG_CONTINENT_MAP[lang];
-		if (c && buckets[c]) buckets[c].push(lang);
-		else other.push(lang);
-	}
-	for (const c of CONTINENT_ORDER) buckets[c].sort((a, b) => a.localeCompare(b));
-	other.sort((a, b) => a.localeCompare(b));
-	return [
-		...CONTINENT_ORDER
-			.filter((c) => buckets[c].length > 0)
-			.map((c) => ({ continent: c, langs: buckets[c] })),
-		...(other.length ? [{ continent: "Other", langs: other }] : []),
-	];
-})();
 
 // ─── Gemini TTS voice catalog (hardcoded) ────────────────────────────────────
 const GEMINI_VOICES = [
@@ -364,126 +180,6 @@ const SPOTLIGHT_TARGET_LANGS = [
 	"Chinese",
 ];
 
-/** Flag emoji for language label (best-effort by name) */
-function flagForLanguageName(name) {
-	if (!name) return "🌐";
-	if (LANG_FLAG_EXACT[name]) return LANG_FLAG_EXACT[name];
-	const n = name.toLowerCase();
-	if (n.includes("welsh")) return "🇬🇧";
-	if (
-		n.includes("english (india)") ||
-		(n.includes("bengali") && n.includes("india"))
-	)
-		return "🇮🇳";
-	if (n.includes("hindi")) return "🇮🇳";
-	if (
-		n.includes("english (uk)") ||
-		(n.includes("united kingdom") && n.includes("english"))
-	)
-		return "🇬🇧";
-	if (n.includes("english (united states)") || n.includes("english (us)"))
-		return "🇺🇸";
-	if (n.startsWith("english")) return "🇬🇧";
-	if (n.includes("spanish"))
-		return n.includes("mexico")
-			? "🇲🇽"
-			: n.includes("united states")
-				? "🇪🇸"
-				: "🇪🇸";
-	if (n.includes("french"))
-		return n.includes("canada") ? "🇨🇦" : n.includes("france") ? "🇫🇷" : "🇫🇷";
-	if (n.includes("german")) return n.includes("austria") ? "🇦🇹" : "🇩🇪";
-	if (n.includes("italian")) return "🇮🇹";
-	if (n.includes("portuguese")) return n.includes("brazil") ? "🇧🇷" : "🇵🇹";
-	if (n.includes("dutch")) return n.includes("belgium") ? "🇧🇪" : "🇳🇱";
-	if (n.includes("polish")) return "🇵🇱";
-	if (n.includes("russian")) return "🇷🇺";
-	if (n.includes("ukrainian")) return "🇺🇦";
-	if (n.includes("chinese"))
-		return n.includes("taiwan") ? "🇹🇼" : n.includes("cantonese") ? "🇭🇰" : "🇨🇳";
-	if (n.includes("mandarin")) return "🇨🇳";
-	if (n.includes("japanese")) return "🇯🇵";
-	if (n.includes("korean")) return "🇰🇷";
-	if (n.includes("arabic"))
-		return n.includes("egypt")
-			? "🇪🇬"
-			: n.includes("saudi")
-				? "🇸🇦"
-				: n.includes("uae")
-					? "🇦🇪"
-					: "🇸🇦";
-	if (n.includes("hindi")) return "🇮🇳";
-	if (n.includes("turkish")) return "🇹🇷";
-	if (n.includes("vietnamese")) return "🇻🇳";
-	if (n.includes("thai")) return "🇹🇭";
-	if (n.includes("indonesian")) return "🇮🇩";
-	if (n.includes("filipino") || n.includes("tagalog")) return "🇵🇭";
-	if (n.includes("swedish")) return "🇸🇪";
-	if (n.includes("norwegian")) return "🇳🇴";
-	if (n.includes("danish")) return "🇩🇰";
-	if (n.includes("finnish")) return "🇫🇮";
-	if (n.includes("greek")) return "🇬🇷";
-	if (n.includes("hebrew")) return "🇮🇱";
-	if (n.includes("persian") || n.includes("farsi")) return "🇮🇷";
-	if (n.includes("romanian")) return "🇷🇴";
-	if (n.includes("czech")) return "🇨🇿";
-	if (n.includes("hungarian")) return "🇭🇺";
-	if (n.includes("croatian")) return "🇭🇷";
-	if (n.includes("slovak")) return "🇸🇰";
-	if (n.includes("bulgarian")) return "🇧🇬";
-	if (n.includes("tamil")) return "🇮🇳";
-	if (n.includes("telugu")) return "🇮🇳";
-	if (n.includes("malayalam")) return "🇮🇳";
-	if (n.includes("kannada")) return "🇮🇳";
-	if (n.includes("marathi")) return "🇮🇳";
-	if (n.includes("gujarati")) return "🇮🇳";
-	if (n.includes("urdu")) return "🇵🇰";
-	if (n.includes("bengali")) return "🇧🇩";
-	if (n.includes("bangla")) return "🇧🇩";
-	if (n.includes("malay")) return "🇲🇾";
-	if (n.includes("afrikaans")) return "🇿🇦";
-	if (n.includes("albanian")) return "🇦🇱";
-	if (n.includes("amharic")) return "🇪🇹";
-	if (n.includes("armenian")) return "🇦🇲";
-	if (n.includes("catalan")) return "🇪🇸";
-	if (n.includes("latin america")) return "🌐";
-	return "🌐";
-}
-
-const LANG_FLAG_EXACT = {
-	English: "🇬🇧",
-	Spanish: "🇪🇸",
-	French: "🇫🇷",
-	Hindi: "🇮🇳",
-	Italian: "🇮🇹",
-	German: "🇩🇪",
-	Polish: "🇵🇱",
-	Portuguese: "🇵🇹",
-	Chinese: "🇨🇳",
-	Japanese: "🇯🇵",
-	Dutch: "🇳🇱",
-	Turkish: "🇹🇷",
-	Korean: "🇰🇷",
-	Danish: "🇩🇰",
-	Arabic: "🇸🇦",
-	Romanian: "🇷🇴",
-	Mandarin: "🇨🇳",
-	Filipino: "🇵🇭",
-	Swedish: "🇸🇪",
-	Indonesian: "🇮🇩",
-	Ukrainian: "🇺🇦",
-	Greek: "🇬🇷",
-	Czech: "🇨🇿",
-	Bulgarian: "🇧🇬",
-	Malay: "🇲🇾",
-	Slovak: "🇸🇰",
-	Croatian: "🇭🇷",
-	Tamil: "🇮🇳",
-	Finnish: "🇫🇮",
-	Russian: "🇷🇺",
-	Vietnamese: "🇻🇳",
-};
-
 function aggregateJobStatus(jobs) {
 	if (!jobs || !jobs.length) return "queued";
 	if (jobs.some((j) => j.status === "error")) return "error";
@@ -493,6 +189,8 @@ function aggregateJobStatus(jobs) {
 
 function sidebarTitle(v) {
 	if (v.label && String(v.label).trim()) return v.label.trim();
+	if (v.type === "caption") return "AI Captions";
+	if (v.type === "clips") return "Viral Clips";
 	const jobs = v.jobs || [];
 	if (jobs.length === 0) return "Translation";
 	if (jobs.length === 1) return jobs[0].lang || "Translation";
@@ -3150,66 +2848,16 @@ function NewTranslationPanel({
 	showTabs = true,
 	usageMinutesUsed,
 	usageMinutesCredited,
+	requireAuthOnSubmit = false,
+	onRequireAuth,
 }) {
 	const [internalTab, setInternalTab] = useState("video");
 	const tab = controlledTab ?? internalTab;
 	const setTab = onTabChange ?? setInternalTab;
-	const tabBtn = (id, label, Icon) => (
-		<button
-			key={id}
-			type="button"
-			onClick={() => setTab(id)}
-			style={{
-				flex: 1,
-				minWidth: 160,
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				gap: 9,
-				padding: "11px 14px",
-				borderRadius: 11,
-				fontSize: 13.5,
-				fontWeight: 600,
-				border:
-					tab === id
-						? "1px solid rgba(234,88,12,0.35)"
-						: "1px solid rgba(0,0,0,0.06)",
-				background:
-					tab === id
-						? "linear-gradient(180deg, rgba(234,88,12,0.14), rgba(234,88,12,0.08))"
-						: "#fff",
-				color: tab === id ? "#c2410c" : "#71717a",
-				cursor: "pointer",
-				boxShadow:
-					tab === id
-						? "0 4px 14px rgba(234,88,12,0.1)"
-						: "0 1px 2px rgba(0,0,0,0.03)",
-				transition: "all 0.2s ease",
-			}}
-		>
-			{Icon ? <Icon size={16} /> : null}
-			{label}
-		</button>
-	);
 	return (
 		<>
 			{showTabs && (
-				<div
-					style={{
-						display: "grid",
-						gridTemplateColumns: "1fr 1fr",
-						gap: 8,
-						marginBottom: 14,
-						flexWrap: "wrap",
-						padding: 5,
-						background: "rgba(0,0,0,0.03)",
-						border: "1px solid rgba(0,0,0,0.06)",
-						borderRadius: 14,
-					}}
-				>
-					{tabBtn("video", "Translate video", Video)}
-					{tabBtn("voice", "Translate audio", Mic2)}
-				</div>
+				<VideoToolsTabBar value={tab} onChange={setTab} className="mb-4" />
 			)}
 			{tab === "video" ? (
 				<>
@@ -3318,7 +2966,7 @@ function NewTranslationPanel({
 						usageMinutesCredited={usageMinutesCredited}
 					/>
 				</>
-			) : (
+			) : tab === "voice" ? (
 				<>
 					<p className="text-sm text-zinc-600 my-4">
 						Record, upload, or paste text to translate audio quickly
@@ -3330,6 +2978,22 @@ function NewTranslationPanel({
 						usageMinutesCredited={usageMinutesCredited}
 					/>
 				</>
+			) : tab === "caption" ? (
+				<div className="mt-4">
+				<VideoCaptionPanel
+					requireAuthOnSubmit={requireAuthOnSubmit}
+					onRequireAuth={onRequireAuth}
+					onJobCreated={addVideo}
+				/>
+				</div>
+			) : (
+				<div className="mt-4">
+				<ViralClipCutPanel
+					requireAuthOnSubmit={requireAuthOnSubmit}
+					onRequireAuth={onRequireAuth}
+					onJobCreated={addVideo}
+				/>
+				</div>
 			)}
 		</>
 	);
@@ -5973,6 +5637,9 @@ export function Dashboard({ user, onLogout }) {
 		return selected.jobs.some((j) => String(j.id).startsWith("voice_"));
 	}, [selected?.jobs]);
 
+	const isCaptionGroup = selected?.type === "caption";
+	const isClipsGroup = selected?.type === "clips";
+
 	const jobsForTabs = useMemo(() => {
 		if (!selected) return [];
 		const real = selected.jobs || [];
@@ -6109,6 +5776,19 @@ export function Dashboard({ user, onLogout }) {
 				caption: j.caption ?? null,
 				outputLanguage: j.outputLanguage ?? null,
 				videoTranslateId: j.videoTranslateId ?? j.id ?? null,
+				videoCaptionId: j.videoCaptionId ?? null,
+				viralClipCutId: j.viralClipCutId ?? null,
+				srtUrl: j.srtUrl ?? null,
+				timedCaptions: j.timedCaptions ?? null,
+				clips: j.clips ?? null,
+				summary: j.summary ?? null,
+				apiStatus: j.apiStatus ?? null,
+				errorMessage: j.errorMessage ?? null,
+				burnCaptions: j.burnCaptions ?? null,
+				captionStyle: j.captionStyle ?? null,
+				model: j.model ?? null,
+				prompt: j.prompt ?? null,
+				targetAspect: j.targetAspect ?? null,
 				durationMinutes: j.durationMinutes ?? null,
 			}));
 			const v = {
@@ -6120,11 +5800,13 @@ export function Dashboard({ user, onLogout }) {
 					payload.sourceVideoUrl ?? jobs[0]?.sourceVideoUrl ?? null,
 				sourceText:
 					typeof payload.sourceText === "string" ? payload.sourceText : null,
-				type: inferTranslationGroupType({
-					...payload,
-					id: groupId,
-					jobs,
-				}),
+				type:
+					payload.type ??
+					inferTranslationGroupType({
+						...payload,
+						id: groupId,
+						jobs,
+					}),
 			};
 			patchVideos((prev) =>
 				dedupeVideosById([v, ...prev.filter((x) => x.id !== v.id)]),
@@ -6306,6 +5988,127 @@ export function Dashboard({ user, onLogout }) {
 	],
 );
 
+	const captionOptionsFromGroup = useCallback((group) => {
+		const ref =
+			group?.jobs?.find((j) => j.burnCaptions != null) || group?.jobs?.[0];
+		return {
+			burnCaptions: ref?.burnCaptions ?? true,
+			captionStyle: ref?.captionStyle ?? "bottom",
+			model: ref?.model ?? "gemini",
+		};
+	}, []);
+
+	const appendCaptionForLanguage = useCallback(
+		async (lang, { replaceJobId = null } = {}) => {
+			if (appendBusyRef.current) return;
+			if (!selected?.id) return;
+			if (!appendSourceVideoUrl) {
+				toast.error(
+					"Source video URL is not ready yet. Wait for the first caption to finish.",
+				);
+				return;
+			}
+			const alreadyActive = (selected?.jobs || []).some(
+				(j) =>
+					j.lang === lang &&
+					j.id !== replaceJobId &&
+					j.status !== "error" &&
+					j.status !== "cancelled" &&
+					!String(j.id).startsWith("failed_"),
+			);
+			if (alreadyActive) {
+				toast.error(`Captions for ${lang} are already running or done.`);
+				return;
+			}
+			appendBusyRef.current = lang;
+			setAppendBusy(lang);
+			const groupId = selected.id;
+			const opts = captionOptionsFromGroup(selected);
+			try {
+				const videoCaptionId = await startCaptionJob({
+					video_url: appendSourceVideoUrl,
+					language: languageNameToApiCode(lang),
+					burn_captions: opts.burnCaptions,
+					caption_style: opts.captionStyle,
+					model: opts.model,
+				});
+				const newJob = {
+					id: videoCaptionId,
+					videoCaptionId,
+					lang,
+					status: "queued",
+					apiStatus: "pending",
+					createdAt: new Date().toISOString(),
+					sourceVideoUrl: appendSourceVideoUrl,
+					...opts,
+				};
+				const mergeJobs = (jobs) => {
+					if (replaceJobId) {
+						const next = [...jobs];
+						let idx = next.findIndex((j) => j.id === replaceJobId);
+						if (idx < 0) {
+							idx = next.findIndex(
+								(j) => j.lang === lang && j.status === "error",
+							);
+						}
+						if (idx < 0) return [...jobs, newJob];
+						next[idx] = newJob;
+						return next;
+					}
+					return [...jobs, newJob];
+				};
+				patchVideos((prev) => {
+					const next = prev.map((g) => {
+						if (g.id !== groupId) return g;
+						const jobs = mergeJobs(g.jobs || []);
+						const out = {
+							...g,
+							jobs,
+							sourceVideoUrl: g.sourceVideoUrl || appendSourceVideoUrl,
+							type: "caption",
+						};
+						return out;
+					});
+					const touched = next.find((g) => g.id === groupId);
+					if (touched) scheduleUpsertGroup(touched);
+					return next;
+				});
+				setSelected((s) => {
+					if (!s || s.id !== groupId) return s;
+					const jobs = mergeJobs(s.jobs || []);
+					return {
+						...s,
+						jobs,
+						sourceVideoUrl: s.sourceVideoUrl || appendSourceVideoUrl,
+						type: "caption",
+					};
+				});
+				setStagedLangs((prev) => prev.filter((l) => l !== lang));
+				if (!replaceJobId) {
+					setDetailTab(selected.jobs?.length || 0);
+				}
+			} catch (e) {
+				toast.error(e?.message || "Could not start caption job.");
+			} finally {
+				appendBusyRef.current = null;
+				setAppendBusy(null);
+			}
+		},
+		[
+			selected?.id,
+			selected?.jobs,
+			appendSourceVideoUrl,
+			captionOptionsFromGroup,
+			patchVideos,
+			scheduleUpsertGroup,
+		],
+	);
+
+	const submitAppendCaption = useCallback(
+		(lang) => appendCaptionForLanguage(lang),
+		[appendCaptionForLanguage],
+	);
+
 const submitAppendVoiceTranslation = useCallback(
 	async (lang) => {
 		if (appendBusyRef.current) return; // synchronous double-submit guard
@@ -6482,6 +6285,12 @@ const submitAppendVoiceTranslation = useCallback(
 				toast.error("Retry from the new translation screen for voice jobs.");
 				return;
 			}
+			if (isCaptionGroup) {
+				await appendCaptionForLanguage(failedJob.lang, {
+					replaceJobId: failedJob.id,
+				});
+				return;
+			}
 			if (!appendSourceVideoUrl) {
 				toast.error("Source video URL is missing.");
 				return;
@@ -6583,6 +6392,9 @@ const submitAppendVoiceTranslation = useCallback(
 		selected?.id,
 		appendSourceVideoUrl,
 		isVoiceTranslationGroup,
+		isCaptionGroup,
+		appendCaptionForLanguage,
+		appendVoiceId,
 		patchVideos,
 		scheduleUpsertGroup,
 	],
@@ -6663,6 +6475,7 @@ const submitAppendVoiceTranslation = useCallback(
 	useEffect(() => {
 		const sel = selectedRef.current;
 		if (!sel?.id || !sel.jobs?.length) return;
+		if (sel.type === "caption" || sel.type === "clips") return;
 	const pending = sel.jobs.filter(
 		(j) =>
 			j.status !== "done" &&
@@ -6699,6 +6512,74 @@ const submitAppendVoiceTranslation = useCallback(
 			ac.abort();
 		};
 	}, [selected?.id, selected?.jobs, updateJob]);
+
+	/** Poll video caption / viral clip jobs while viewing that project. */
+	useEffect(() => {
+		const sel = selectedRef.current;
+		if (!sel?.id || !sel.jobs?.length) return;
+		if (sel.type !== "caption" && sel.type !== "clips") return;
+
+		const pending = sel.jobs.filter(
+			(j) =>
+				j.status !== "done" &&
+				j.status !== "error" &&
+				j.status !== "cancelled",
+		);
+		if (!pending.length) return;
+
+		let cancelled = false;
+		const groupId = sel.id;
+		const tool = sel.type;
+
+		const tick = async () => {
+			const current = selectedRef.current;
+			if (!current?.id || current.id !== groupId) return;
+			const stillPending = (current.jobs || []).filter(
+				(j) =>
+					j.status !== "done" &&
+					j.status !== "error" &&
+					j.status !== "cancelled",
+			);
+			for (const job of stillPending) {
+				if (cancelled) return;
+				try {
+					const fields =
+						tool === "caption"
+							? await fetchCaptionJobOnce(job.videoCaptionId || job.id)
+							: await fetchClipJobOnce(job.viralClipCutId || job.id);
+					if (fields.status === "error") {
+						updateJob({
+							groupId,
+							jobId: job.id,
+							lang: job.lang,
+							...fields,
+						});
+						continue;
+					}
+					updateJob({
+						groupId,
+						jobId: job.id,
+						lang: job.lang,
+						...fields,
+					});
+				} catch {
+					updateJob({
+						groupId,
+						jobId: job.id,
+						status: "error",
+						errorMessage: "Could not load job status.",
+					});
+				}
+			}
+		};
+
+		void tick();
+		const interval = setInterval(() => void tick(), 2500);
+		return () => {
+			cancelled = true;
+			clearInterval(interval);
+		};
+	}, [selected?.id, selected?.type, selected?.jobs, updateJob]);
 
 	const performDeleteTranslation = useCallback(
 		(id) => {
@@ -7344,80 +7225,16 @@ const submitAppendVoiceTranslation = useCallback(
 								initial={{ opacity: 0, y: 12 }}
 								animate={{ opacity: 1, y: 0 }}
 								exit={{ opacity: 0 }}
-								style={{ maxWidth: 560, margin: "0 auto" }}
+								className="max-w-2xl mx-auto"
 							>
-								<div
-									style={{
-										display: "grid",
-										gridTemplateColumns: "1fr 1fr",
-										gap: 8,
-										marginBottom: 12,
-										padding: 5,
-										background: "rgba(0,0,0,0.03)",
-										border: "1px solid rgba(0,0,0,0.06)",
-										borderRadius: 14,
-									}}
-								>
-									{[
-										{ id: "video", label: "Translate video", Icon: Video },
-										{ id: "voice", label: "Translate audio", Icon: Mic2 },
-									].map(({ id, label, Icon }) => (
-										<button
-											key={id}
-											type="button"
-											onClick={() => setNewTranslationTab(id)}
-											style={{
-												flex: 1,
-												minWidth: 160,
-												display: "flex",
-												alignItems: "center",
-												justifyContent: "center",
-												gap: 9,
-												padding: "11px 14px",
-												borderRadius: 11,
-												fontSize: 13.5,
-												fontWeight: 600,
-												border:
-													newTranslationTab === id
-														? "1px solid rgba(234,88,12,0.35)"
-														: "1px solid rgba(0,0,0,0.06)",
-												background:
-													newTranslationTab === id
-														? "linear-gradient(180deg, rgba(234,88,12,0.14), rgba(234,88,12,0.08))"
-														: "#fff",
-												color:
-													newTranslationTab === id ? "#c2410c" : "#71717a",
-												cursor: "pointer",
-												boxShadow:
-													newTranslationTab === id
-														? "0 4px 14px rgba(234,88,12,0.1)"
-														: "0 1px 2px rgba(0,0,0,0.03)",
-												transition: "all 0.2s ease",
-											}}
-										>
-											<Icon size={16} />
-											{label}
-										</button>
-									))}
-								</div>
-								<div
-									style={{
-										borderRadius: 18,
-										padding: "28px 24px",
-										background: "#fff",
-										border: "1px solid rgba(0,0,0,0.08)",
-									}}
-								>
+								<VideoToolsTabBar
+									value={newTranslationTab}
+									onChange={setNewTranslationTab}
+									className="mb-3"
+								/>
+								<div className="rounded-xl p-7 px-6 bg-white border border-zinc-200/80">
 									<div className="flex items-start justify-start flex-col">
-									<h2
-										className="aantraa-font"
-										style={{
-											fontSize: 24,
-											fontWeight: 700,
-											color: "#18181b",
-											marginBottom: 6,
-										}}
-									>
+									<h2 className="aantraa-font text-2xl font-bold text-zinc-900 mb-1.5">
 										New Translation
 									</h2>
 									</div>
@@ -7507,7 +7324,9 @@ const submitAppendVoiceTranslation = useCallback(
 														flex: "1 1 240px",
 													}}
 												>
-													{selected?.id ? (
+													{selected?.id &&
+													!isCaptionGroup &&
+													!isClipsGroup ? (
 														<button
 															type="button"
 															onClick={() =>
@@ -7534,7 +7353,19 @@ const submitAppendVoiceTranslation = useCallback(
 															Stats
 														</button>
 													) : null}
-												{((!isVoiceTranslationGroup && appendSourceVideoUrl) ||
+												{isCaptionGroup && selected?.jobs?.length > 0 && (
+													<div style={{ flex: "1 1 200px", minWidth: 180 }}>
+														<LangMultiSelect
+															selected={langPickerSelected}
+															onChange={setLangPickerSelected}
+															lockedLangs={existingJobLangs}
+															fullWidth
+														/>
+													</div>
+												)}
+												{!isCaptionGroup &&
+													!isClipsGroup &&
+													((!isVoiceTranslationGroup && appendSourceVideoUrl) ||
 													(isVoiceTranslationGroup &&
 														appendVoiceSourceText)) && (
 													<>
@@ -7587,6 +7418,30 @@ const submitAppendVoiceTranslation = useCallback(
 														To add more languages here, include the original text in the
 														voice form (or use a submission that stored it). Audio-only
 														entries without text cannot be extended from this screen.
+													</p>
+												</div>
+											)}
+
+											{isCaptionGroup && !appendSourceVideoUrl && (
+												<div
+													style={{
+														marginBottom: 20,
+														padding: "12px 14px",
+														borderRadius: 12,
+														background: "rgba(0,0,0,0.04)",
+														border: "1px solid rgba(0,0,0,0.06)",
+													}}
+												>
+													<p
+														style={{
+															fontSize: 12,
+															color: "#71717a",
+															margin: 0,
+															lineHeight: 1.45,
+														}}
+													>
+														Wait for the first caption to finish before generating
+														other languages (source video URL is still processing).
 													</p>
 												</div>
 											)}
@@ -7701,7 +7556,10 @@ const submitAppendVoiceTranslation = useCallback(
 												</div>
 											)}
 
-											{selectedDetail.j.isStaged && isVoiceTranslationGroup && (
+											{selectedDetail.j.isStaged &&
+												!isCaptionGroup &&
+												!isClipsGroup &&
+												isVoiceTranslationGroup && (
 												<div style={{ marginBottom: 24 }}>
 													{appendVoiceSourceText ? (
 														<>
@@ -7781,7 +7639,77 @@ const submitAppendVoiceTranslation = useCallback(
 												</div>
 											)}
 
-											{selectedDetail.j.isStaged && !isVoiceTranslationGroup && (
+											{selectedDetail.j.isStaged && isCaptionGroup && (
+												<div style={{ marginBottom: 24 }}>
+													<p
+														style={{
+															fontSize: 13,
+															color: "#52525b",
+															marginBottom: 12,
+															lineHeight: 1.5,
+														}}
+													>
+														Generate captions in{" "}
+														<strong>{selectedDetail.j.lang}</strong> using the same
+														source video.
+													</p>
+													{appendSourceVideoUrl ? (
+														<div style={{ marginBottom: 16 }}>
+															<OriginalSourceMediaPreview
+																url={appendSourceVideoUrl}
+																footerLabel="Source preview"
+															/>
+														</div>
+													) : null}
+													<button
+														type="button"
+														onClick={() =>
+															submitAppendCaption(selectedDetail.j.lang)
+														}
+														disabled={
+															appendBusy === selectedDetail.j.lang ||
+															!appendSourceVideoUrl
+														}
+														style={{
+															display: "inline-flex",
+															alignItems: "center",
+															justifyContent: "center",
+															gap: 8,
+															padding: "12px 22px",
+															borderRadius: 10,
+															fontSize: 14,
+															fontWeight: 600,
+															background: "#ea580c",
+															color: "#fff",
+															border: "none",
+															cursor:
+																appendBusy === selectedDetail.j.lang ||
+																!appendSourceVideoUrl
+																	? "not-allowed"
+																	: "pointer",
+															opacity:
+																appendBusy === selectedDetail.j.lang ||
+																!appendSourceVideoUrl
+																	? 0.85
+																	: 1,
+														}}
+													>
+														{appendBusy === selectedDetail.j.lang ? (
+															<>
+																<Loader2 size={16} className="spin" aria-hidden />
+																Starting…
+															</>
+														) : (
+															"Generate captions"
+														)}
+													</button>
+												</div>
+											)}
+
+											{selectedDetail.j.isStaged &&
+												!isCaptionGroup &&
+												!isClipsGroup &&
+												!isVoiceTranslationGroup && (
 												<div style={{ marginBottom: 24 }}>
 													<p
 														style={{
@@ -7842,6 +7770,15 @@ const submitAppendVoiceTranslation = useCallback(
 											selectedDetail.j.status !== "done" &&
 											selectedDetail.j.status !== "error" && (
 												<>
+													{isCaptionGroup || isClipsGroup ? (
+														<VideoToolsStatusProgress
+															tool={isClipsGroup ? "clips" : "caption"}
+															apiStatus={selectedDetail.j.apiStatus}
+															status={selectedDetail.j.status}
+															createdAt={selectedDetail.j.createdAt}
+														/>
+													) : (
+														<>
 													<StatusProgress
 														status={selectedDetail.j.status}
 														jobId={selectedDetail.j.id}
@@ -7930,11 +7867,17 @@ const submitAppendVoiceTranslation = useCallback(
 																)}
 															</button>
 														)}
+														</>
+													)}
 												</>
 											)}
 
 											{selectedDetail.j.status === "done" &&
-												(isVoiceTranslationGroup ? (
+												(isCaptionGroup ? (
+													<VideoCaptionJobResult job={selectedDetail.j} />
+												) : isClipsGroup ? (
+													<ViralClipsJobResult job={selectedDetail.j} />
+												) : isVoiceTranslationGroup ? (
 													<div>
 														{/* Top: translated audio + translated script */}
 														<div
@@ -8484,8 +8427,23 @@ const submitAppendVoiceTranslation = useCallback(
 															fontWeight: 500,
 														}}
 													>
-														Translation failed ({selectedDetail.j.lang})
+														{isCaptionGroup
+															? "Caption generation failed"
+															: isClipsGroup
+																? "Clip generation failed"
+																: `Translation failed (${selectedDetail.j.lang})`}
 													</p>
+													{selectedDetail.j.errorMessage ? (
+														<p
+															style={{
+																color: "#71717a",
+																fontSize: 13.5,
+																textAlign: "center",
+															}}
+														>
+															{selectedDetail.j.errorMessage}
+														</p>
+													) : (
 													<p
 														style={{
 															color: "#71717a",
@@ -8493,9 +8451,11 @@ const submitAppendVoiceTranslation = useCallback(
 															textAlign: "center",
 														}}
 													>
-														Retry with the same source video, or start a new
-														translation.
+														{isCaptionGroup || isClipsGroup
+															? "Retry with the same source video, or add another language from the dropdown above."
+															: "Retry with the same source video, or start a new translation."}
 													</p>
+													)}
 													<div
 														style={{
 															display: "flex",
@@ -8505,7 +8465,58 @@ const submitAppendVoiceTranslation = useCallback(
 															marginTop: 4,
 														}}
 													>
-														{!isVoiceTranslationGroup && appendSourceVideoUrl && (
+														{isCaptionGroup && appendSourceVideoUrl && (
+															<button
+																type="button"
+																onClick={() =>
+																	retryFailedTranslation(selectedDetail.j)
+																}
+																disabled={
+																	appendBusy === selectedDetail.j.lang
+																}
+																style={{
+																	display: "inline-flex",
+																	alignItems: "center",
+																	justifyContent: "center",
+																	gap: 8,
+																	padding: "9px 20px",
+																	borderRadius: 10,
+																	fontSize: 13.5,
+																	fontWeight: 600,
+																	background: "#ea580c",
+																	color: "#fff",
+																	border: "none",
+																	cursor:
+																		appendBusy === selectedDetail.j.lang
+																			? "wait"
+																			: "pointer",
+																	opacity:
+																		appendBusy === selectedDetail.j.lang
+																			? 0.85
+																			: 1,
+																}}
+															>
+																{appendBusy === selectedDetail.j.lang ? (
+																	<>
+																		<Loader2
+																			size={14}
+																			className="spin"
+																			aria-hidden
+																		/>
+																		Retrying…
+																	</>
+																) : (
+																	<>
+																		<RefreshCw size={14} aria-hidden />
+																		Retry captions
+																	</>
+																)}
+															</button>
+														)}
+														{!isCaptionGroup &&
+															!isClipsGroup &&
+															!isVoiceTranslationGroup &&
+															appendSourceVideoUrl && (
 															<button
 																type="button"
 																onClick={() =>
