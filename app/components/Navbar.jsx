@@ -136,11 +136,10 @@ const Navbar = ({ variant, onSignIn }) => {
 
 	const navLinks = [
 		{ href: "/", label: "Home" },
-		{ href: "/features", label: "Features" },
+		{ href: "/examples", label: "Features" },
 		{ href: "/blog", label: "Blog" },
 		{ href: "/pricing", label: "Pricing" },
 		{ href: "/contact", label: "Contact" },
-		{ href: "/docs", label: "Docs" },
 	];
 
 	const isActive = (href) => {

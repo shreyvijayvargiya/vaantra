@@ -5,6 +5,7 @@ import { onAuthStateChange } from "../../lib/api/auth";
 const NAV_LINKS = [
 	{ label: "Features", hash: "features" },
 	{ label: "Examples", href: "/examples" },
+	{ label: "Blog", href: "/blog" },
 	{ label: "Benefits", hash: "benefits" },
 	{ label: "Pricing", hash: "pricing" },
 	{ label: "FAQ", hash: "faq" },

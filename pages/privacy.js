@@ -118,10 +118,10 @@ export default function PrivacyPage() {
 								Welcome to <strong>aantraa</strong> ("we", "us", or "our"). We
 								operate the AI-powered video translation service at{" "}
 								<a
-									href="https://aantraa.video"
+									href="https://aantraa.site"
 									style={{ color: "#ea580c", fontWeight: 500 }}
 								>
-									aantraa.video
+									aantraa.site
 								</a>
 								. This Privacy Policy explains how we collect, use, disclose,
 								and safeguard your information when you use our service.

@@ -2,6 +2,8 @@
  * Dynamic sitemap for crawlers. Rewritten as /sitemap.xml via next.config.js.
  * Set NEXT_PUBLIC_SITE_URL (e.g. https://aantraa.com) on Vercel for stable absolute URLs.
  */
+import { getAllStaticBlogSlugs } from "../../lib/blogs/staticBlogs";
+
 const PATHS = [
 	{ path: "/", changefreq: "weekly", priority: 1 },
 	{ path: "/pricing", changefreq: "weekly", priority: 0.9 },
@@ -10,6 +12,11 @@ const PATHS = [
 	{ path: "/contact", changefreq: "monthly", priority: 0.7 },
 	{ path: "/docs", changefreq: "weekly", priority: 0.8 },
 	{ path: "/blog", changefreq: "weekly", priority: 0.8 },
+	...getAllStaticBlogSlugs().map((slug) => ({
+		path: `/blog/${slug}`,
+		changefreq: "monthly",
+		priority: 0.75,
+	})),
 ];
 
 function getSiteBase() {

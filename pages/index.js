@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -4834,21 +4835,29 @@ function Landing() {
 						</div>
 
 						<motion.div
-							className="landing-hero-cta-shine-wrap"
+							className="flex flex-wrap items-center gap-3"
 							initial={{ opacity: 0, y: 8 }}
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ duration: 0.45, delay: 0.12 }}
 						>
-							<motion.button
-								type="button"
-								onClick={() => router.push("/login")}
-								className="landing-hero-cta-shine-btn flex items-center gap-2 py-2 px-4 text-zinc-50 text-lg font-semibold group bg-gradient-to-r from-orange-400 to-orange-600 hover:from-orange-500 hover:to-orange-700 hover:shadow-xl transition-all duration-200"
-								whileHover={{ scale: 1.02 }}
-								whileTap={{ scale: 0.98 }}
+							<motion.div className="landing-hero-cta-shine-wrap">
+								<motion.button
+									type="button"
+									onClick={() => router.push("/login")}
+									className="landing-hero-cta-shine-btn flex items-center gap-2 py-2 px-4 text-zinc-50 text-lg font-semibold group bg-gradient-to-r from-orange-400 to-orange-600 hover:from-orange-500 hover:to-orange-700 hover:shadow-xl transition-all duration-200"
+									whileHover={{ scale: 1.02 }}
+									whileTap={{ scale: 0.98 }}
+								>
+									Get Started
+									<ArrowRightIcon className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
+								</motion.button>
+							</motion.div>
+							<Link
+								href="/examples"
+								className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-base font-semibold text-zinc-800 shadow-sm transition-all duration-200 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
 							>
-								Get Started
-								<ArrowRightIcon className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
-							</motion.button>
+								Check demo examples
+							</Link>
 						</motion.div>
 
 					</div>
