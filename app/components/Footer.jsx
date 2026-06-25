@@ -66,6 +66,22 @@ const Footer = () => {
 					Terms
 				</Link>
 			</div>
+
+			<div className="mt-6 flex flex-wrap items-center justify-center gap-4">
+				<a
+					href="https://sellwithboost.com"
+					target="_blank"
+					rel="noopener noreferrer"
+					className="inline-flex opacity-90 hover:opacity-100 transition-opacity"
+				>
+					{/* eslint-disable-next-line @next/next/no-img-element */}
+					<img
+						src="https://sellwithboost.com/badge/listing.svg"
+						alt="Listed on Sell With boost"
+						className="h-10 w-auto"
+					/>
+				</a>
+			</div>
 		</footer>
 	);
 };
