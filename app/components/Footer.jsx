@@ -81,6 +81,21 @@ const Footer = () => {
 						className="h-10 w-auto"
 					/>
 				</a>
+				<a
+					href="https://www.producthunt.com/products/aantraa?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-aantraa"
+					target="_blank"
+					rel="noopener noreferrer"
+					className="inline-flex opacity-90 hover:opacity-100 transition-opacity"
+				>
+					{/* eslint-disable-next-line @next/next/no-img-element */}
+					<img
+						src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1174958&theme=light&t=1782387443305"
+						alt="aantraa - AI audio video translation platform | Product Hunt"
+						width={250}
+						height={54}
+						className="h-[54px] w-auto"
+					/>
+				</a>
 			</div>
 		</footer>
 	);
