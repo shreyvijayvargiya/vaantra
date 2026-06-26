@@ -14,6 +14,8 @@ import StudioYouTubePreview from "../app/components/StudioYouTubePreview";
 import TranslationExamplesSection from "../app/components/TranslationExamplesSection";
 import HomePage from "../app/components/Home";
 import VideoToolsTabBar from "../lib/ui/VideoToolsTabBar";
+import WorkspaceVideoPicker from "../lib/ui/WorkspaceVideoPicker";
+import WorkspacePage from "../app/components/WorkspacePage";
 import { getBlockedVideoUrlWarning } from "../lib/utils/blockedVideoUrl";
 import VideoCaptionPanel from "../lib/ui/VideoCaptionPanel";
 import ViralClipCutPanel from "../lib/ui/ViralClipCutPanel";
@@ -27,11 +29,22 @@ import {
 	deleteTranslationGroupDoc,
 	upsertTranslationGroup,
 } from "../lib/api/translationHistory";
+import {
+	getPublicShareUrl,
+	publishPublicShare,
+} from "../lib/api/publicShare";
 import { auth } from "../lib/config/firebase";
 import {
 	QUERY_KEY_TRANSLATION_GROUPS,
 	useTranslationGroups,
 } from "../lib/hooks/useTranslationHistory";
+import { useWorkspaceVideos, QUERY_KEY_WORKSPACE_VIDEOS } from "../lib/hooks/useWorkspaceVideos";
+import { ensureWorkspaceVideoFromJob } from "../lib/api/workspaceVideos";
+import {
+	resolveReuseVideoUrl,
+	getFollowUpTabOrderForGroupType,
+	getInitialFollowUpTabForGroupType,
+} from "../lib/utils/videoToolsTabs";
 import {
 	dedupeVideosById,
 	inferTranslationGroupType,
@@ -123,6 +136,8 @@ import {
 	Play,
 	Pause,
 	Maximize2,
+	LayoutGrid,
+	Share2,
 } from "lucide-react";
 
 // ─── Contact & billing (UI only; API later) ───────────────────────────────────
@@ -2852,6 +2867,10 @@ function NewTranslationPanel({
 	usageMinutesCredited,
 	requireAuthOnSubmit = false,
 	onRequireAuth,
+	prefillVideoUrl = null,
+	lockPrefilledUrl = false,
+	workspaceVideos = [],
+	followUpMode = false,
 }) {
 	const [internalTab, setInternalTab] = useState("video");
 	const tab = controlledTab ?? internalTab;
@@ -2863,9 +2882,17 @@ function NewTranslationPanel({
 			)}
 			{tab === "video" ? (
 				<>
+					{!followUpMode && (
 					<p className="text-sm text-zinc-600 my-4">
 						Upload a video or paste a URL to get started
 					</p>
+					)}
+					{followUpMode && (
+					<p className="text-sm text-zinc-600 my-4">
+						Same video is ready — pick languages and start. This opens a new project.
+					</p>
+					)}
+					{!followUpMode && (
 					<details
 						className="upload-limits-details"
 						style={{
@@ -2961,11 +2988,16 @@ function NewTranslationPanel({
 					</p>
 				</div>
 									</details>
+					)}
 					<TranslateForm
 						onJobCreated={addVideo}
 						compact
 						requireAuthOnSubmit={requireAuthOnSubmit}
 						onRequireAuth={onRequireAuth}
+						prefillVideoUrl={prefillVideoUrl}
+						lockPrefilledUrl={lockPrefilledUrl}
+						workspaceVideos={workspaceVideos}
+						urlOnly={followUpMode}
 						usageMinutesUsed={usageMinutesUsed}
 						usageMinutesCredited={usageMinutesCredited}
 					/>
@@ -2983,19 +3015,27 @@ function NewTranslationPanel({
 					/>
 				</>
 			) : tab === "caption" ? (
-				<div className="mt-4">
+				<div className={followUpMode ? "" : "mt-4"}>
 				<VideoCaptionPanel
 					requireAuthOnSubmit={requireAuthOnSubmit}
 					onRequireAuth={onRequireAuth}
 					onJobCreated={addVideo}
+					prefillVideoUrl={prefillVideoUrl}
+					lockPrefilledUrl={lockPrefilledUrl}
+					workspaceVideos={workspaceVideos}
+					urlOnly={followUpMode}
 				/>
 				</div>
 			) : (
-				<div className="mt-4">
+				<div className={followUpMode ? "" : "mt-4"}>
 				<ViralClipCutPanel
 					requireAuthOnSubmit={requireAuthOnSubmit}
 					onRequireAuth={onRequireAuth}
 					onJobCreated={addVideo}
+					prefillVideoUrl={prefillVideoUrl}
+					lockPrefilledUrl={lockPrefilledUrl}
+					workspaceVideos={workspaceVideos}
+					urlOnly={followUpMode}
 				/>
 				</div>
 			)}
@@ -3012,6 +3052,8 @@ function TranslateForm({
 	lockPrefilledUrl = false,
 	usageMinutesUsed,
 	usageMinutesCredited,
+	workspaceVideos = [],
+	urlOnly = false,
 }) {
 	const [mode, setMode] = useState("url");
 	const [url, setUrl] = useState("");
@@ -3043,6 +3085,13 @@ function TranslateForm({
 			return GEMINI_DEFAULT_VOICE_ID;
 		}
 	});
+
+	useEffect(() => {
+		if (!urlOnly) return;
+		setMode("url");
+		setFile(null);
+		setFileError(null);
+	}, [urlOnly]);
 
 	useEffect(() => {
 		if (!prefillVideoUrl) return;
@@ -3359,7 +3408,9 @@ function TranslateForm({
 				createdAt: new Date().toISOString(),
 				...postFields,
 				resultUrl: postFields.resultUrl ?? extractResultUrl(data) ?? null,
-				sourceVideoUrl: postFields.sourceVideoUrl ?? null,
+				sourceVideoUrl:
+					postFields.sourceVideoUrl ??
+					(mode === "url" ? url.trim() : null),
 				videoTranslateId: postFields.videoTranslateId ?? videoId,
 				durationMinutes:
 					postFields.durationMinutes ?? clientDurationMinutesHint ?? null,
@@ -3375,7 +3426,8 @@ function TranslateForm({
 		}
 
 		const sourceVideoUrl =
-			jobs.find((j) => j.sourceVideoUrl)?.sourceVideoUrl ?? null;
+			jobs.find((j) => j.sourceVideoUrl)?.sourceVideoUrl ??
+			(mode === "url" ? url.trim() : null);
 
 		if (onJobCreated) {
 			onJobCreated({
@@ -3533,6 +3585,7 @@ function TranslateForm({
 			{showForm ? (
 				<>
 					{/* Mode tabs */}
+					{!urlOnly && (
 					<div
 						style={{
 							display: "flex",
@@ -3571,16 +3624,29 @@ function TranslateForm({
 							</button>
 						))}
 					</div>
-
-				{/* blocked-domain warning — shown inline after URL input */}
+					)}
 
 					{/* Input area */}
 					{mode === "url" ? (
 						<>
+						{workspaceVideos.length > 0 && !urlOnly && (
+							<WorkspaceVideoPicker
+								videos={workspaceVideos}
+								value={url}
+								onChange={(nextUrl) => {
+									setUrl(nextUrl);
+									setUrlLocked(false);
+								}}
+								disabled={busy || urlLocked}
+								className="mb-3"
+							/>
+						)}
 						<input
 							value={url}
 							onChange={(e) => setUrl(e.target.value)}
 							placeholder="https://example.com/video.mp4"
+							readOnly={urlLocked}
+							disabled={busy || urlLocked}
 							style={{
 								width: "100%",
 								padding: "11px 14px",
@@ -5465,6 +5531,7 @@ export function Dashboard({ user, onLogout }) {
 	const uid = user?.uid;
 	const { data: queryVideos } = useTranslationGroups(uid);
 	const [sidebarOpen, setSidebarOpen] = useState(true);
+	const [jobsAccordionOpen, setJobsAccordionOpen] = useState(true);
 	const [localFallback, setLocalFallback] = useState([]);
 	const [storageHydrated, setStorageHydrated] = useState(false);
 	const [selected, setSelected] = useState(null);
@@ -5483,6 +5550,7 @@ export function Dashboard({ user, onLogout }) {
 	const [editingName, setEditingName] = useState("");
 	const [viewNew, setViewNew] = useState(true);
 	const [newTranslationTab, setNewTranslationTab] = useState("video");
+	const [followUpTab, setFollowUpTab] = useState("video");
 	const [showUpgrade, setShowUpgrade] = useState(false);
 	const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 	const [windowW, setWindowW] = useState(
@@ -5503,6 +5571,8 @@ export function Dashboard({ user, onLogout }) {
 		if (queryVideos !== undefined) return queryVideos;
 		return localFallback;
 	}, [uid, queryVideos, localFallback]);
+
+	const { data: workspaceVideos = [] } = useWorkspaceVideos(uid, videos);
 
 	const pendingDeleteGroup = useMemo(() => {
 		if (!deleteConfirmId) return null;
@@ -5535,6 +5605,9 @@ export function Dashboard({ user, onLogout }) {
 			clearTimeout(upsertDebounceRef.current[id]);
 			upsertDebounceRef.current[id] = setTimeout(() => {
 				void upsertTranslationGroup(uid, group);
+				if (group.jobs?.some((j) => j.status === "done")) {
+					void publishPublicShare(uid, group);
+				}
 				delete upsertDebounceRef.current[id];
 			}, 2000);
 		},
@@ -5555,6 +5628,7 @@ export function Dashboard({ user, onLogout }) {
 	}, [router.isReady, router.query.id]);
 
 	const isStatsRoute = router.pathname === "/app/[id]/stats";
+	const isWorkspaceRoute = router.pathname === "/app/workspace";
 
 	const pageReady = router.isReady && storageHydrated;
 
@@ -5594,6 +5668,13 @@ export function Dashboard({ user, onLogout }) {
 			router.replace("/app", undefined, { shallow: true });
 		}
 	}, [router.isReady, router.query?.upgrade, router.query?.usage_paid, router]);
+
+	/** Workspace route — no group selected */
+	useEffect(() => {
+		if (!router.isReady || !isWorkspaceRoute) return;
+		setSelected(null);
+		setViewNew(false);
+	}, [router.isReady, isWorkspaceRoute]);
 
 	/** Keep selection in sync with /app vs /app/[id] (group / Firestore doc id in URL). */
 	useEffect(() => {
@@ -5669,7 +5750,33 @@ export function Dashboard({ user, onLogout }) {
 	useEffect(() => {
 		setDetailTab(0);
 		setStagedLangs([]);
-	}, [selected?.id]);
+		if (selected?.type) {
+			setFollowUpTab(getInitialFollowUpTabForGroupType(selected.type));
+		}
+	}, [selected?.id, selected?.type]);
+
+	const reuseVideoUrl = useMemo(
+		() => resolveReuseVideoUrl(selected),
+		[selected],
+	);
+
+	const followUpTabOrder = useMemo(
+		() => getFollowUpTabOrderForGroupType(selected?.type),
+		[selected?.type],
+	);
+
+	const showFollowUpTools = Boolean(
+		reuseVideoUrl &&
+			selectedDetail?.j?.status === "done" &&
+			!selectedDetail?.j?.isStaged &&
+			!isVoiceTranslationGroup,
+	);
+
+	useEffect(() => {
+		if (!followUpTabOrder.includes(followUpTab)) {
+			setFollowUpTab(followUpTabOrder[0] || "video");
+		}
+	}, [followUpTabOrder, followUpTab]);
 
 	useEffect(() => {
 		setDetailTab((d) =>
@@ -5812,6 +5919,18 @@ export function Dashboard({ user, onLogout }) {
 				dedupeVideosById([v, ...prev.filter((x) => x.id !== v.id)]),
 			);
 			void upsertTranslationGroup(uid, v);
+			const srcUrl = v.sourceVideoUrl;
+			if (uid && srcUrl) {
+				void ensureWorkspaceVideoFromJob(uid, {
+					url: srcUrl,
+					name: v.label || "From job",
+					groupId: v.id,
+				}).then(() => {
+					void queryClient.invalidateQueries({
+						queryKey: ["workspaceVideos", uid],
+					});
+				});
+			}
 			setSelected(v);
 			setViewNew(false);
 			router.push(`/app/${encodeURIComponent(v.id)}`);
@@ -5821,10 +5940,49 @@ export function Dashboard({ user, onLogout }) {
 						void billUsageForJobId(job.id, v.id);
 					}
 				}
+				if (v.jobs?.some((j) => j.status === "done")) {
+					void publishPublicShare(uid, v);
+				}
 			});
 		},
-		[router, uid, patchVideos, billUsageForJobId],
+		[router, uid, patchVideos, billUsageForJobId, queryClient],
 	);
+
+	const addFollowUpToolJob = useCallback(
+		(payload) => {
+			const sourceUrl =
+				payload.sourceVideoUrl ??
+				payload.jobs?.find((j) => j.sourceVideoUrl)?.sourceVideoUrl ??
+				reuseVideoUrl;
+			addVideo({
+				...payload,
+				sourceVideoUrl: sourceUrl,
+				jobs: (payload.jobs || []).map((j) => ({
+					...j,
+					sourceVideoUrl: j.sourceVideoUrl ?? sourceUrl ?? null,
+				})),
+			});
+		},
+		[addVideo, reuseVideoUrl],
+	);
+
+	const handleShareProject = useCallback(async () => {
+		if (!uid || !selected?.id) return;
+		const hasDone = selected.jobs?.some((j) => j.status === "done");
+		if (!hasDone) {
+			toast.error("Finish at least one language before sharing.");
+			return;
+		}
+		try {
+			await publishPublicShare(uid, selected);
+			const url = getPublicShareUrl(selected.id);
+			await navigator.clipboard.writeText(url);
+			toast.success("Public share link copied!");
+		} catch (e) {
+			console.error(e);
+			toast.error("Could not publish share link.");
+		}
+	}, [uid, selected]);
 
 	const appendSourceVideoUrl = useMemo(() => {
 		if (!selected) return null;
@@ -6652,8 +6810,8 @@ const submitAppendVoiceTranslation = useCallback(
 				</button>
 			</div>
 
-			{/* New button */}
-			<div style={{ padding: "10px 10px 4px" }}>
+			{/* New + Workspace */}
+			<div style={{ padding: "10px 10px 4px", display: "flex", flexDirection: "column", gap: 4 }}>
 				<button
 					onClick={() => {
 						router.push("/app");
@@ -6669,20 +6827,51 @@ const submitAppendVoiceTranslation = useCallback(
 						fontSize: 13,
 						fontWeight: 600,
 						background:
-							viewNew && !selected ? "rgba(234,88,12,0.1)" : "rgba(0,0,0,0.03)",
+							viewNew && !selected && !isWorkspaceRoute
+								? "rgba(234,88,12,0.1)"
+								: "rgba(0,0,0,0.03)",
 						border:
-							viewNew && !selected
+							viewNew && !selected && !isWorkspaceRoute
 								? "1px solid rgba(234,88,12,0.3)"
 								: "1px solid transparent",
-						color: viewNew && !selected ? "#c2410c" : "#71717a",
+						color:
+							viewNew && !selected && !isWorkspaceRoute
+								? "#c2410c"
+								: "#71717a",
 						transition: "all 0.15s",
 					}}
 				>
 					<Plus size={14} /> New Translation
 				</button>
+				<button
+					onClick={() => {
+						router.push("/app/workspace");
+						if (isMobile) setSidebarOpen(false);
+					}}
+					style={{
+						width: "100%",
+						display: "flex",
+						alignItems: "center",
+						gap: 7,
+						padding: "9px 12px",
+						borderRadius: 10,
+						fontSize: 13,
+						fontWeight: 600,
+						background: isWorkspaceRoute
+							? "rgba(234,88,12,0.1)"
+							: "rgba(0,0,0,0.03)",
+						border: isWorkspaceRoute
+							? "1px solid rgba(234,88,12,0.3)"
+							: "1px solid transparent",
+						color: isWorkspaceRoute ? "#c2410c" : "#71717a",
+						transition: "all 0.15s",
+					}}
+				>
+					<LayoutGrid size={14} /> Workspace
+				</button>
 			</div>
 
-			{/* History — minHeight:0 so flex child can shrink and list scrolls (shows all items) */}
+			{/* History accordion */}
 			<div
 				style={{
 					flex: 1,
@@ -6693,6 +6882,45 @@ const submitAppendVoiceTranslation = useCallback(
 					padding: "6px 10px",
 				}}
 			>
+				<button
+					type="button"
+					onClick={() => setJobsAccordionOpen((o) => !o)}
+					style={{
+						width: "100%",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "space-between",
+						padding: "8px 6px",
+						marginBottom: 4,
+						border: "none",
+						background: "transparent",
+						cursor: "pointer",
+						fontSize: 11,
+						fontWeight: 700,
+						letterSpacing: "0.06em",
+						textTransform: "uppercase",
+						color: "#a1a1aa",
+					}}
+				>
+					<span>Your jobs ({videos.length})</span>
+					<motion.span
+						animate={{ rotate: jobsAccordionOpen ? 180 : 0 }}
+						transition={{ duration: 0.2 }}
+						style={{ display: "flex" }}
+					>
+						<ChevronDown size={14} />
+					</motion.span>
+				</button>
+
+				<AnimatePresence initial={false}>
+					{jobsAccordionOpen && (
+						<motion.div
+							initial={{ height: 0, opacity: 0 }}
+							animate={{ height: "auto", opacity: 1 }}
+							exit={{ height: 0, opacity: 0 }}
+							transition={{ duration: 0.22, ease: "easeInOut" }}
+							style={{ overflow: "hidden" }}
+						>
 				
 				{!storageHydrated ? (
 					<SidebarHistorySkeleton />
@@ -6877,6 +7105,9 @@ const submitAppendVoiceTranslation = useCallback(
 						);
 					})
 				)}
+						</motion.div>
+					)}
+				</AnimatePresence>
 			</div>
 
 			{/* Credits & usage */}
@@ -7164,11 +7395,13 @@ const submitAppendVoiceTranslation = useCallback(
 					<span style={{ fontSize: 15, fontWeight: 500, color: "#18181b" }}>
 						{isStatsRoute
 							? "Usage stats"
-							: viewNew && !selected
-								? "New Translation"
-								: selected
-									? selected.label || sidebarTitle(selected)
-									: "Dashboard"}
+							: isWorkspaceRoute
+								? "Workspace"
+								: viewNew && !selected
+									? "New Translation"
+									: selected
+										? selected.label || sidebarTitle(selected)
+										: "Dashboard"}
 					</span>
 					<div style={{ flex: 1 }} />
 					{!sidebarOpen && (
@@ -7189,7 +7422,17 @@ const submitAppendVoiceTranslation = useCallback(
 					}}
 				>
 					<AnimatePresence mode="wait">
-						{isStatsRoute ? (
+						{isWorkspaceRoute ? (
+							<motion.div
+								key="workspace"
+								initial={{ opacity: 0, y: 12 }}
+								animate={{ opacity: 1, y: 0 }}
+								exit={{ opacity: 0 }}
+								style={{ width: "100%" }}
+							>
+								<WorkspacePage uid={uid} translationGroups={videos} />
+							</motion.div>
+						) : isStatsRoute ? (
 							routeVideoId ? (
 								<motion.div
 									key="stats"
@@ -7244,6 +7487,7 @@ const submitAppendVoiceTranslation = useCallback(
 											tab={newTranslationTab}
 											onTabChange={setNewTranslationTab}
 											showTabs={false}
+											workspaceVideos={workspaceVideos}
 											usageMinutesUsed={usageMinutes.used}
 											usageMinutesCredited={usageMinutes.credited}
 										/>
@@ -7325,6 +7569,30 @@ const submitAppendVoiceTranslation = useCallback(
 													}}
 												>
 													{selected?.id &&
+													selectedDetail?.agg === "done" ? (
+														<button
+															type="button"
+															onClick={() => void handleShareProject()}
+															style={{
+																display: "inline-flex",
+																alignItems: "center",
+																gap: 6,
+																padding: "10px 14px",
+																borderRadius: 10,
+																fontSize: 13,
+																fontWeight: 600,
+																border: "1px solid rgba(234,88,12,0.25)",
+																background: "rgba(234,88,12,0.08)",
+																color: "#c2410c",
+																cursor: "pointer",
+																whiteSpace: "nowrap",
+															}}
+														>
+															<Share2 size={16} aria-hidden />
+															Share
+														</button>
+													) : null}
+													{selected?.id &&
 													!isCaptionGroup &&
 													!isClipsGroup ? (
 														<button
@@ -7397,6 +7665,7 @@ const submitAppendVoiceTranslation = useCallback(
 												</div>
 											</div>
 
+											
 											{isVoiceTranslationGroup && !appendVoiceSourceText && (
 												<div
 													style={{
@@ -7766,7 +8035,7 @@ const submitAppendVoiceTranslation = useCallback(
 												</div>
 											)}
 
-										{!selectedDetail.j.isStaged &&
+											{!selectedDetail.j.isStaged &&
 											selectedDetail.j.status !== "done" &&
 											selectedDetail.j.status !== "error" && (
 												<>
@@ -8581,10 +8850,72 @@ const submitAppendVoiceTranslation = useCallback(
 													</div>
 												</div>
 											)}
+
+{showFollowUpTools && (
+												<div
+													style={{
+														marginBottom: 28,
+														paddingBottom: 24,
+														borderBottom: "1px solid rgba(0,0,0,0.06)",
+													}}
+												>
+													<h3
+														className="aantraa-font"
+														style={{
+															fontSize: 17,
+															fontWeight: 700,
+															color: "#18181b",
+															marginTop: 20,
+														}}
+													>
+														Use this video in another tool
+													</h3>
+													<p
+														style={{
+															fontSize: 13,
+															color: "#71717a",
+															marginBottom: 14,
+															lineHeight: 1.5,
+														}}
+													>
+														Pick translate, captions, or clips — the video URL
+														is already filled. Each run creates a{" "}
+														<strong>new project</strong> and opens it when
+														processing starts.
+													</p>
+													<VideoToolsTabBar
+														value={followUpTab}
+														onChange={setFollowUpTab}
+														tabOrder={followUpTabOrder}
+														className="mb-4"
+													/>
+													<div
+														style={{
+															borderRadius: 14,
+															padding: "20px 18px",
+															background: "rgba(254,243,232,0.35)",
+															border: "1px solid rgba(234,88,12,0.15)",
+														}}
+													>
+														<NewTranslationPanel
+															addVideo={addFollowUpToolJob}
+															tab={followUpTab}
+															onTabChange={setFollowUpTab}
+															showTabs={false}
+															followUpMode
+															prefillVideoUrl={reuseVideoUrl}
+															lockPrefilledUrl
+															workspaceVideos={workspaceVideos}
+															usageMinutesUsed={usageMinutes.used}
+															usageMinutesCredited={usageMinutes.credited}
+														/>
+													</div>
+												</div>
+											)}
+
 										</>
 									)}
 								</div>
-								
 
 								<div
 									style={{

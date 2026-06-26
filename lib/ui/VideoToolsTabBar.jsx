@@ -7,12 +7,24 @@ export const VIDEO_TOOLS_TABS = [
 	{ id: "clips", label: "Viral clips", Icon: Scissors },
 ];
 
-export default function VideoToolsTabBar({ value, onChange, className = "" }) {
+export default function VideoToolsTabBar({
+	value,
+	onChange,
+	className = "",
+	tabOrder,
+}) {
+	const tabs = tabOrder?.length
+		? tabOrder
+				.map((id) => VIDEO_TOOLS_TABS.find((t) => t.id === id))
+				.filter(Boolean)
+		: VIDEO_TOOLS_TABS;
+
 	return (
 		<div
-			className={`grid grid-cols-4 gap-2 p-1.5 bg-zinc-100/80 border border-zinc-200/80 rounded-xl max-w-4xl mx-auto ${className}`}
+			className={`grid gap-2 p-1.5 bg-zinc-100/80 border border-zinc-200/80 rounded-xl max-w-4xl mx-auto ${className}`}
+			style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
 		>
-			{VIDEO_TOOLS_TABS.map(({ id, label, Icon }) => (
+			{tabs.map(({ id, label, Icon }) => (
 				<button
 					key={id}
 					type="button"

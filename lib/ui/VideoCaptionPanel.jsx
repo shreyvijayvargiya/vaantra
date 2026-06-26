@@ -17,6 +17,7 @@ import VideoCaptionJobResult from "./VideoCaptionJobResult";
 import { extractCaptionJobFields } from "../videoToolsJob";
 import { getBlockedVideoUrlWarning } from "../utils/blockedVideoUrl";
 import BlockedUrlWarning from "./BlockedUrlWarning";
+import WorkspaceVideoPicker from "./WorkspaceVideoPicker";
 
 const CAPTION_STYLE_OPTIONS = [
 	{ value: "bottom", label: "Bottom" },
@@ -33,9 +34,15 @@ export default function VideoCaptionPanel({
 	requireAuthOnSubmit,
 	onRequireAuth,
 	onJobCreated,
+	prefillVideoUrl = null,
+	lockPrefilledUrl = false,
+	workspaceVideos = [],
+	urlOnly = false,
 }) {
 	const [mode, setMode] = useState("url");
 	const [videoUrl, setVideoUrl] = useState("");
+	const [urlLocked, setUrlLocked] = useState(false);
+	const prefillAppliedRef = useRef(null);
 	const [file, setFile] = useState(null);
 	const [languageName, setLanguageName] = useState("English");
 	const [captionStyle, setCaptionStyle] = useState("bottom");
@@ -52,6 +59,23 @@ export default function VideoCaptionPanel({
 	useEffect(() => {
 		return () => abortRef.current?.abort();
 	}, []);
+
+	useEffect(() => {
+		if (!urlOnly) return;
+		setMode("url");
+		setFile(null);
+		setError("");
+	}, [urlOnly]);
+
+	useEffect(() => {
+		if (!prefillVideoUrl) return;
+		if (prefillAppliedRef.current === prefillVideoUrl) return;
+		prefillAppliedRef.current = prefillVideoUrl;
+		setMode("url");
+		setVideoUrl(prefillVideoUrl);
+		setUrlLocked(Boolean(lockPrefilledUrl));
+		setFile(null);
+	}, [prefillVideoUrl, lockPrefilledUrl]);
 
 	const pickFile = (f) => {
 		if (!f) return;
@@ -173,6 +197,7 @@ export default function VideoCaptionPanel({
 				Upload a video or paste a URL — AI transcribes and burns captions into your video.
 			</p>
 
+			{!urlOnly && (
 			<div className="flex gap-2 p-1 bg-zinc-100/80 border border-zinc-200/80 rounded-xl">
 				{[
 					{ id: "url", label: "Video URL" },
@@ -192,15 +217,27 @@ export default function VideoCaptionPanel({
 					</button>
 				))}
 			</div>
-
+			)}
 			{mode === "url" ? (
 				<div className="space-y-2">
+					{workspaceVideos.length > 0 && !urlOnly && (
+						<WorkspaceVideoPicker
+							videos={workspaceVideos}
+							value={videoUrl}
+							onChange={(url) => {
+								setVideoUrl(url);
+								setUrlLocked(false);
+							}}
+							disabled={busy || urlLocked}
+						/>
+					)}
 					<input
 						type="url"
 						placeholder="https://utfs.io/f/your-video.mp4"
 						value={videoUrl}
 						onChange={(e) => setVideoUrl(e.target.value)}
-						disabled={busy}
+						disabled={busy || urlLocked}
+						readOnly={urlLocked}
 						className={inputClass}
 					/>
 					<BlockedUrlWarning message={blockedUrlWarning} />
