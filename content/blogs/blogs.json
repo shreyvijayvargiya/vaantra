@@ -1,5 +1,14 @@
 [
 	{
+		"slug": "making-of-aantraa",
+		"title": "Making of Aantraa",
+		"description": "How aantraa was built in a week — AI video translation, audio-to-MP3, captions, viral shorts, OpenRouter, FFmpeg, UploadThing, and 90+ languages under the hood.",
+		"author": "Shrey",
+		"publishedAt": "2026-06-26",
+		"tags": ["making-of", "ai", "video translation", "startup", "backend"],
+		"contentFile": "making-of-aantraa.md"
+	},
+	{
 		"slug": "ai-audio-video-translation-free-credits-pricing-and-contact",
 		"title": "AI Audio & Video Translation — Free Credits, Pricing & Contact",
 		"description": "Translate audio and video into 90+ languages with aantraa. Every new account gets 1 free starter minute, pay-as-you-go pricing after that, and B2B API solutions for agencies coming soon.",
