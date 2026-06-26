@@ -19,6 +19,8 @@ import LangSingleSelect from "./LangSingleSelect";
 import { languageNameToApiCode } from "../utils/languages";
 import ViralClipsJobResult from "./ViralClipsJobResult";
 import { extractClipJobFields } from "../videoToolsJob";
+import { getBlockedVideoUrlWarning } from "../utils/blockedVideoUrl";
+import BlockedUrlWarning from "./BlockedUrlWarning";
 
 const VIDEO_UPLOAD_MAX_MB = 500;
 const VIDEO_UPLOAD_MAX_BYTES = VIDEO_UPLOAD_MAX_MB * 1024 * 1024;
@@ -96,7 +98,7 @@ export default function ViralClipCutPanel({
 
 	const submit = async () => {
 		if (busy) return;
-		if (mode === "url" && !videoUrl.trim()) return;
+		if (mode === "url" && (!videoUrl.trim() || getBlockedVideoUrlWarning(videoUrl))) return;
 		if (mode === "file" && !file) return;
 		if (requireAuthOnSubmit && !auth.currentUser) {
 			onRequireAuth?.();
@@ -170,6 +172,9 @@ export default function ViralClipCutPanel({
 	};
 
 	const resultJob = result ? extractClipJobFields(result) : null;
+	const blockedUrlWarning =
+		mode === "url" ? getBlockedVideoUrlWarning(videoUrl) : null;
+	const canSubmitUrl = mode === "url" && videoUrl.trim() && !blockedUrlWarning;
 
 	return (
 		<div className="space-y-4">
@@ -198,14 +203,17 @@ export default function ViralClipCutPanel({
 			</div>
 
 			{mode === "url" ? (
-				<input
-					type="url"
-					placeholder="https://utfs.io/f/your-long-video.mp4"
-					value={videoUrl}
-					onChange={(e) => setVideoUrl(e.target.value)}
-					disabled={busy}
-					className={inputClass}
-				/>
+				<div className="space-y-2">
+					<input
+						type="url"
+						placeholder="https://utfs.io/f/your-long-video.mp4"
+						value={videoUrl}
+						onChange={(e) => setVideoUrl(e.target.value)}
+						disabled={busy}
+						className={inputClass}
+					/>
+					<BlockedUrlWarning message={blockedUrlWarning} />
+				</div>
 			) : (
 				<div
 					onDragOver={(e) => {
@@ -377,7 +385,7 @@ export default function ViralClipCutPanel({
 				<button
 					type="button"
 					onClick={submit}
-					disabled={busy || (mode === "url" ? !videoUrl.trim() : !file)}
+					disabled={busy || (mode === "url" ? !canSubmitUrl : !file)}
 					className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
 				>
 					{busy ? (

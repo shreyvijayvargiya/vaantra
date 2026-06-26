@@ -14,6 +14,7 @@ import StudioYouTubePreview from "../app/components/StudioYouTubePreview";
 import TranslationExamplesSection from "../app/components/TranslationExamplesSection";
 import HomePage from "../app/components/Home";
 import VideoToolsTabBar from "../lib/ui/VideoToolsTabBar";
+import { getBlockedVideoUrlWarning } from "../lib/utils/blockedVideoUrl";
 import VideoCaptionPanel from "../lib/ui/VideoCaptionPanel";
 import ViralClipCutPanel from "../lib/ui/ViralClipCutPanel";
 import VideoToolsStatusProgress from "../lib/ui/VideoToolsStatusProgress";
@@ -2963,6 +2964,8 @@ function NewTranslationPanel({
 					<TranslateForm
 						onJobCreated={addVideo}
 						compact
+						requireAuthOnSubmit={requireAuthOnSubmit}
+						onRequireAuth={onRequireAuth}
 						usageMinutesUsed={usageMinutesUsed}
 						usageMinutesCredited={usageMinutesCredited}
 					/>
@@ -3479,32 +3482,8 @@ function TranslateForm({
 		!isHttpOrHttpsUrl(url.trim());
 
 	// Domains whose videos cannot be fetched by the API
-	const BLOCKED_DOMAINS = {
-		"youtube.com":    "YouTube videos can't be fetched by our API. Please download the video and upload it instead.",
-		"youtu.be":       "YouTube videos can't be fetched by our API. Please download the video and upload it instead.",
-		"tiktok.com":     "TikTok videos are protected. Please download and upload the file directly.",
-		"instagram.com":  "Instagram requires authentication. Please download and upload the file directly.",
-		"facebook.com":   "Facebook videos are protected. Please download and upload the file directly.",
-		"fb.watch":       "Facebook videos are protected. Please download and upload the file directly.",
-		"fb.com":         "Facebook videos are protected. Please download and upload the file directly.",
-		"twitter.com":    "Twitter/X videos can't be fetched. Please download and upload the file directly.",
-		"x.com":          "Twitter/X videos can't be fetched. Please download and upload the file directly.",
-		"twitch.tv":      "Twitch streams/clips can't be fetched. Please download and upload the file directly.",
-		"netflix.com":    "Netflix videos are DRM-protected and cannot be downloaded.",
-		"hulu.com":       "Hulu videos are DRM-protected and cannot be downloaded.",
-		"disneyplus.com": "Disney+ videos are DRM-protected and cannot be downloaded.",
-		"primevideo.com": "Amazon Prime Video is DRM-protected and cannot be downloaded.",
-		"reddit.com":     "Reddit-hosted videos can't be fetched. Please download and upload the file directly.",
-	};
-	const blockedDomainWarning = (() => {
-		if (mode !== "url" || !url.trim()) return null;
-		try {
-			const hostname = new URL(url.trim()).hostname.replace(/^www\./, "");
-			return BLOCKED_DOMAINS[hostname] ?? null;
-		} catch {
-			return null;
-		}
-	})();
+	const blockedDomainWarning =
+		mode === "url" ? getBlockedVideoUrlWarning(url) : null;
 
 	const canSubmit =
 		selectedLangs.length > 0 &&
@@ -4500,6 +4479,7 @@ function UpgradePriceModal({ open, onClose }) {
 function Landing() {
 	const [showLogin, setShowLogin] = useState(false);
 	const [faqOpen, setFaqOpen] = useState(null);
+	const [heroToolTab, setHeroToolTab] = useState("video");
 	const [landingPricingCurrency, setLandingPricingCurrency] = useState("usd");
 	const router = useRouter();
 
@@ -4900,7 +4880,15 @@ function Landing() {
 									"0 24px 64px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)",
 							}}
 						>
-							<TranslateForm
+							<VideoToolsTabBar
+								value={heroToolTab}
+								onChange={setHeroToolTab}
+								className="mb-3"
+							/>
+							<NewTranslationPanel
+								tab={heroToolTab}
+								onTabChange={setHeroToolTab}
+								showTabs={false}
 								requireAuthOnSubmit
 								onRequireAuth={() => setShowLogin(true)}
 							/>

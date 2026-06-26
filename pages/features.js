@@ -1,133 +1,79 @@
-import React from "react";
 import Head from "next/head";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 import Navbar from "../app/components/Navbar";
 import Footer from "../app/components/Footer";
-import { motion } from "framer-motion";
-import {
-	Check,
-	Zap,
-	Shield,
-	Rocket,
-	Sparkles,
-	Database,
-	CreditCard,
-	Users,
-	BarChart3,
-} from "lucide-react";
+import FeaturesShowcaseSection from "../app/components/FeaturesShowcaseSection";
+import TranslationExamplesSection from "../app/components/TranslationExamplesSection";
+import { getCanonicalUrl } from "../lib/config/seo";
 
-const FeaturesPage = () => {
-	const features = [
-		{
-			icon: Zap,
-			title: "Lightning Fast Performance",
-			description:
-				"Built with Next.js 15 and React 18 for optimal performance and SEO. Server-side rendering and static generation included.",
-		},
-		{
-			icon: Shield,
-			title: "Secure Authentication",
-			description:
-				"Complete authentication system with email/password and Google OAuth. Role-based access control included.",
-		},
-		{
-			icon: CreditCard,
-			title: "Payment Integration",
-			description:
-				"Seamless payment processing in USD and INR. Subscription management, webhooks, and customer management built-in.",
-		},
-		{
-			icon: Database,
-			title: "Database Ready",
-			description:
-				"Firebase Firestore integration with Supabase alternative. Real-time data synchronization included.",
-		},
-		{
-			icon: Users,
-			title: "User Management",
-			description:
-				"Complete user management system with teams, roles, and permissions. Admin panel included.",
-		},
-		{
-			icon: BarChart3,
-			title: "Analytics Dashboard",
-			description:
-				"Beautiful analytics dashboard with charts and metrics. Track your business KPIs in real-time.",
-		},
-		{
-			icon: Rocket,
-			title: "Scalable Architecture",
-			description:
-				"Built to scale from startup to enterprise. Clean code architecture and best practices.",
-		},
-		{
-			icon: Sparkles,
-			title: "Modern UI/UX",
-			description:
-				"Beautiful, responsive design with Tailwind CSS. Framer Motion animations included.",
-		},
-	];
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://aantraa.video";
+
+export default function FeaturesPage() {
+	const title = "Features — aantraa";
+	const description =
+		"Video translation, text to audio, AI captions, and viral shorts — four AI tools to dub, caption, and clip content in 90+ languages.";
 
 	return (
 		<>
 			<Head>
-				<title>Features - YourApp</title>
+				<title>{title}</title>
+				<meta name="description" content={description} />
 				<meta
-					name="description"
-					content="Discover all the features included in our SaaS starter template."
+					name="keywords"
+					content="video translation, text to audio, AI captions, viral clips, aantraa features"
 				/>
+				<link rel="canonical" href={getCanonicalUrl("/features", SITE_URL)} />
+				<meta name="robots" content="index, follow" />
+				<meta property="og:site_name" content="aantraa" />
+				<meta property="og:type" content="website" />
+				<meta property="og:url" content={getCanonicalUrl("/features", SITE_URL)} />
+				<meta property="og:title" content={title} />
+				<meta property="og:description" content={description} />
+				<meta property="og:image" content={`${SITE_URL}/aantraa-banner.png`} />
+				<meta name="twitter:card" content="summary_large_image" />
+				<meta name="twitter:site" content="@aantraa_ai" />
+				<meta name="twitter:title" content={title} />
+				<meta name="twitter:description" content={description} />
 			</Head>
-			<div className="min-h-screen flex flex-col">
+
+			<div className="min-h-screen flex flex-col bg-white">
 				<Navbar />
 
-				<section className="flex-1 py-20 px-4 sm:px-6 lg:px-8">
-					<div className="max-w-6xl mx-auto">
-						<div className="text-center mb-12">
-							<h1 className="text-4xl font-bold text-zinc-900 mb-4">
-								Everything You Need to Launch
-							</h1>
-							<p className="text-lg text-zinc-600 max-w-2xl mx-auto">
-								Our SaaS starter template includes all the essential features to
-								get your product to market faster.
-							</p>
-						</div>
-
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-							{features.map((feature, index) => {
-								const Icon = feature.icon;
-								return (
-									<motion.div
-										key={index}
-										initial={{ opacity: 0, y: 20 }}
-										whileInView={{ opacity: 1, y: 0 }}
-										viewport={{ once: true }}
-										transition={{ delay: index * 0.1 }}
-										className="p-6 bg-white border border-zinc-200 rounded-xl hover:border-zinc-300 transition-colors"
-									>
-										<div className="flex items-start gap-4">
-											<div className="p-3 bg-zinc-900 text-white rounded-xl flex-shrink-0">
-												<Icon className="w-5 h-5" />
-											</div>
-											<div>
-												<h3 className="text-lg font-semibold text-zinc-900 mb-2">
-													{feature.title}
-												</h3>
-												<p className="text-sm text-zinc-600">
-													{feature.description}
-												</p>
-											</div>
-										</div>
-									</motion.div>
-								);
-							})}
-						</div>
-					</div>
+				{/* Hero */}
+				<section className="pt-14 pb-4 px-5 sm:px-8 text-center border-b border-zinc-100">
+					<motion.div
+						initial={{ opacity: 0, y: 12 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.45 }}
+						className="max-w-2xl mx-auto"
+					>
+						<h1 className="aantraa-font text-4xl sm:text-5xl font-bold text-zinc-900 mb-4 tracking-tight">
+							Features
+						</h1>
+						<p className="text-lg text-zinc-600 leading-relaxed mb-6">
+							AI audio and video tools built for creators, marketers, and teams
+							who need to ship multilingual content fast.
+						</p>
+						<Link
+							href="/login"
+							className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-xl shadow-md shadow-orange-500/20 transition-all"
+						>
+							Get started free
+							<ArrowRight className="w-4 h-4" aria-hidden />
+						</Link>
+					</motion.div>
 				</section>
+
+				{/* 4 product features — quote left, demo right */}
+				<FeaturesShowcaseSection sectionId="product-features" showHeader />
+
+				{/* Real translation examples */}
+				<TranslationExamplesSection sectionId="examples" showOriginalLink />
 
 				<Footer />
 			</div>
 		</>
 	);
-};
-
-export default FeaturesPage;
-
+}

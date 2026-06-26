@@ -1,73 +1,33 @@
-import { motion } from "framer-motion";
-import { ExternalLink } from "lucide-react";
+import { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowDown, ArrowRight, ExternalLink, Sparkles } from "lucide-react";
 import { TRANSLATION_EXAMPLES } from "../../lib/config/translationExamples";
 import StudioVideoPlayer from "./StudioVideoPlayer";
 import StudioYouTubePreview from "./StudioYouTubePreview";
 
 function TwitterOriginalEmbed({ tweetId, label = "Original tweet" }) {
 	return (
-		<div
-			style={{
-				borderRadius: 16,
-				overflow: "hidden",
-				background:
-					"linear-gradient(145deg, #18181b 0%, #27272a 45%, #1c1917 100%)",
-				border: "1px solid rgba(255,255,255,0.06)",
-				boxShadow:
-					"0 12px 40px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)",
-			}}
-		>
-			<div
-				style={{
-					borderRadius: 12,
-					overflow: "hidden",
-					position: "relative",
-					background: "#000",
-					aspectRatio: "16/9",
-					maxHeight: 320,
-					width: "100%",
-				}}
-			>
+		<div className="overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 border border-white/10 shadow-xl shadow-black/20">
+			<div className="relative w-full aspect-video max-h-72 bg-black overflow-hidden rounded-xl m-1">
 				<iframe
 					src={`https://platform.twitter.com/embed/Tweet.html?id=${encodeURIComponent(tweetId)}&theme=dark`}
 					title="Original tweet"
-					style={{
-						width: "100%",
-						height: "100%",
-						border: "none",
-						display: "block",
-					}}
+					className="absolute inset-0 w-full h-full border-0"
 					allowFullScreen
 				/>
 			</div>
-			<div
-				style={{
-					padding: "8px 12px",
-					background: "rgba(0,0,0,0.45)",
-					borderTop: "1px solid rgba(255,255,255,0.06)",
-					display: "flex",
-					alignItems: "center",
-					gap: 8,
-				}}
-			>
+			<div className="flex items-center gap-2 px-3 py-2 bg-black/40 border-t border-white/10">
 				<svg
 					width="14"
 					height="14"
 					viewBox="0 0 24 24"
 					fill="currentColor"
-					style={{ color: "rgba(255,255,255,0.7)", flexShrink: 0 }}
+					className="shrink-0 text-white/70"
+					aria-hidden
 				>
 					<path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.74l7.73-8.835L1.254 2.25H8.08l4.261 5.635L18.244 2.25Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z" />
 				</svg>
-				<span
-					style={{
-						fontSize: 11,
-						fontFamily: "'DM Mono', monospace",
-						color: "rgba(255,255,255,0.8)",
-					}}
-				>
-					{label}
-				</span>
+				<span className="text-[11px] font-mono text-white/80">{label}</span>
 			</div>
 		</div>
 	);
@@ -88,172 +48,166 @@ function renderOriginalEmbed(original) {
 	return null;
 }
 
-function TranslationExampleRow({
-	originalEmbed,
-	originalFlag,
-	originalLang,
-	originalUrl,
-	showOriginalLink = false,
-	translatedSrc,
-	translatedFlag,
-	translatedLang,
-}) {
-	return (
-		<motion.div
-			initial={{ opacity: 0, y: 24 }}
-			whileInView={{ opacity: 1, y: 0 }}
-			viewport={{ once: true, margin: "-60px" }}
-			transition={{ duration: 0.5, ease: "easeOut" }}
-			style={{
-				display: "grid",
-				gridTemplateColumns: "1fr auto 1fr",
-				alignItems: "center",
-				gap: "clamp(12px, 3vw, 32px)",
-			}}
-		>
-			<div
-				style={{
-					display: "flex",
-					flexDirection: "column",
-					gap: 12,
-					background: "rgba(234,88,12,0.02)",
-				}}
-				className="p-2 border border-orange-100 rounded-xl"
-			>
-				{originalEmbed}
-				<div
-					style={{
-						display: "flex",
-						flexDirection: "column",
-						gap: 8,
-						padding: "8px 14px",
-					}}
-				>
-					<div
-						style={{
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "start",
-							gap: 8,
-						}}
-					>
-						<span style={{ fontSize: 20, lineHeight: 1 }}>{originalFlag}</span>
-						<span
-							style={{ fontSize: 13.5, fontWeight: 600, color: "#18181b" }}
-						>
-							{originalLang}
-						</span>
-						<span
-							style={{
-								fontSize: 11,
-								color: "#a1a1aa",
-								marginLeft: 4,
-								fontFamily: "'DM Mono', monospace",
-							}}
-						>
-							original
-						</span>
-					</div>
-					{showOriginalLink && originalUrl ? (
-						<a
-							href={originalUrl}
-							target="_blank"
-							rel="noopener noreferrer"
-							style={{
-								display: "inline-flex",
-								alignItems: "center",
-								gap: 6,
-								fontSize: 12,
-								fontWeight: 500,
-								color: "#ea580c",
-								wordBreak: "break-all",
-								lineHeight: 1.4,
-							}}
-						>
-							<ExternalLink size={13} aria-hidden />
-							View original source
-						</a>
-					) : null}
-				</div>
-			</div>
+function getTabMeta(example, examples) {
+	const { flag, lang } = example.translated;
+	const duplicates = examples.filter((e) => e.translated.lang === lang);
+	const duplicateIndex = duplicates.findIndex((e) => e.id === example.id);
+	const suffix =
+		duplicates.length > 1 ? ` ${duplicateIndex + 1}` : "";
 
-			<div
-				style={{
-					display: "flex",
-					flexDirection: "column",
-					alignItems: "center",
-					gap: 6,
-					flexShrink: 0,
-				}}
+	return {
+		flag,
+		label: lang,
+		sublabel:
+			duplicates.length > 1
+				? `${example.original.flag} ${example.original.lang}`
+				: null,
+		ariaLabel: `${lang}${suffix} translation example`,
+	};
+}
+
+function LanguageExampleTabs({ examples, activeId, onChange }) {
+	return (
+		<div
+			className="flex gap-2 hidescrollbar overflow-x-auto pb-1 -mx-1 px-1 scrollbar-thin"
+			role="tablist"
+			aria-label="Translation language examples"
+		>
+			{examples.map((example) => {
+				const active = example.id === activeId;
+				const { flag, label, sublabel, ariaLabel } = getTabMeta(
+					example,
+					examples,
+				);
+
+				return (
+					<button
+						key={example.id}
+						type="button"
+						role="tab"
+						aria-selected={active}
+						aria-label={ariaLabel}
+						onClick={() => onChange(example.id)}
+						className={`flex shrink-0 flex-wrap text-sm items-center gap-0.5 min-w-[4.5rem] sm:min-w-[5.5rem] p-2 rounded-xl border text-center transition-all ${
+							active
+								? "border-orange-300 bg-gradient-to-b from-orange-100/90 to-orange-50/90 text-orange-800 shadow-sm shadow-orange-100/80"
+								: "border-transparent bg-white/70 text-zinc-600 hover:bg-white hover:border-zinc-200 hover:text-zinc-800"
+						}`}
+					>
+						<span className="text-xl sm:text-2xl leading-none" aria-hidden>
+							{flag}
+						</span>
+						<span className="text-xs sm:text-sm font-semibold truncate max-w-[5.5rem]">
+							{label}
+						</span>
+						{sublabel ? (
+							<span className="text-[10px] text-zinc-400 font-medium truncate max-w-[5.5rem]">
+								from {sublabel}
+							</span>
+						) : null}
+					</button>
+				);
+			})}
+		</div>
+	);
+}
+
+function LangBadge({ flag, lang, variant = "original" }) {
+	const isTranslated = variant === "translated";
+	return (
+		<div
+			className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ${
+				isTranslated
+					? "bg-orange-100 text-orange-800 border border-orange-200/80"
+					: "bg-zinc-100 text-zinc-800 border border-zinc-200/80"
+			}`}
+		>
+			<span className="text-lg leading-none" aria-hidden>
+				{flag}
+			</span>
+			<span>{lang}</span>
+			<span
+				className={`text-[10px] font-mono uppercase tracking-wider ${
+					isTranslated ? "text-orange-600/80" : "text-zinc-400"
+				}`}
 			>
-				<div
-					style={{
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-					}}
-				>
-					<div className="flex items-center gap-2 -rotate-90">
-						<img
-							className="h-10"
-							src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyOCAyOCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjZDVkNWQ1IiBzdHlsZT0ib3BhY2l0eToxOyI+PHBhdGggIGQ9Ik0xOS40MDEgMy4zNzhhLjc1Ljc1IDAgMCAwLTEuMDIzLS4yOEMxMy4wNzIgNi4xMzIgMTMgMTEuMjY5IDEzIDE0Ljc1djcuNjlsLTQuNzItNC43MmEuNzUuNzUgMCAxIDAtMS4wNiAxLjA2bDYgNmEuNzUuNzUgMCAwIDAgMS4wNiAwbDYtNmEuNzUuNzUgMCAwIDAtMS4wNi0xLjA2bC00LjcyIDQuNzJ2LTcuNjljMC0zLjUxOC4xMjgtNy43OCA0LjYyMi0xMC4zNDlhLjc1Ljc1IDAgMCAwIC4yOC0xLjAyMyIvPjwvc3ZnPg=="
-							alt=""
+				{isTranslated ? "translated" : "original"}
+			</span>
+		</div>
+	);
+}
+
+function FlowConnector() {
+	return (
+		<div className="flex flex-col items-center justify-center gap-1.5 shrink-0 py-2 lg:py-0 lg:px-2">
+			<div className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-zinc-200 shadow-sm text-orange-500">
+				<ArrowDown className="h-5 w-5 lg:hidden" aria-hidden />
+				<ArrowRight className="h-5 w-5 hidden lg:block" aria-hidden />
+			</div>
+			<span className="text-[10px] font-mono uppercase tracking-widest text-zinc-400">
+				aantraa
+			</span>
+		</div>
+	);
+}
+
+function TranslationExampleCard({
+	example,
+	showOriginalLink,
+}) {
+	const originalEmbed = renderOriginalEmbed(example.original);
+
+	return (
+		<div className="rounded-3xl border border-zinc-200/80 bg-white p-4 sm:p-5 shadow-lg shadow-black/[0.04]">
+			<div className="flex flex-col lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-stretch gap-4 lg:gap-5">
+				<div className="flex flex-col rounded-2xl border border-zinc-100 bg-zinc-50/80 overflow-hidden">
+					<div className="px-4 pt-4 pb-2">
+						<LangBadge
+							flag={example.original.flag}
+							lang={example.original.lang}
+							variant="original"
 						/>
 					</div>
+					<div className="px-3 pb-3 flex-1 min-w-0">{originalEmbed}</div>
+					{showOriginalLink && example.original.url ? (
+						<div className="px-4 pb-4 pt-1 border-t border-zinc-100">
+							<a
+								href={example.original.url}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="inline-flex items-center gap-1.5 text-xs font-medium text-orange-600 hover:text-orange-700 break-all"
+							>
+								<ExternalLink className="w-3.5 h-3.5 shrink-0" aria-hidden />
+								View original source
+							</a>
+						</div>
+					) : null}
 				</div>
-				<span
-					style={{
-						fontSize: 10.5,
-						fontFamily: "'DM Mono', monospace",
-						color: "#a1a1aa",
-						textTransform: "uppercase",
-						letterSpacing: "0.06em",
-					}}
-				>
-					Aantraa
-				</span>
-			</div>
 
-			<div
-				style={{
-					display: "flex",
-					flexDirection: "column",
-					gap: 12,
-					borderRadius: 10,
-					background: "rgba(234,88,12,0.1)",
-					padding: "8px 8px",
-					border: "1px solid rgba(234,88,12,0.18)",
-					boxShadow: "0 1px 4px rgba(234,88,12,0.08)",
-				}}
-			>
-				<StudioVideoPlayer src={translatedSrc} />
-				<div
-					style={{
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "start",
-						gap: 8,
-						padding: "8px 14px",
-					}}
-				>
-					<span style={{ fontSize: 20, lineHeight: 1 }}>{translatedFlag}</span>
-					<span style={{ fontSize: 13.5, fontWeight: 600, color: "#c2410c" }}>
-						{translatedLang}
-					</span>
-					<span
-						style={{
-							fontSize: 11,
-							color: "#ea580c",
-							marginLeft: 4,
-							fontFamily: "'DM Mono', monospace",
-							opacity: 0.7,
-						}}
-					>
-						translated
-					</span>
+				<FlowConnector />
+
+				<div className="relative flex flex-col rounded-2xl border-2 border-orange-200/90 bg-gradient-to-br from-orange-50 via-white to-orange-50/40 overflow-hidden shadow-md shadow-orange-500/10">
+					<div className="absolute top-3 right-3 z-10">
+						<span className="inline-flex items-center gap-1 rounded-full bg-orange-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+							<Sparkles className="w-3 h-3" aria-hidden />
+							AI dubbed
+						</span>
+					</div>
+					<div className="px-4 pt-4 pb-2">
+						<LangBadge
+							flag={example.translated.flag}
+							lang={example.translated.lang}
+							variant="translated"
+						/>
+					</div>
+					<div className="px-3 pb-4 flex-1 min-w-0">
+						<div className="rounded-xl overflow-hidden ring-1 ring-orange-200/60 bg-black/5">
+							<StudioVideoPlayer src={example.translated.src} />
+						</div>
+					</div>
 				</div>
 			</div>
-		</motion.div>
+		</div>
 	);
 }
 
@@ -266,57 +220,56 @@ export default function TranslationExamplesSection({
 	showOriginalLink = false,
 	sectionId = "examples",
 }) {
+	const [activeId, setActiveId] = useState(TRANSLATION_EXAMPLES[0]?.id ?? "");
+
+	const activeExample = useMemo(
+		() =>
+			TRANSLATION_EXAMPLES.find((e) => e.id === activeId) ??
+			TRANSLATION_EXAMPLES[0],
+		[activeId],
+	);
+
 	return (
 		<section
 			id={sectionId}
-			style={{
-				borderTop: "1px solid rgba(0,0,0,0.06)",
-				padding: "80px clamp(20px,5vw,64px)",
-				background: "#faf9f7",
-			}}
+			className="border-t border-zinc-200/80 bg-[#faf9f7] py-16 sm:py-20 px-5 sm:px-8"
 		>
-			<div style={{ maxWidth: 1100, margin: "0 auto" }}>
-				<h2
-					className="aantraa-font"
-					style={{
-						textAlign: "center",
-						fontSize: "clamp(1.8rem,4vw,2.8rem)",
-						fontWeight: 700,
-						color: "#18181b",
-						marginBottom: 12,
-					}}
-				>
-					See it in action
-				</h2>
-				<p
-					style={{
-						textAlign: "center",
-						fontSize: 15,
-						color: "#71717a",
-						lineHeight: 1.65,
-						maxWidth: 520,
-						margin: "0 auto 56px",
-					}}
-				>
-					Real translations made with aantra — original on the left, translated
-					on the right.
-				</p>
-
-				<div style={{ display: "flex", flexDirection: "column", gap: 56 }}>
-					{TRANSLATION_EXAMPLES.map((example) => (
-						<TranslationExampleRow
-							key={example.id}
-							originalEmbed={renderOriginalEmbed(example.original)}
-							originalFlag={example.original.flag}
-							originalLang={example.original.lang}
-							originalUrl={example.original.url}
-							showOriginalLink={showOriginalLink}
-							translatedSrc={example.translated.src}
-							translatedFlag={example.translated.flag}
-							translatedLang={example.translated.lang}
-						/>
-					))}
+			<div className="max-w-6xl mx-auto">
+				<div className="text-center mb-10 sm:mb-12">
+					<h2 className="aantraa-font text-3xl sm:text-4xl font-bold text-zinc-900 mb-3 tracking-tight">
+						See it in action
+					</h2>
+					<p className="text-base text-zinc-600 leading-relaxed max-w-lg mx-auto">
+						Pick a language — original on the left, AI-dubbed output on the
+						right.
+					</p>
 				</div>
+
+				<div className="rounded-2xl border border-zinc-200/80 bg-zinc-100/60 p-2 sm:p-2.5 mb-6">
+					<LanguageExampleTabs
+						examples={TRANSLATION_EXAMPLES}
+						activeId={activeExample?.id}
+						onChange={setActiveId}
+					/>
+				</div>
+
+				<AnimatePresence mode="wait">
+					<motion.div
+						key={activeExample?.id}
+						role="tabpanel"
+						initial={{ opacity: 0, y: 12 }}
+						animate={{ opacity: 1, y: 0 }}
+						exit={{ opacity: 0, y: -8 }}
+						transition={{ duration: 0.25, ease: "easeOut" }}
+					>
+						{activeExample ? (
+							<TranslationExampleCard
+								example={activeExample}
+								showOriginalLink={showOriginalLink}
+							/>
+						) : null}
+					</motion.div>
+				</AnimatePresence>
 			</div>
 		</section>
 	);

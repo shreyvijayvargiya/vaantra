@@ -60,3 +60,4 @@
 		margin-right: 0;
 	}
 }
+.hidescrollbar::-webkit-scrollbar { display: none; }
