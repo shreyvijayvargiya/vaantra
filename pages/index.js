@@ -19,10 +19,12 @@ import WorkspacePage from "../app/components/WorkspacePage";
 import { getBlockedVideoUrlWarning } from "../lib/utils/blockedVideoUrl";
 import VideoCaptionPanel from "../lib/ui/VideoCaptionPanel";
 import ViralClipCutPanel from "../lib/ui/ViralClipCutPanel";
+import BlogToVideoPanel from "../lib/ui/BlogToVideoPanel";
 import VideoToolsStatusProgress from "../lib/ui/VideoToolsStatusProgress";
 import VideoCaptionJobResult from "../lib/ui/VideoCaptionJobResult";
 import ViralClipsJobResult from "../lib/ui/ViralClipsJobResult";
-import { fetchCaptionJobOnce, fetchClipJobOnce } from "../lib/videoToolsJob";
+import BlogToVideoJobResult from "../lib/ui/BlogToVideoJobResult";
+import { fetchCaptionJobOnce, fetchClipJobOnce, fetchBlogToVideoJobOnce } from "../lib/videoToolsJob";
 import { startCaptionJob } from "../lib/videoToolsApi";
 import { onAuthStateChange } from "../lib/api/auth";
 import {
@@ -208,6 +210,7 @@ function sidebarTitle(v) {
 	if (v.label && String(v.label).trim()) return v.label.trim();
 	if (v.type === "caption") return "AI Captions";
 	if (v.type === "clips") return "Viral Clips";
+	if (v.type === "blog") return "Blog to video";
 	const jobs = v.jobs || [];
 	if (jobs.length === 0) return "Translation";
 	if (jobs.length === 1) return jobs[0].lang || "Translation";
@@ -3026,6 +3029,14 @@ function NewTranslationPanel({
 					urlOnly={followUpMode}
 				/>
 				</div>
+			) : tab === "blog" ? (
+				<div className={followUpMode ? "" : "mt-4"}>
+				<BlogToVideoPanel
+					requireAuthOnSubmit={requireAuthOnSubmit}
+					onRequireAuth={onRequireAuth}
+					onJobCreated={addVideo}
+				/>
+				</div>
 			) : (
 				<div className={followUpMode ? "" : "mt-4"}>
 				<ViralClipCutPanel
@@ -5717,6 +5728,8 @@ export function Dashboard({ user, onLogout }) {
 
 	const isCaptionGroup = selected?.type === "caption";
 	const isClipsGroup = selected?.type === "clips";
+	const isBlogGroup = selected?.type === "blog";
+	const isVideoToolsJobGroup = isCaptionGroup || isClipsGroup || isBlogGroup;
 
 	const jobsForTabs = useMemo(() => {
 		if (!selected) return [];
@@ -5882,6 +5895,24 @@ export function Dashboard({ user, onLogout }) {
 				videoTranslateId: j.videoTranslateId ?? j.id ?? null,
 				videoCaptionId: j.videoCaptionId ?? null,
 				viralClipCutId: j.viralClipCutId ?? null,
+				blogToVideoId: j.blogToVideoId ?? null,
+				blogUrl: j.blogUrl ?? null,
+				script: j.script ?? null,
+				segments: j.segments ?? null,
+				audioUrl: j.audioUrl ?? null,
+				title: j.title ?? null,
+				targetAudience: j.targetAudience ?? null,
+				visualDirector: j.visualDirector ?? null,
+				renderPlan: j.renderPlan ?? null,
+				scenes: j.scenes ?? null,
+				captions: j.captions ?? null,
+				targetDuration: j.targetDuration ?? null,
+				aspect: j.aspect ?? null,
+				ttsVoice: j.ttsVoice ?? null,
+				style: j.style ?? null,
+				styleThemes: j.styleThemes ?? null,
+				videoWidth: j.videoWidth ?? null,
+				videoHeight: j.videoHeight ?? null,
 				srtUrl: j.srtUrl ?? null,
 				timedCaptions: j.timedCaptions ?? null,
 				clips: j.clips ?? null,
@@ -5905,6 +5936,7 @@ export function Dashboard({ user, onLogout }) {
 				createdAt: payload.createdAt || new Date().toISOString(),
 				sourceVideoUrl:
 					payload.sourceVideoUrl ?? jobs[0]?.sourceVideoUrl ?? null,
+				blogUrl: payload.blogUrl ?? jobs[0]?.blogUrl ?? null,
 				sourceText:
 					typeof payload.sourceText === "string" ? payload.sourceText : null,
 				type:
@@ -6633,7 +6665,7 @@ const submitAppendVoiceTranslation = useCallback(
 	useEffect(() => {
 		const sel = selectedRef.current;
 		if (!sel?.id || !sel.jobs?.length) return;
-		if (sel.type === "caption" || sel.type === "clips") return;
+		if (sel.type === "caption" || sel.type === "clips" || sel.type === "blog") return;
 	const pending = sel.jobs.filter(
 		(j) =>
 			j.status !== "done" &&
@@ -6675,7 +6707,7 @@ const submitAppendVoiceTranslation = useCallback(
 	useEffect(() => {
 		const sel = selectedRef.current;
 		if (!sel?.id || !sel.jobs?.length) return;
-		if (sel.type !== "caption" && sel.type !== "clips") return;
+		if (sel.type !== "caption" && sel.type !== "clips" && sel.type !== "blog") return;
 
 		const pending = sel.jobs.filter(
 			(j) =>
@@ -6704,7 +6736,9 @@ const submitAppendVoiceTranslation = useCallback(
 					const fields =
 						tool === "caption"
 							? await fetchCaptionJobOnce(job.videoCaptionId || job.id)
-							: await fetchClipJobOnce(job.viralClipCutId || job.id);
+							: tool === "clips"
+								? await fetchClipJobOnce(job.viralClipCutId || job.id)
+								: await fetchBlogToVideoJobOnce(job.blogToVideoId || job.id);
 					if (fields.status === "error") {
 						updateJob({
 							groupId,
@@ -7593,8 +7627,7 @@ const submitAppendVoiceTranslation = useCallback(
 														</button>
 													) : null}
 													{selected?.id &&
-													!isCaptionGroup &&
-													!isClipsGroup ? (
+													!isVideoToolsJobGroup ? (
 														<button
 															type="button"
 															onClick={() =>
@@ -7631,8 +7664,7 @@ const submitAppendVoiceTranslation = useCallback(
 														/>
 													</div>
 												)}
-												{!isCaptionGroup &&
-													!isClipsGroup &&
+												{!isVideoToolsJobGroup &&
 													((!isVoiceTranslationGroup && appendSourceVideoUrl) ||
 													(isVoiceTranslationGroup &&
 														appendVoiceSourceText)) && (
@@ -7826,8 +7858,7 @@ const submitAppendVoiceTranslation = useCallback(
 											)}
 
 											{selectedDetail.j.isStaged &&
-												!isCaptionGroup &&
-												!isClipsGroup &&
+												!isVideoToolsJobGroup &&
 												isVoiceTranslationGroup && (
 												<div style={{ marginBottom: 24 }}>
 													{appendVoiceSourceText ? (
@@ -7976,8 +8007,7 @@ const submitAppendVoiceTranslation = useCallback(
 											)}
 
 											{selectedDetail.j.isStaged &&
-												!isCaptionGroup &&
-												!isClipsGroup &&
+												!isVideoToolsJobGroup &&
 												!isVoiceTranslationGroup && (
 												<div style={{ marginBottom: 24 }}>
 													<p
@@ -8039,9 +8069,15 @@ const submitAppendVoiceTranslation = useCallback(
 											selectedDetail.j.status !== "done" &&
 											selectedDetail.j.status !== "error" && (
 												<>
-													{isCaptionGroup || isClipsGroup ? (
+													{isVideoToolsJobGroup ? (
 														<VideoToolsStatusProgress
-															tool={isClipsGroup ? "clips" : "caption"}
+															tool={
+																isBlogGroup
+																	? "blog"
+																	: isClipsGroup
+																		? "clips"
+																		: "caption"
+															}
 															apiStatus={selectedDetail.j.apiStatus}
 															status={selectedDetail.j.status}
 															createdAt={selectedDetail.j.createdAt}
@@ -8146,6 +8182,8 @@ const submitAppendVoiceTranslation = useCallback(
 													<VideoCaptionJobResult job={selectedDetail.j} />
 												) : isClipsGroup ? (
 													<ViralClipsJobResult job={selectedDetail.j} />
+												) : isBlogGroup ? (
+													<BlogToVideoJobResult job={selectedDetail.j} />
 												) : isVoiceTranslationGroup ? (
 													<div>
 														{/* Top: translated audio + translated script */}
@@ -8700,7 +8738,9 @@ const submitAppendVoiceTranslation = useCallback(
 															? "Caption generation failed"
 															: isClipsGroup
 																? "Clip generation failed"
-																: `Translation failed (${selectedDetail.j.lang})`}
+																: isBlogGroup
+																	? "Blog video generation failed"
+																	: `Translation failed (${selectedDetail.j.lang})`}
 													</p>
 													{selectedDetail.j.errorMessage ? (
 														<p
@@ -8720,8 +8760,10 @@ const submitAppendVoiceTranslation = useCallback(
 															textAlign: "center",
 														}}
 													>
-														{isCaptionGroup || isClipsGroup
-															? "Retry with the same source video, or add another language from the dropdown above."
+														{isVideoToolsJobGroup
+															? isBlogGroup
+																? "Try again with the same blog URL or paste different content."
+																: "Retry with the same source video, or add another language from the dropdown above."
 															: "Retry with the same source video, or start a new translation."}
 													</p>
 													)}
@@ -8782,8 +8824,7 @@ const submitAppendVoiceTranslation = useCallback(
 																)}
 															</button>
 														)}
-														{!isCaptionGroup &&
-															!isClipsGroup &&
+														{!isVideoToolsJobGroup &&
 															!isVoiceTranslationGroup &&
 															appendSourceVideoUrl && (
 															<button

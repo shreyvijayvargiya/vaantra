@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Loader2, CheckCircle, AlertCircle, Clock, Film, Scissors, Upload } from "lucide-react";
-import { captionStatusLabel, clipStatusLabel } from "../videoToolsJob";
+import { Loader2, CheckCircle, AlertCircle, Clock, Film, Scissors, Upload, FileText, Sparkles, Clapperboard, LayoutTemplate, Video } from "lucide-react";
+import { captionStatusLabel, clipStatusLabel, blogStatusLabel } from "../videoToolsJob";
 
 const CAPTION_STEPS = [
 	{ key: "pending", label: "Queued", Icon: Clock },
@@ -16,8 +16,19 @@ const CLIP_STEPS = [
 	{ key: "success", label: "Done", Icon: CheckCircle },
 ];
 
+const BLOG_STEPS = [
+	{ key: "pending", label: "Queued", Icon: Clock },
+	{ key: "scraping", label: "Scrape", Icon: FileText },
+	{ key: "strategizing", label: "Plan", Icon: Sparkles },
+	{ key: "directing", label: "Direct", Icon: Clapperboard },
+	{ key: "planning", label: "Scenes", Icon: LayoutTemplate },
+	{ key: "rendering", label: "Render", Icon: Video },
+	{ key: "success", label: "Done", Icon: CheckCircle },
+];
+
 export default function VideoToolsStatusProgress({ tool, apiStatus, status, createdAt }) {
-	const steps = tool === "clips" ? CLIP_STEPS : CAPTION_STEPS;
+	const steps =
+		tool === "blog" ? BLOG_STEPS : tool === "clips" ? CLIP_STEPS : CAPTION_STEPS;
 	const isErr = status === "error";
 	const isDone = status === "done";
 	const currentKey = isDone ? "success" : isErr ? apiStatus : apiStatus || "pending";
@@ -34,7 +45,12 @@ export default function VideoToolsStatusProgress({ tool, apiStatus, status, crea
 		return () => clearInterval(id);
 	}, [createdAt, isDone, isErr]);
 
-	const label = tool === "clips" ? clipStatusLabel(apiStatus) : captionStatusLabel(apiStatus);
+	const label =
+		tool === "blog"
+			? blogStatusLabel(apiStatus)
+			: tool === "clips"
+				? clipStatusLabel(apiStatus)
+				: captionStatusLabel(apiStatus);
 	const elapsedLabel =
 		elapsed > 0
 			? `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")} elapsed`

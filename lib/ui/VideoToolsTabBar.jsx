@@ -1,9 +1,10 @@
-import { Video, Mic2, Subtitles, Scissors } from "lucide-react";
+import { Video, Mic2, Subtitles, Scissors, FileText } from "lucide-react";
 
 export const VIDEO_TOOLS_TABS = [
 	{ id: "video", label: "Translate video", Icon: Video },
 	{ id: "voice", label: "Translate audio", Icon: Mic2 },
 	{ id: "caption", label: "AI captions", Icon: Subtitles },
+	{ id: "blog", label: "Blog to video", Icon: FileText },
 	{ id: "clips", label: "Viral clips", Icon: Scissors },
 ];
 
