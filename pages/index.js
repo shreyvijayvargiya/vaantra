@@ -5,6 +5,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import LoginModal from "../lib/ui/LoginModal";
+import {
+	FeedbackCreditProvider,
+	FeedbackCreditTrigger,
+} from "../lib/ui/FeedbackCreditLauncher";
 import TopTargetLanguagesSection from "../app/components/TopTargetLanguagesSection";
 import { TranslationGroupStatsPanel } from "../app/components/TranslationGroupStats";
 import Navbar from "../app/components/Navbar";
@@ -7081,6 +7085,7 @@ const submitAppendVoiceTranslation = useCallback(
 										>
 											<Edit2 size={13} />
 										</button>
+										<FeedbackCreditTrigger variant="icon" />
 										<button
 											type="button"
 											title="Delete"
@@ -7187,6 +7192,7 @@ const submitAppendVoiceTranslation = useCallback(
 				>
 					Upgrade
 				</button>
+				<FeedbackCreditTrigger variant="sidebar" />
 			</div>
 			{/* User */}
 			<div
@@ -7298,6 +7304,7 @@ const submitAppendVoiceTranslation = useCallback(
 		</div>
 	);
 	return (
+		<FeedbackCreditProvider user={user}>
 		<div
 			className="sans"
 			style={{
@@ -8920,10 +8927,14 @@ const submitAppendVoiceTranslation = useCallback(
 								<div
 									style={{
 										display: "flex",
-										justifyContent: "flex-end",
+										justifyContent: "space-between",
+										alignItems: "center",
+										gap: 8,
 										marginTop: 10,
+										flexWrap: "wrap",
 									}}
 								>
+									<FeedbackCreditTrigger variant="inline" />
 									<button
 										type="button"
 										onClick={() => setDeleteConfirmId(selected.id)}
@@ -8988,6 +8999,7 @@ const submitAppendVoiceTranslation = useCallback(
 				
 			</div>
 			
+			<FeedbackCreditTrigger variant="fixed" />
 			<UpgradePriceModal
 				open={showUpgrade}
 				onClose={() => setShowUpgrade(false)}
@@ -9002,6 +9014,7 @@ const submitAppendVoiceTranslation = useCallback(
 				}}
 			/>
 		</div>
+		</FeedbackCreditProvider>
 	);
 }
 
