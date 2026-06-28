@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Copy, Check } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -143,26 +144,30 @@ const markdownComponents = {
 	),
 	hr: ({ ...props }) => <hr className="border-zinc-200 my-8" {...props} />,
 	table: ({ ...props }) => (
-		<div className="overflow-x-auto my-6">
-			<table
-				className="min-w-full border-collapse border border-zinc-200 text-sm"
-				{...props}
-			/>
+		<div className="overflow-x-auto my-6 rounded-xl border border-zinc-200 shadow-sm">
+			<table className="min-w-full border-collapse text-sm" {...props} />
 		</div>
 	),
 	thead: ({ ...props }) => (
-		<thead className="bg-zinc-50 text-zinc-900" {...props} />
+		<thead className="bg-zinc-50 border-b border-zinc-200" {...props} />
 	),
-	tbody: ({ ...props }) => <tbody className="divide-y divide-zinc-200" {...props} />,
-	tr: ({ ...props }) => <tr className="divide-x divide-zinc-200" {...props} />,
+	tbody: ({ ...props }) => (
+		<tbody className="divide-y divide-zinc-100 bg-white" {...props} />
+	),
+	tr: ({ ...props }) => (
+		<tr className="hover:bg-orange-50/40 transition-colors" {...props} />
+	),
 	th: ({ ...props }) => (
 		<th
-			className="px-4 py-2 text-left font-semibold border border-zinc-200"
+			className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-600 border-r border-zinc-100 last:border-r-0"
 			{...props}
 		/>
 	),
 	td: ({ ...props }) => (
-		<td className="px-4 py-2 border border-zinc-200 text-zinc-700" {...props} />
+		<td
+			className="px-4 py-3 text-zinc-700 border-r border-zinc-100 last:border-r-0 align-top"
+			{...props}
+		/>
 	),
 };
 
@@ -171,7 +176,9 @@ export default function BlogMarkdown({ content, className = "" }) {
 
 	return (
 		<div className={`blog-content prose prose-zinc max-w-none prose-base ${className}`}>
-			<ReactMarkdown components={markdownComponents}>{content}</ReactMarkdown>
+			<ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+				{content}
+			</ReactMarkdown>
 		</div>
 	);
 }
