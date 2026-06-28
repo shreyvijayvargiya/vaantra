@@ -12,6 +12,10 @@ const PATHS = [
 	{ path: "/contact", changefreq: "monthly", priority: 0.7 },
 	{ path: "/docs", changefreq: "weekly", priority: 0.8 },
 	{ path: "/blog", changefreq: "weekly", priority: 0.8 },
+	{ path: "/examples", changefreq: "weekly", priority: 0.75 },
+	{ path: "/legal", changefreq: "yearly", priority: 0.4 },
+	{ path: "/privacy", changefreq: "yearly", priority: 0.4 },
+	{ path: "/terms-and-conditions", changefreq: "yearly", priority: 0.4 },
 	...getAllStaticBlogSlugs().map((slug) => ({
 		path: `/blog/${slug}`,
 		changefreq: "monthly",

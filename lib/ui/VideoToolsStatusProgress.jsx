@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2, CheckCircle, AlertCircle, Clock, Film, Scissors, Upload, FileText, Sparkles, Clapperboard, LayoutTemplate, Video } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle, Clock, Film, Scissors, Upload, FileText, Sparkles, Clapperboard } from "lucide-react";
 import { captionStatusLabel, clipStatusLabel, blogStatusLabel } from "../videoToolsJob";
 
 const CAPTION_STEPS = [
@@ -19,11 +19,9 @@ const CLIP_STEPS = [
 const BLOG_STEPS = [
 	{ key: "pending", label: "Queued", Icon: Clock },
 	{ key: "scraping", label: "Scrape", Icon: FileText },
-	{ key: "strategizing", label: "Plan", Icon: Sparkles },
-	{ key: "directing", label: "Direct", Icon: Clapperboard },
-	{ key: "planning", label: "Scenes", Icon: LayoutTemplate },
-	{ key: "rendering", label: "Render", Icon: Video },
-	{ key: "success", label: "Done", Icon: CheckCircle },
+	{ key: "generating", label: "Generate", Icon: Sparkles },
+	{ key: "synthesizing", label: "Audio", Icon: Clapperboard },
+	{ key: "ready", label: "Edit", Icon: CheckCircle },
 ];
 
 export default function VideoToolsStatusProgress({ tool, apiStatus, status, createdAt }) {
@@ -31,7 +29,13 @@ export default function VideoToolsStatusProgress({ tool, apiStatus, status, crea
 		tool === "blog" ? BLOG_STEPS : tool === "clips" ? CLIP_STEPS : CAPTION_STEPS;
 	const isErr = status === "error";
 	const isDone = status === "done";
-	const currentKey = isDone ? "success" : isErr ? apiStatus : apiStatus || "pending";
+	const currentKey = isDone
+		? tool === "blog"
+			? "ready"
+			: "success"
+		: isErr
+			? apiStatus
+			: apiStatus || "pending";
 	const curIdx = steps.findIndex((s) => s.key === currentKey);
 	const activeIdx = curIdx >= 0 ? curIdx : isDone ? steps.length - 1 : 0;
 
@@ -106,7 +110,7 @@ export default function VideoToolsStatusProgress({ tool, apiStatus, status, crea
 					) : (
 						<Loader2 className="w-4 h-4 animate-spin text-orange-600" />
 					)}
-					{isErr ? "Failed" : isDone ? "Complete" : label}
+					{isErr ? "Failed" : isDone ? (tool === "blog" ? "Ready to edit" : "Complete") : label}
 				</p>
 				{elapsedLabel && !isDone && !isErr ? (
 					<p className="text-xs text-zinc-400">{elapsedLabel}</p>

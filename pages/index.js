@@ -5896,6 +5896,13 @@ export function Dashboard({ user, onLogout }) {
 				videoCaptionId: j.videoCaptionId ?? null,
 				viralClipCutId: j.viralClipCutId ?? null,
 				blogToVideoId: j.blogToVideoId ?? null,
+				videoEditorProjectId: j.videoEditorProjectId ?? j.blogToVideoId ?? null,
+				editorProject: j.editorProject ?? null,
+				editorFrames: j.editorFrames ?? null,
+				editorFramesStored: j.editorFramesStored ?? null,
+				globalStyle: j.globalStyle ?? null,
+				maxDurationSec: j.maxDurationSec ?? null,
+				maxFrames: j.maxFrames ?? null,
 				blogUrl: j.blogUrl ?? null,
 				script: j.script ?? null,
 				segments: j.segments ?? null,
@@ -6766,7 +6773,8 @@ const submitAppendVoiceTranslation = useCallback(
 		};
 
 		void tick();
-		const interval = setInterval(() => void tick(), 2500);
+		const pollMs = tool === "blog" ? 3000 : 2500;
+		const interval = setInterval(() => void tick(), pollMs);
 		return () => {
 			cancelled = true;
 			clearInterval(interval);
@@ -8183,7 +8191,18 @@ const submitAppendVoiceTranslation = useCallback(
 												) : isClipsGroup ? (
 													<ViralClipsJobResult job={selectedDetail.j} />
 												) : isBlogGroup ? (
-													<BlogToVideoJobResult job={selectedDetail.j} />
+													<BlogToVideoJobResult
+														job={selectedDetail.j}
+														onEditorPersist={(patch) => {
+															if (!selected?.id) return;
+															updateJob({
+																groupId: selected.id,
+																jobId: selectedDetail.j.id,
+																lang: selectedDetail.j.lang,
+																...patch,
+															});
+														}}
+													/>
 												) : isVoiceTranslationGroup ? (
 													<div>
 														{/* Top: translated audio + translated script */}

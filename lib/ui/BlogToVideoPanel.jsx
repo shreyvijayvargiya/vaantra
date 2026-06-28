@@ -40,7 +40,7 @@ export default function BlogToVideoPanel({
 	const [targetDuration, setTargetDuration] = useState(60);
 	const [model, setModel] = useState("gemini");
 	const [ttsVoice, setTtsVoice] = useState("Puck");
-	const [aspect, setAspect] = useState("16:9");
+	const [aspect, setAspect] = useState("9:16");
 	const [styleForm, setStyleForm] = useState(() => createEmptyBlogStyleForm());
 	const [styleModalOpen, setStyleModalOpen] = useState(false);
 	const [busy, setBusy] = useState(false);

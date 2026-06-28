@@ -20,6 +20,12 @@ export default function Document() {
 
 				{/* Base meta tags - route-specific tags are handled in lib/modules/SEO */}
 				<meta name="theme-color" content="#18181b" />
+				{process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ? (
+					<meta
+						name="google-site-verification"
+						content={process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION}
+					/>
+				) : null}
 			</Head>
 			<body>
 				<Main />

@@ -59,7 +59,24 @@ const nextConfig = {
 		return config;
 	},
 	async rewrites() {
-		return [{ source: "/sitemap.xml", destination: "/api/sitemap" }];
+		const origin =
+			process.env.NEXT_PUBLIC_AANTRA_API_URL?.trim() ||
+			process.env.NEXT_PUBLIC_IHATEREADING_API_URL?.trim() ||
+			process.env.NEXT_PUBLIC_TRANSLATE_API_URL?.trim() ||
+			"http://localhost:3002";
+		let apiOrigin = "http://localhost:3002";
+		try {
+			apiOrigin = new URL(origin).origin;
+		} catch {
+			/* keep default */
+		}
+		return [
+			{ source: "/sitemap.xml", destination: "/api/sitemap" },
+			{
+				source: "/api/video-editor/:path*",
+				destination: `${apiOrigin}/api/video-editor/:path*`,
+			},
+		];
 	},
 };
 
